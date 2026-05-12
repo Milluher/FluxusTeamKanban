@@ -5,6 +5,7 @@ import Image from 'next/image';
 import api from '@/lib/api';
 import { Board, User } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
+import ProfileModal from '@/components/ProfileModal';
 
 export default function DashboardPage() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -12,6 +13,7 @@ export default function DashboardPage() {
   const [newBoardName, setNewBoardName] = useState('');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -80,19 +82,17 @@ export default function DashboardPage() {
               </button>
             </>
           )}
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowProfile(true)}
+            className="flex items-center gap-2 min-h-[44px] px-1 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Profile"
+          >
             <img
               src={avatarUrl(user?.name || 'User')}
               className="w-8 h-8 rounded-full flex-shrink-0"
               alt={user?.name || 'User'}
             />
             <span className="hidden sm:block text-sm font-medium text-gray-700">{user?.name}</span>
-          </div>
-          <button
-            onClick={logout}
-            className="text-sm px-3 py-1.5 min-h-[44px] rounded-lg font-medium text-gray-500 border border-gray-200 bg-white transition-all duration-150 hover:text-gray-800 hover:border-gray-300"
-          >
-            Log out
           </button>
         </div>
       </nav>
@@ -235,6 +235,13 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+      {showProfile && user && (
+        <ProfileModal
+          user={user}
+          onClose={() => setShowProfile(false)}
+          onLogout={logout}
+        />
+      )}
     </div>
   );
 }
