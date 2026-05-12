@@ -12,11 +12,16 @@ const userRoutes = require('./routes/users');
 const app = express();
 const server = http.createServer(app);
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'https://fluxusteamkanban.vercel.app',
+];
+
 const io = new Server(server, {
-  cors: { origin: 'http://localhost:3000', credentials: true },
+  cors: { origin: ALLOWED_ORIGINS, credentials: true },
 });
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 app.use(express.json());
 
 // Attach io to req
