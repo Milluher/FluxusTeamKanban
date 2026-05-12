@@ -21,7 +21,7 @@ const ticketInclude = {
 // Create ticket
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project } = req.body;
     if (!title || !columnId) return res.status(400).json({ error: 'Title and columnId required' });
     const column = await prisma.column.findUnique({ where: { id: columnId } });
     if (!column) return res.status(404).json({ error: 'Column not found' });
@@ -35,6 +35,8 @@ router.post('/', authenticate, async (req, res) => {
         productManagerId: productManagerId || null,
         assignedDate: assignedDate ? new Date(assignedDate) : null,
         createdById: req.user.id,
+        type: type || null,
+        project: project || null,
       },
       include: ticketInclude,
     });
@@ -55,13 +57,15 @@ router.get('/:id', authenticate, async (req, res) => {
 // Update ticket
 router.patch('/:id', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (assigneeId !== undefined) data.assigneeId = assigneeId || null;
     if (productManagerId !== undefined) data.productManagerId = productManagerId || null;
     if (assignedDate !== undefined) data.assignedDate = assignedDate ? new Date(assignedDate) : null;
+    if (type !== undefined) data.type = type || null;
+    if (project !== undefined) data.project = project || null;
     if (columnId) {
       const col = await prisma.column.findUnique({ where: { id: columnId } });
       if (col) { data.columnId = columnId; data.status = col.name; }

@@ -8,121 +8,68 @@ interface Props {
 }
 
 export default function InviteMemberModal({ boardId, onClose }: Props) {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus('loading');
+  const generate = async () => {
+    setLoading(true);
+    setError('');
     try {
-      await api.post(`/boards/${boardId}/members`, { email });
-      setStatus('success');
-      setMessage(`${email} has been added to the board.`);
-      setEmail('');
-    } catch (err: any) {
-      setStatus('error');
-      setMessage(err.response?.data?.error || 'Failed to add member');
-    }
+      const { data } = await api.post(`/boards/${boardId}/invitations`);
+      setInviteUrl(data.inviteUrl);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Failed to generate link');
+    } finally { setLoading(false); }
+  };
+
+  const copy = () => {
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
-      style={{ background: 'rgba(0,0,0,0.4)' }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl overflow-hidden bg-white shadow-xl border border-gray-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200">
-          <div>
-            <h2 className="text-base font-bold" style={{ color: '#1a1f3c' }}>Invite Member</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Add a collaborator to this board</p>
-          </div>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold" style={{ color: '#1a1f3c' }}>Invite to Board</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-4">Generate a link that lets anyone join this board. The link expires in 7 days.</p>
+
+        {!inviteUrl ? (
           <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700"
+            onClick={generate}
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
+            style={{ background: '#e8390e' }}
           >
-            ×
+            {loading ? 'Generating...' : 'Generate Invite Link'}
           </button>
-        </div>
-
-        {/* Form */}
-        <div className="px-6 py-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                Email address
-              </label>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
               <input
-                autoFocus
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 transition-all duration-150"
-                style={{
-                  background: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  outline: 'none',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#e8390e';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                placeholder="colleague@example.com"
-                required
+                readOnly
+                value={inviteUrl}
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 truncate"
               />
+              <button
+                onClick={copy}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex-shrink-0"
+                style={{ background: copied ? '#16a34a' : '#e8390e' }}
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
             </div>
+            <button onClick={generate} className="text-sm text-gray-400 hover:text-gray-600">Generate new link</button>
+          </div>
+        )}
 
-            {status === 'success' && (
-              <div className="rounded-lg px-3 py-2.5 text-sm font-medium flex items-center gap-2 text-green-700 bg-green-50 border border-green-200">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                {message}
-              </div>
-            )}
-            {status === 'error' && (
-              <div className="rounded-lg px-3 py-2.5 text-sm font-medium flex items-center gap-2 text-red-700 bg-red-50 border border-red-200">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={status === 'loading'}
-              className="w-full py-2.5 rounded-lg text-sm font-bold text-white transition-all duration-150 disabled:opacity-50"
-              style={{ background: '#e8390e' }}
-              onMouseEnter={(e) => { if (status !== 'loading') e.currentTarget.style.background = '#c73009'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
-            >
-              {status === 'loading' ? 'Inviting...' : 'Send Invite'}
-            </button>
-          </form>
-
-          {status === 'success' && (
-            <button
-              onClick={onClose}
-              className="w-full mt-3 py-2.5 rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
-            >
-              Done
-            </button>
-          )}
-        </div>
+        {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
       </div>
     </div>
   );

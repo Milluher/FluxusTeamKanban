@@ -8,6 +8,8 @@ const boardRoutes = require('./routes/boards');
 const ticketRoutes = require('./routes/tickets');
 const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
+const invitationRoutes = require('./routes/invitations');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const server = http.createServer(app);
@@ -33,6 +35,8 @@ app.use('/api/boards', boardRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api', invitationRoutes);
+app.use('/api/admin', adminRoutes);
 
 io.on('connection', (socket) => {
   socket.on('join-board', (boardId) => socket.join(`board:${boardId}`));

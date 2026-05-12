@@ -104,4 +104,18 @@ router.post('/:id/members', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Remove member from board (board admin only)
+router.delete('/:id/members/:userId', authenticate, async (req, res) => {
+  try {
+    const membership = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+    });
+    if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+    await prisma.boardMember.deleteMany({
+      where: { userId: req.params.userId, boardId: req.params.id },
+    });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/api';
 import { Board, User } from '@/types';
+import { avatarUrl } from '@/lib/avatar';
 
 export default function DashboardPage() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -54,13 +55,23 @@ export default function DashboardPage() {
           <span className="font-bold text-base tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-              style={{ background: '#1a1f3c' }}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => router.push('/admin')}
+              className="text-sm px-3 py-1.5 rounded-lg font-medium border transition-all duration-150"
+              style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
             >
-              {user?.name?.charAt(0).toUpperCase()}
-            </div>
+              Admin
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <img
+              src={avatarUrl(user?.name || 'User')}
+              className="w-8 h-8 rounded-full flex-shrink-0"
+              alt={user?.name || 'User'}
+            />
             <span className="text-sm font-medium text-gray-700">{user?.name}</span>
           </div>
           <button

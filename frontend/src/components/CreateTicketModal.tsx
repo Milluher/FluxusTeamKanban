@@ -3,6 +3,14 @@ import { useState } from 'react';
 import api from '@/lib/api';
 import { Board, Ticket } from '@/types';
 
+const TICKET_TYPES = [
+  { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
+  { value: 'design', label: 'Design', color: 'bg-pink-50 text-pink-600 border-pink-200' },
+  { value: 'product', label: 'Product', color: 'bg-purple-50 text-purple-600 border-purple-200' },
+  { value: 'backend', label: 'Backend', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+  { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-600 border-green-200' },
+];
+
 interface Props {
   columnId: string;
   boardId: string;
@@ -18,6 +26,8 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     assigneeId: '',
     productManagerId: '',
     assignedDate: '',
+    type: '',
+    project: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -161,6 +171,39 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               className="px-3 py-2.5 text-sm transition-all duration-150"
               style={inputStyle}
               {...focusHandlers}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Type
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {TICKET_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, type: form.type === t.value ? '' : t.value })}
+                  className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all duration-150 ${t.color} ${form.type === t.value ? 'ring-2 ring-orange-400 ring-offset-1' : ''}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Project
+            </label>
+            <input
+              type="text"
+              value={form.project}
+              onChange={(e) => setForm({ ...form, project: e.target.value })}
+              className="px-3 py-2.5 text-sm transition-all duration-150"
+              style={inputStyle}
+              {...focusHandlers}
+              placeholder="Project name..."
             />
           </div>
 

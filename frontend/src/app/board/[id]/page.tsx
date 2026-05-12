@@ -16,6 +16,7 @@ import {
 import api from '@/lib/api';
 import socket from '@/lib/socket';
 import { Board, Ticket, User } from '@/types';
+import { avatarUrl } from '@/lib/avatar';
 import KanbanColumn from '@/components/KanbanColumn';
 import TicketCard from '@/components/TicketCard';
 import TicketModal from '@/components/TicketModal';
@@ -221,14 +222,13 @@ export default function BoardPage() {
           {/* Member avatars */}
           <div className="flex -space-x-1.5">
             {board.members.slice(0, 5).map((m) => (
-              <div
+              <img
                 key={m.id}
+                src={avatarUrl(m.user.name)}
                 title={m.user.name}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white flex-shrink-0"
-                style={{ background: '#1a1f3c' }}
-              >
-                {m.user.name.charAt(0).toUpperCase()}
-              </div>
+                className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0"
+                alt={m.user.name}
+              />
             ))}
           </div>
 

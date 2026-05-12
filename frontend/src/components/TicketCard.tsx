@@ -2,6 +2,15 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Ticket } from '@/types';
+import { avatarUrl } from '@/lib/avatar';
+
+const TYPE_STYLES: Record<string, string> = {
+  mobile: 'bg-blue-50 text-blue-600',
+  design: 'bg-pink-50 text-pink-600',
+  product: 'bg-purple-50 text-purple-600',
+  backend: 'bg-gray-100 text-gray-600',
+  frontend: 'bg-green-50 text-green-600',
+};
 
 interface Props {
   ticket: Ticket;
@@ -61,16 +70,23 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         {ticket.title}
       </p>
 
+      {ticket.type && (
+        <div className="mb-2">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TYPE_STYLES[ticket.type] || 'bg-gray-100 text-gray-600'}`}>
+            {ticket.type}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           {ticket.assignee && (
-            <div
+            <img
+              src={avatarUrl(ticket.assignee.name)}
               title={ticket.assignee.name}
-              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-              style={{ background: '#1a1f3c' }}
-            >
-              {ticket.assignee.name.charAt(0).toUpperCase()}
-            </div>
+              className="w-6 h-6 rounded-full flex-shrink-0"
+              alt={ticket.assignee.name}
+            />
           )}
           {depCount > 0 && (
             <span

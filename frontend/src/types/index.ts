@@ -35,6 +35,8 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   order: number;
+  type?: string;
+  project?: string;
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };

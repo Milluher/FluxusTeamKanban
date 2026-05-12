@@ -2,6 +2,15 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { Ticket, Board, User, Comment } from '@/types';
+import { avatarUrl } from '@/lib/avatar';
+
+const TICKET_TYPES = [
+  { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
+  { value: 'design', label: 'Design', color: 'bg-pink-50 text-pink-600 border-pink-200' },
+  { value: 'product', label: 'Product', color: 'bg-purple-50 text-purple-600 border-purple-200' },
+  { value: 'backend', label: 'Backend', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+  { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-600 border-green-200' },
+];
 
 interface Props {
   ticket: Ticket;
@@ -21,6 +30,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
     assigneeId: ticket.assigneeId || '',
     productManagerId: ticket.productManagerId || '',
     assignedDate: ticket.assignedDate ? ticket.assignedDate.split('T')[0] : '',
+    type: ticket.type || '',
+    project: ticket.project || '',
   });
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
@@ -202,10 +213,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                   ),
                   viewEl: ticket.assignee ? (
                     <div className="mt-1.5 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ background: '#1a1f3c' }}>
-                        {ticket.assignee.name.charAt(0).toUpperCase()}
-                      </div>
+                      <img src={avatarUrl(ticket.assignee.name)} className="w-7 h-7 rounded-full" alt={ticket.assignee.name} />
                       <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}</span>
                     </div>
                   ) : <p className="mt-1.5 text-sm text-gray-400">Unassigned</p>,
@@ -227,10 +235,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                   ),
                   viewEl: ticket.productManager ? (
                     <div className="mt-1.5 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ background: '#1a1f3c' }}>
-                        {ticket.productManager.name.charAt(0).toUpperCase()}
-                      </div>
+                      <img src={avatarUrl(ticket.productManager.name)} className="w-7 h-7 rounded-full" alt={ticket.productManager.name} />
                       <span className="text-sm font-medium text-gray-800">{ticket.productManager.name}</span>
                     </div>
                   ) : <p className="mt-1.5 text-sm text-gray-400">None</p>,
@@ -264,6 +269,51 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                       </span>
                     </div>
                   ),
+                },
+                {
+                  label: 'Type',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/></svg>,
+                  editEl: (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {TICKET_TYPES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setForm({ ...form, type: form.type === t.value ? '' : t.value })}
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-all duration-150 ${t.color} ${form.type === t.value ? 'ring-2 ring-orange-400 ring-offset-1' : ''}`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  ),
+                  viewEl: ticket.type ? (
+                    <div className="mt-1.5">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        ticket.type === 'mobile' ? 'bg-blue-50 text-blue-600' :
+                        ticket.type === 'design' ? 'bg-pink-50 text-pink-600' :
+                        ticket.type === 'product' ? 'bg-purple-50 text-purple-600' :
+                        ticket.type === 'backend' ? 'bg-gray-100 text-gray-600' :
+                        ticket.type === 'frontend' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-600'
+                      }`}>{ticket.type}</span>
+                    </div>
+                  ) : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                },
+                {
+                  label: 'Project',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.47 0 12 0S6 2.53 6 4.64c0 .48.11.92.18 1.36H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8-4c1.59 0 3 1.41 3 2.64 0 .47-.18.88-.45 1.36H9.45C9.18 5.52 9 5.11 9 4.64 9 3.41 10.41 2 12 2zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>,
+                  editEl: (
+                    <input
+                      type="text"
+                      value={form.project}
+                      onChange={(e) => setForm({ ...form, project: e.target.value })}
+                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                      style={inputStyle}
+                      {...inputFocusHandlers}
+                      placeholder="Project name..."
+                    />
+                  ),
+                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-400">—</span>}</p>,
                 },
               ].map(({ label, icon, editEl, viewEl }) => (
                 <div key={label} className="rounded-lg p-3 bg-gray-50 border border-gray-100">
@@ -420,12 +470,11 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
               )}
               {(ticket.comments || []).map((c) => (
                 <div key={c.id} className="flex gap-2.5">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
-                    style={{ background: '#1a1f3c' }}
-                  >
-                    {c.author.name.charAt(0).toUpperCase()}
-                  </div>
+                  <img
+                    src={avatarUrl(c.author.name)}
+                    className="w-7 h-7 rounded-full flex-shrink-0 mt-0.5"
+                    alt={c.author.name}
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 mb-1">
                       <span className="text-xs font-semibold text-gray-800">{c.author.name}</span>
@@ -444,12 +493,11 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
             {/* Comment input */}
             <form onSubmit={addComment} className="mt-4 flex-shrink-0">
               <div className="flex gap-2 items-end">
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                  style={{ background: '#1a1f3c' }}
-                >
-                  {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
+                <img
+                  src={avatarUrl(currentUser?.name || 'User')}
+                  className="w-7 h-7 rounded-full flex-shrink-0"
+                  alt={currentUser?.name || 'User'}
+                />
                 <div className="flex-1 flex flex-col gap-2">
                   <input
                     type="text"
