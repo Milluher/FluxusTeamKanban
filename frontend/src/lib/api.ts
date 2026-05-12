@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: 'https://yamabiko.proxy.rlwy.net:13375/api' });
+const api = axios.create({ baseURL: 'https://fluxusteamkanban-staging.up.railway.app/api' });
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {

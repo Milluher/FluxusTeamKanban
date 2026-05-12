@@ -15,6 +15,7 @@ const server = http.createServer(app);
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'https://fluxusteamkanban.vercel.app',
+  'https://fluxusteamkanban-staging.up.railway.app',
 ];
 
 const io = new Server(server, {
