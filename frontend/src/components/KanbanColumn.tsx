@@ -27,7 +27,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket }: Pro
   const cfg = columnConfig[column.name] || defaultConfig;
 
   return (
-    <div className="flex flex-col w-72 flex-shrink-0">
+    <div className="flex flex-col w-72 flex-shrink-0 board-column-snap">
       {/* Column Header */}
       <div className="flex items-center justify-between mb-2.5 px-1">
         <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket }: Pro
         </div>
         <button
           onClick={() => onAddTicket(column.id)}
-          className="w-6 h-6 rounded-md flex items-center justify-center text-base leading-none font-medium text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
+          className="w-7 h-7 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:w-6 sm:h-6 rounded-md flex items-center justify-center text-base leading-none font-medium text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
           title="Add ticket"
         >
           +
@@ -98,6 +98,14 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket }: Pro
             <span className="text-xs font-medium" style={{ color: '#e8390e' }}>Drop here</span>
           </div>
         )}
+
+        {/* Full-width add ticket button (visible on mobile) */}
+        <button
+          onClick={() => onAddTicket(column.id)}
+          className="w-full mt-2 py-2 text-sm text-gray-400 hover:text-gray-600 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors min-h-[44px]"
+        >
+          + Add ticket
+        </button>
       </div>
     </div>
   );

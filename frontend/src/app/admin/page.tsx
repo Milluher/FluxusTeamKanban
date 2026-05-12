@@ -51,23 +51,50 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
-      <nav className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 h-14 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Image src="/logo.png" width={26} height={26} alt="Fluxus" />
           <span className="font-bold text-sm" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
-          <span className="text-gray-300 text-sm">/</span>
-          <span className="text-sm font-medium text-gray-600">Admin</span>
+          <span className="text-gray-300 text-sm hidden sm:inline">/</span>
+          <span className="text-sm font-medium text-gray-600 hidden sm:inline">Admin</span>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-500 hover:text-gray-700">← Dashboard</button>
-          <button onClick={() => { localStorage.clear(); router.push('/'); }} className="text-sm text-gray-500 hover:text-gray-700">Logout</button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">← <span className="hidden sm:inline ml-1">Dashboard</span></button>
+          <button onClick={() => { localStorage.clear(); router.push('/'); }} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">Logout</button>
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold mb-6" style={{ color: '#1a1f3c' }}>User Management</h1>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <h1 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6" style={{ color: '#1a1f3c' }}>User Management</h1>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Mobile card list */}
+        <div className="sm:hidden bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+          {users.map((u) => (
+            <div key={u.id} className="px-4 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <img src={avatarUrl(u.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={u.name} />
+                <div className="min-w-0">
+                  <p className="font-medium text-sm text-gray-900 truncate">{u.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+                    {u.role}
+                  </span>
+                </div>
+              </div>
+              {u.id !== currentUser?.id && (
+                <button
+                  onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
+                  className="text-xs border border-gray-200 rounded-lg px-3 py-2 text-gray-600 min-h-[36px] flex-shrink-0 ml-3"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -112,11 +139,11 @@ export default function AdminPage() {
       </main>
 
       {resetModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setResetModal(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setResetModal(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold" style={{ color: '#1a1f3c' }}>Reset Password</h3>
-              <button onClick={() => setResetModal(null)} className="text-gray-400 text-xl">×</button>
+              <button onClick={() => setResetModal(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <p className="text-sm text-gray-500 mb-4">Set a new password for <strong>{resetModal.name}</strong></p>
             <form onSubmit={resetPassword} className="space-y-3">
@@ -125,7 +152,7 @@ export default function AdminPage() {
                 placeholder="New password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                 required
                 minLength={6}
               />
@@ -133,7 +160,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={resetting}
-                className="w-full py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                 style={{ background: '#e8390e' }}
               >
                 {resetting ? 'Resetting...' : 'Reset Password'}

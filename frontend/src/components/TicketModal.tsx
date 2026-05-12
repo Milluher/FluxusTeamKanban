@@ -114,16 +114,16 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 flex items-end sm:items-center justify-center z-50"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-xl flex flex-col bg-white shadow-xl border border-gray-200"
+        className="w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-xl flex flex-col bg-white shadow-xl border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 flex-shrink-0 border-b border-gray-200">
+        <div className="flex items-start justify-between px-4 sm:px-6 py-4 flex-shrink-0 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="flex-1 mr-4">
             {editing ? (
               <input
@@ -140,13 +140,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
               Created by {ticket.createdBy?.name} &middot; {new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {editing ? (
               <>
                 <button
                   onClick={save}
                   disabled={saving}
-                  className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
+                  className="px-3 sm:px-4 py-1.5 min-h-[36px] rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
                   style={{ background: '#e8390e' }}
                   onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
                   onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#e8390e'; }}
@@ -155,22 +155,47 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                 </button>
                 <button
                   onClick={() => setEditing(false)}
-                  className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
+                  className="px-3 sm:px-4 py-1.5 min-h-[36px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
                 >
                   Cancel
                 </button>
               </>
             ) : (
               <>
+                {/* Mobile: icon buttons */}
                 <button
                   onClick={() => setEditing(true)}
-                  className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
+                  className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300"
+                  title="Edit"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={deleteTicket}
+                  className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-all duration-150"
+                  style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}
+                  title="Delete"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
+                {/* Desktop: text buttons */}
+                <button
+                  onClick={() => setEditing(true)}
+                  className="hidden sm:block px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
                 >
                   Edit
                 </button>
                 <button
                   onClick={deleteTicket}
-                  className="px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150"
+                  className="hidden sm:block px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150"
                   style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
@@ -181,20 +206,20 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
             )}
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700 ml-1"
+              className="w-8 h-8 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700 ml-1"
             >
               ×
             </button>
           </div>
         </div>
 
-        {/* Body — two column layout */}
-        <div className="flex flex-1 overflow-hidden">
+        {/* Body — stacked on mobile, two columns on desktop */}
+        <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
           {/* Left: details */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 border-r border-gray-100">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 lg:border-r border-gray-100">
 
             {/* Metadata grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 {
                   label: 'Assignee',
@@ -442,7 +467,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
           </div>
 
           {/* Right: comments */}
-          <div className="w-72 flex-shrink-0 flex flex-col px-5 py-5">
+          <div className="lg:w-72 lg:flex-shrink-0 flex flex-col px-4 sm:px-5 py-5 border-t lg:border-t-0 border-gray-100">
             <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -504,7 +529,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="w-full px-3 py-2 text-sm text-gray-800 placeholder-gray-400"
+                    className="w-full px-3 py-2 text-base sm:text-sm text-gray-800 placeholder-gray-400"
                     style={{
                       background: 'white',
                       border: '1px solid #e5e7eb',

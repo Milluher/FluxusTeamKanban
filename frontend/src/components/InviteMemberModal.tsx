@@ -31,8 +31,8 @@ export default function InviteMemberModal({ boardId, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold" style={{ color: '#1a1f3c' }}>Invite to Board</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -44,7 +44,7 @@ export default function InviteMemberModal({ boardId, onClose }: Props) {
           <button
             onClick={generate}
             disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
+            className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
             style={{ background: '#e8390e' }}
           >
             {loading ? 'Generating...' : 'Generate Invite Link'}
@@ -55,11 +55,11 @@ export default function InviteMemberModal({ boardId, onClose }: Props) {
               <input
                 readOnly
                 value={inviteUrl}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 truncate"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-base sm:text-sm text-gray-600 bg-gray-50 truncate min-w-0"
               />
               <button
                 onClick={copy}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex-shrink-0"
+                className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-colors flex-shrink-0"
                 style={{ background: copied ? '#16a34a' : '#e8390e' }}
               >
                 {copied ? 'Copied!' : 'Copy'}

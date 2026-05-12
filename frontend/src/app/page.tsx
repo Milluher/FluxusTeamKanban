@@ -31,7 +31,7 @@ export default function AuthPage() {
     }
   };
 
-  const inputBase = "w-full rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
+  const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
@@ -139,7 +139,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-bold text-white transition-all duration-150 mt-1"
+              className="w-full py-3 sm:py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white transition-all duration-150 mt-1"
               style={{
                 background: loading ? '#f0a08a' : '#e8390e',
                 opacity: loading ? 0.8 : 1,

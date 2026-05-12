@@ -197,45 +197,54 @@ export default function BoardPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-10 h-14">
-        <div className="flex items-center gap-3">
+      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-10 h-14">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Logo */}
-          <Image src="/logo.png" width={26} height={26} alt="Fluxus" className="rounded-md" />
+          <Image src="/logo.png" width={26} height={26} alt="Fluxus" className="rounded-md flex-shrink-0" />
 
-          {/* Back link */}
+          {/* Back link — arrow only on mobile, arrow + text on desktop */}
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1 text-sm font-medium text-gray-400 transition-all duration-150 hover:text-gray-800"
+            className="flex items-center gap-1 text-sm font-medium text-gray-400 transition-all duration-150 hover:text-gray-800 min-h-[44px] flex-shrink-0"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M19 12H5M12 5l-7 7 7 7"/>
             </svg>
-            Back
+            <span className="hidden sm:inline">Back</span>
           </button>
 
-          <span className="text-gray-300">/</span>
+          <span className="text-gray-300 hidden sm:inline">/</span>
 
-          <h1 className="font-semibold text-sm" style={{ color: '#1a1f3c' }}>{board.name}</h1>
+          <h1 className="font-semibold text-sm truncate max-w-[120px] sm:max-w-none" style={{ color: '#1a1f3c' }}>{board.name}</h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Member avatars */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Member avatars — max 3 on mobile, max 5 on desktop */}
           <div className="flex -space-x-1.5">
-            {board.members.slice(0, 5).map((m) => (
+            {board.members.slice(0, 3).map((m) => (
               <img
                 key={m.id}
                 src={avatarUrl(m.user.name)}
                 title={m.user.name}
-                className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0"
+                className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 sm:hidden"
+                alt={m.user.name}
+              />
+            ))}
+            {board.members.slice(0, 5).map((m) => (
+              <img
+                key={`d-${m.id}`}
+                src={avatarUrl(m.user.name)}
+                title={m.user.name}
+                className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 hidden sm:block"
                 alt={m.user.name}
               />
             ))}
           </div>
 
-          {/* Invite button */}
+          {/* Invite button — icon only on mobile, icon + text on desktop */}
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150"
+            className="flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
             style={{
               color: '#e8390e',
               borderColor: '#e8390e',
@@ -256,20 +265,20 @@ export default function BoardPage() {
               <line x1="20" y1="8" x2="20" y2="14"/>
               <line x1="23" y1="11" x2="17" y2="11"/>
             </svg>
-            Invite
+            <span className="hidden sm:inline">Invite</span>
           </button>
         </div>
       </nav>
 
       {/* Board */}
-      <div className="flex-1 overflow-x-auto p-6">
+      <div className="flex-1 overflow-x-auto pb-4 board-scroll">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 h-full" style={{ minHeight: 'calc(100vh - 120px)' }}>
+          <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
             {board.columns.map((col) => (
               <KanbanColumn
                 key={col.id}

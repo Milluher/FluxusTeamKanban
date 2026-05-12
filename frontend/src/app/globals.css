@@ -5,6 +5,25 @@
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; background: #f7f8fa; color: #111827; }
 
+/* Prevent iOS input zoom — inputs must be at least 16px on mobile */
+input, select, textarea {
+  font-size: 16px;
+}
+@media (min-width: 640px) {
+  input, select, textarea {
+    font-size: 14px;
+  }
+}
+
+/* Smooth scrolling for board horizontal scroll */
+.board-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.board-column-snap {
+  scroll-snap-align: start;
+}
+
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.4);
   cursor: pointer;

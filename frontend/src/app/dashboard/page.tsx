@@ -49,22 +49,36 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
       {/* Top navigation */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-0 flex items-center justify-between sticky top-0 z-10 h-14">
+      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 py-0 flex items-center justify-between sticky top-0 z-10 h-14">
         <div className="flex items-center gap-2.5">
           <Image src="/logo.png" width={28} height={28} alt="Fluxus" className="rounded-md" />
           <span className="font-bold text-base tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {user?.role === 'admin' && (
-            <button
-              onClick={() => router.push('/admin')}
-              className="text-sm px-3 py-1.5 rounded-lg font-medium border transition-all duration-150"
-              style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
-            >
-              Admin
-            </button>
+            <>
+              {/* Mobile: gear icon only */}
+              <button
+                onClick={() => router.push('/admin')}
+                className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg border transition-all duration-150 min-h-[44px] min-w-[44px]"
+                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
+                title="Admin"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+              </button>
+              {/* Desktop: text button */}
+              <button
+                onClick={() => router.push('/admin')}
+                className="hidden sm:block text-sm px-3 py-1.5 rounded-lg font-medium border transition-all duration-150"
+                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
+              >
+                Admin
+              </button>
+            </>
           )}
           <div className="flex items-center gap-2">
             <img
@@ -72,20 +86,20 @@ export default function DashboardPage() {
               className="w-8 h-8 rounded-full flex-shrink-0"
               alt={user?.name || 'User'}
             />
-            <span className="text-sm font-medium text-gray-700">{user?.name}</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-700">{user?.name}</span>
           </div>
           <button
             onClick={logout}
-            className="text-sm px-3 py-1.5 rounded-lg font-medium text-gray-500 border border-gray-200 bg-white transition-all duration-150 hover:text-gray-800 hover:border-gray-300"
+            className="text-sm px-3 py-1.5 min-h-[44px] rounded-lg font-medium text-gray-500 border border-gray-200 bg-white transition-all duration-150 hover:text-gray-800 hover:border-gray-300"
           >
             Log out
           </button>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Page header */}
-        <div className="flex items-center justify-between mb-7">
+        <div className="flex items-center justify-between mb-5 sm:mb-7">
           <div>
             <h2 className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>Your Boards</h2>
             <p className="text-sm mt-0.5 text-gray-500">
@@ -94,7 +108,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all duration-150"
+            className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold border transition-all duration-150"
             style={{
               color: '#e8390e',
               borderColor: '#e8390e',
@@ -118,7 +132,7 @@ export default function DashboardPage() {
         {showCreate && (
           <form
             onSubmit={createBoard}
-            className="bg-white border border-gray-200 rounded-xl p-4 mb-5 flex gap-3 items-center shadow-sm"
+            className="bg-white border border-gray-200 rounded-xl p-4 mb-5 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center shadow-sm w-full"
             style={{ borderColor: '#e8390e' }}
           >
             <input
@@ -127,25 +141,27 @@ export default function DashboardPage() {
               value={newBoardName}
               onChange={(e) => setNewBoardName(e.target.value)}
               placeholder="Board name..."
-              className="flex-1 text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent"
+              className="flex-1 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent min-h-[44px] px-1"
             />
-            <button
-              type="submit"
-              disabled={creating}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
-              style={{ background: '#e8390e' }}
-              onMouseEnter={(e) => { if (!creating) e.currentTarget.style.background = '#c73009'; }}
-              onMouseLeave={(e) => { if (!creating) e.currentTarget.style.background = '#e8390e'; }}
-            >
-              {creating ? 'Creating...' : 'Create'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-500 border border-gray-200 bg-white transition-all duration-150 hover:text-gray-800"
-            >
-              Cancel
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={creating}
+                className="flex-1 sm:flex-none px-4 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
+                style={{ background: '#e8390e' }}
+                onMouseEnter={(e) => { if (!creating) e.currentTarget.style.background = '#c73009'; }}
+                onMouseLeave={(e) => { if (!creating) e.currentTarget.style.background = '#e8390e'; }}
+              >
+                {creating ? 'Creating...' : 'Create'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="flex-1 sm:flex-none px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-500 border border-gray-200 bg-white transition-all duration-150 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         )}
 
@@ -169,7 +185,7 @@ export default function DashboardPage() {
                 style={{ background: '#e8390e' }}
               />
 
-              <div className="pl-5 pr-5 py-5">
+              <div className="pl-5 pr-5 py-4 sm:py-5">
                 <h3 className="font-semibold text-base mb-2 truncate" style={{ color: '#1a1f3c' }}>
                   {board.name}
                 </h3>

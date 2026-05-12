@@ -77,8 +77,8 @@ export default function InvitePage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] p-4">
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full max-w-sm p-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4 py-8">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm w-full max-w-sm px-6 py-8 sm:px-8">
         <div className="flex items-center gap-2 mb-6">
           <Image src="/logo.png" width={32} height={32} alt="Fluxus" />
           <span className="font-bold text-lg" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
@@ -92,7 +92,7 @@ export default function InvitePage() {
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${mode === m ? 'text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              className={`flex-1 py-2.5 min-h-[44px] text-sm font-medium transition-colors ${mode === m ? 'text-white' : 'text-gray-500 hover:bg-gray-50'}`}
               style={mode === m ? { background: '#1a1f3c' } : {}}
             >
               {m === 'register' ? 'Create Account' : 'Sign In'}
@@ -107,7 +107,7 @@ export default function InvitePage() {
               placeholder="Full name"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               required
             />
           )}
@@ -116,7 +116,7 @@ export default function InvitePage() {
             placeholder="Email"
             value={form.email}
             onChange={e => setForm({ ...form, email: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             required
           />
           <input
@@ -124,14 +124,14 @@ export default function InvitePage() {
             placeholder="Password"
             value={form.password}
             onChange={e => setForm({ ...form, password: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             required
           />
           {authError && <p className="text-red-500 text-sm">{authError}</p>}
           <button
             type="submit"
             disabled={accepting}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+            className="w-full py-3 sm:py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white disabled:opacity-50"
             style={{ background: '#e8390e' }}
           >
             {accepting ? 'Joining...' : `Join ${invite?.boardName}`}

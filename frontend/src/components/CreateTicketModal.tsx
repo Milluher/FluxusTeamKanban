@@ -75,16 +75,16 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 flex items-end sm:items-center justify-center z-50"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl overflow-hidden bg-white shadow-xl border border-gray-200"
+        className="w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl overflow-y-auto bg-white shadow-xl border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4 flex items-center justify-between border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-base font-bold" style={{ color: '#1a1f3c' }}>New Ticket</h2>
           <button
             onClick={onClose}
@@ -95,7 +95,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1.5">
               Title <span className="text-red-500">*</span>
@@ -127,7 +127,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                 Assignee
@@ -213,23 +213,23 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
             </div>
           )}
 
-          <div className="flex gap-3 pt-1">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1 pb-2 sm:pb-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white transition-all duration-150 disabled:opacity-50"
+              className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white transition-all duration-150 disabled:opacity-50"
               style={{ background: '#e8390e' }}
               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
               onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#e8390e'; }}
             >
               {saving ? 'Creating...' : 'Create Ticket'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
-            >
-              Cancel
             </button>
           </div>
         </form>

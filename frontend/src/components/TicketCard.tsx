@@ -32,6 +32,7 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
     padding: '12px',
     cursor: 'pointer',
     position: 'relative',
+    minHeight: '72px',
     ...(isDragging
       ? {
           transform: 'rotate(1.5deg)',
@@ -66,7 +67,7 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         }
       }}
     >
-      <p className="text-sm font-medium text-gray-800 mb-2.5 line-clamp-2 leading-snug">
+      <p className="text-sm font-medium text-gray-800 mb-2.5 line-clamp-2 leading-5">
         {ticket.title}
       </p>
 
