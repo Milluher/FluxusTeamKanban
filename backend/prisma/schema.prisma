@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("standard") // "standard" | "admin"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boardMembers  BoardMember[]
+  assignedTickets Ticket[] @relation("AssigneeRelation")
+  managedTickets  Ticket[] @relation("ProductManagerRelation")
+  createdTickets  Ticket[] @relation("CreatorRelation")
+  comments        Comment[]
+}
+
+model Board {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  columns     Column[]
+  members     BoardMember[]
+}
+
+model BoardMember {
+  id      String @id @default(uuid())
+  userId  String
+  boardId String
+  role    String @default("member") // "member" | "admin"
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boardId])
+}
+
+model Column {
+  id       String @id @default(uuid())
+  name     String
+  order    Int
+  boardId  String
+
+  board   Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+}
+
+model Ticket {
+  id               String    @id @default(uuid())
+  title            String
+  description      String?
+  status           String
+  columnId         String
+  assigneeId       String?
+  productManagerId String?
+  assignedDate     DateTime?
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  order            Int       @default(0)
+
+  column         Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignee       User?    @relation("AssigneeRelation", fields: [assigneeId], references: [id])
+  productManager User?    @relation("ProductManagerRelation", fields: [productManagerId], references: [id])
+  createdBy      User     @relation("CreatorRelation", fields: [createdById], references: [id])
+  comments       Comment[]
+
+  // Self-referential many-to-many for dependencies
+  dependsOn      Dependency[] @relation("DependentTicket")
+  dependedOnBy   Dependency[] @relation("BlockingTicket")
+}
+
+model Dependency {
+  id            String @id @default(uuid())
+  ticketId      String
+  dependsOnId   String
+
+  ticket    Ticket @relation("DependentTicket", fields: [ticketId], references: [id], onDelete: Cascade)
+  dependsOn Ticket @relation("BlockingTicket", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, dependsOnId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  ticketId  String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
