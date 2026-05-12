@@ -95,12 +95,22 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Add member to board
+// Add member to board (by userId or email)
 router.post('/:id/members', authenticate, async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const { email, userId } = req.body;
+    let user;
+    if (userId) {
+      user = await prisma.user.findUnique({ where: { id: userId } });
+    } else if (email) {
+      user = await prisma.user.findUnique({ where: { email } });
+    }
     if (!user) return res.status(404).json({ error: 'User not found' });
+    // Check if already a member
+    const existing = await prisma.boardMember.findUnique({
+      where: { userId_boardId: { userId: user.id, boardId: req.params.id } },
+    });
+    if (existing) return res.status(409).json({ error: 'User is already a member of this board' });
     const member = await prisma.boardMember.create({
       data: { userId: user.id, boardId: req.params.id },
       include: { user: { select: { id: true, name: true, email: true } } },

@@ -333,7 +333,11 @@ export default function BoardPage() {
       {showInviteModal && (
         <InviteMemberModal
           boardId={boardId}
+          boardMemberIds={board.members.map(m => m.user.id)}
           onClose={() => setShowInviteModal(false)}
+          onMemberAdded={(member) => {
+            setBoard((prev) => prev ? { ...prev, members: [...prev.members, member] } : prev);
+          }}
         />
       )}
     </div>
