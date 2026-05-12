@@ -10,30 +10,30 @@ interface Props {
   columnColor?: string;
 }
 
-export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#6366f1' }: Props) {
+export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#e8390e' }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({ id: ticket.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isSortableDragging ? 0.3 : 1,
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderLeft: `3px solid ${columnColor}`,
-    borderRadius: '12px',
-    padding: '14px',
+    opacity: isSortableDragging ? 0.35 : 1,
+    background: 'white',
+    border: '1px solid #e5e7eb',
+    borderRadius: '10px',
+    padding: '12px',
     cursor: 'pointer',
     position: 'relative',
     ...(isDragging
-      ? { transform: 'rotate(2deg)', boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${columnColor}44` }
+      ? {
+          transform: 'rotate(1.5deg)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          border: '1px solid #e8390e',
+        }
       : {}),
   };
 
   const commentCount = ticket._count?.comments ?? ticket.comments?.length ?? 0;
   const depCount = ticket.dependsOn?.length ?? 0;
-
-  const avatarColors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f43f5e', '#f59e0b'];
-  const getAvatarColor = (name: string) => avatarColors[name.charCodeAt(0) % avatarColors.length];
 
   return (
     <div
@@ -45,47 +45,38 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
       onMouseEnter={(e) => {
         if (!isSortableDragging) {
           const el = e.currentTarget as HTMLDivElement;
-          el.style.background = 'rgba(255,255,255,0.1)';
-          el.style.transform = CSS.Transform.toString(transform) + ' translateY(-2px)';
-          el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.12)`;
+          el.style.borderColor = '#e8390e';
+          el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isSortableDragging) {
           const el = e.currentTarget as HTMLDivElement;
-          el.style.background = 'rgba(255,255,255,0.06)';
-          el.style.transform = CSS.Transform.toString(transform) || '';
+          el.style.borderColor = '#e5e7eb';
           el.style.boxShadow = 'none';
         }
       }}
     >
-      <p className="text-sm font-semibold text-white mb-3 line-clamp-2 leading-snug pr-1">
+      <p className="text-sm font-medium text-gray-800 mb-2.5 line-clamp-2 leading-snug">
         {ticket.title}
       </p>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {ticket.assignee && (
             <div
               title={ticket.assignee.name}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-              style={{
-                background: getAvatarColor(ticket.assignee.name),
-                boxShadow: '0 0 0 2px rgba(15,23,42,0.8)',
-              }}
+              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+              style={{ background: '#1a1f3c' }}
             >
               {ticket.assignee.name.charAt(0).toUpperCase()}
             </div>
           )}
           {depCount > 0 && (
             <span
-              className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+              className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-500"
               title={`${depCount} dependenc${depCount === 1 ? 'y' : 'ies'}`}
-              style={{
-                background: 'rgba(245,158,11,0.15)',
-                color: '#fbbf24',
-                border: '1px solid rgba(245,158,11,0.25)',
-              }}
+              style={{ background: '#f3f4f6' }}
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -98,12 +89,8 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
 
         {commentCount > 0 && (
           <span
-            className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-            style={{
-              background: 'rgba(99,102,241,0.12)',
-              color: 'rgba(165,180,252,0.9)',
-              border: '1px solid rgba(99,102,241,0.2)',
-            }}
+            className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-400"
+            style={{ background: '#f3f4f6' }}
           >
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>

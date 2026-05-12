@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Image from 'next/image';
 import {
   DndContext,
   DragEndEvent,
@@ -179,11 +180,13 @@ export default function BoardPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f172a' }}>
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 rounded-xl animate-pulse"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }} />
-        <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading board...</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa]">
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="w-8 h-8 rounded-lg animate-pulse"
+          style={{ background: '#1a1f3c' }}
+        />
+        <p className="text-sm text-gray-400">Loading board...</p>
       </div>
     </div>
   );
@@ -191,69 +194,61 @@ export default function BoardPage() {
   if (!board) return null;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#0f172a' }}>
+    <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
       {/* Navbar */}
-      <nav className="px-6 py-3.5 flex items-center justify-between flex-shrink-0 sticky top-0 z-10"
-        style={{
-          background: 'rgba(15,23,42,0.85)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}>
+      <nav className="bg-white border-b border-gray-200 px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-10 h-14">
         <div className="flex items-center gap-3">
+          {/* Logo */}
+          <Image src="/logo.png" width={26} height={26} alt="Fluxus" className="rounded-md" />
+
+          {/* Back link */}
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1.5 text-sm font-medium transition-all duration-200 px-2.5 py-1.5 rounded-lg"
-            style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+            className="flex items-center gap-1 text-sm font-medium text-gray-400 transition-all duration-150 hover:text-gray-800"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M19 12H5M12 5l-7 7 7 7"/>
             </svg>
-            Boards
+            Back
           </button>
-          <span style={{ color: 'rgba(255,255,255,0.15)' }}>/</span>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="8" height="5" rx="1.5" fill="white"/>
-                <rect x="13" y="3" width="8" height="11" rx="1.5" fill="white" opacity="0.7"/>
-              </svg>
-            </div>
-            <h1 className="font-bold text-white text-sm">{board.name}</h1>
-          </div>
+
+          <span className="text-gray-300">/</span>
+
+          <h1 className="font-semibold text-sm" style={{ color: '#1a1f3c' }}>{board.name}</h1>
         </div>
+
         <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
-            {board.members.slice(0, 5).map((m, i) => {
-              const colors = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f43f5e'];
-              return (
-                <div
-                  key={m.id}
-                  title={m.user.name}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2"
-                  style={{
-                    background: colors[i % colors.length],
-                    boxShadow: '0 0 0 2px #0f172a',
-                  }}
-                >
-                  {m.user.name.charAt(0).toUpperCase()}
-                </div>
-              );
-            })}
+          {/* Member avatars */}
+          <div className="flex -space-x-1.5">
+            {board.members.slice(0, 5).map((m) => (
+              <div
+                key={m.id}
+                title={m.user.name}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white flex-shrink-0"
+                style={{ background: '#1a1f3c' }}
+              >
+                {m.user.name.charAt(0).toUpperCase()}
+              </div>
+            ))}
           </div>
+
+          {/* Invite button */}
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-xl transition-all duration-200"
+            className="flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150"
             style={{
-              background: 'rgba(99,102,241,0.15)',
-              color: '#a5b4fc',
-              border: '1px solid rgba(99,102,241,0.3)',
+              color: '#e8390e',
+              borderColor: '#e8390e',
+              background: 'white',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99,102,241,0.25)'; e.currentTarget.style.border = '1px solid rgba(99,102,241,0.5)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(99,102,241,0.15)'; e.currentTarget.style.border = '1px solid rgba(99,102,241,0.3)'; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#e8390e';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.color = '#e8390e';
+            }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -274,7 +269,7 @@ export default function BoardPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-5 h-full" style={{ minHeight: 'calc(100vh - 120px)' }}>
+          <div className="flex gap-4 h-full" style={{ minHeight: 'calc(100vh - 120px)' }}>
             {board.columns.map((col) => (
               <KanbanColumn
                 key={col.id}
