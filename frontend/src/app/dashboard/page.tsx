@@ -166,29 +166,26 @@ export default function DashboardPage() {
         )}
 
         {/* Boards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {boards.map((board) => (
+        {(() => {
+          const myBoards = boards.filter((b) => (b as any).userRole === 'admin');
+          const sharedBoards = boards.filter((b) => (b as any).userRole !== 'admin');
+
+          const BoardCard = ({ board }: { board: typeof boards[0] }) => (
             <div
               key={board.id}
               onClick={() => router.push(`/board/${board.id}`)}
-              className="bg-white border border-gray-200 rounded-xl cursor-pointer transition-all duration-150 group relative overflow-hidden hover:shadow-sm"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#e8390e';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb';
-              }}
+              className="bg-white border border-gray-200 rounded-xl cursor-pointer transition-all duration-150 relative overflow-hidden hover:shadow-sm"
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#e8390e'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
             >
-              {/* Left orange bar */}
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
-                style={{ background: '#e8390e' }}
-              />
-
+              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style={{ background: '#e8390e' }} />
               <div className="pl-5 pr-5 py-4 sm:py-5">
-                <h3 className="font-semibold text-base mb-2 truncate" style={{ color: '#1a1f3c' }}>
-                  {board.name}
-                </h3>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-semibold text-base truncate" style={{ color: '#1a1f3c' }}>{board.name}</h3>
+                  {(board as any).userRole !== 'admin' && (
+                    <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 font-medium">Shared</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-4 text-xs text-gray-400">
                   <span className="flex items-center gap-1.5">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -205,15 +202,12 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          ))}
+          );
 
-          {boards.length === 0 && !showCreate && (
-            <div className="col-span-3 text-center py-20">
-              <div
-                className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-4 border border-gray-200"
-                style={{ background: '#f7f8fa' }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          if (boards.length === 0 && !showCreate) return (
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-4 border border-gray-200" style={{ background: '#f7f8fa' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="3" width="8" height="5" rx="1.5" fill="#d1d5db"/>
                   <rect x="3" y="10" width="8" height="11" rx="1.5" fill="#e5e7eb"/>
                   <rect x="13" y="3" width="8" height="11" rx="1.5" fill="#d1d5db"/>
@@ -222,18 +216,33 @@ export default function DashboardPage() {
               </div>
               <p className="text-base font-semibold text-gray-700 mb-1">No boards yet</p>
               <p className="text-sm text-gray-400 mb-5">Create your first board to start collaborating</p>
-              <button
-                onClick={() => setShowCreate(true)}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-150"
-                style={{ background: '#e8390e' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#c73009'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
-              >
+              <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: '#e8390e' }}>
                 Create your first board
               </button>
             </div>
-          )}
-        </div>
+          );
+
+          return (
+            <div className="space-y-8">
+              {myBoards.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">My Boards</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {myBoards.map((board) => <BoardCard key={board.id} board={board} />)}
+                  </div>
+                </div>
+              )}
+              {sharedBoards.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Shared with me</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sharedBoards.map((board) => <BoardCard key={board.id} board={board} />)}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </main>
       {showProfile && user && (
         <ProfileModal

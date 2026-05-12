@@ -13,9 +13,15 @@ router.get('/', authenticate, async (req, res) => {
       include: {
         _count: { select: { members: true } },
         columns: { orderBy: { order: 'asc' }, select: { id: true, name: true, order: true, _count: { select: { tickets: true } } } },
+        members: { where: { userId: req.user.id }, select: { role: true } },
       },
     });
-    res.json(boards);
+    // Attach userRole at the top level for convenience
+    const result = boards.map((b) => ({
+      ...b,
+      userRole: b.members[0]?.role ?? 'member',
+    }));
+    res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
