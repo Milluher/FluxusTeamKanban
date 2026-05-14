@@ -107,6 +107,11 @@ export default function BoardPage() {
       });
     });
 
+    socket.on('member-removed', ({ userId }: { userId: string }) => {
+      if (userId === currentUser?.id) { router.push('/dashboard'); return; }
+      setBoard((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.user.id !== userId) } : prev);
+    });
+
     return () => {
       socket.emit('leave-board', boardId);
       socket.off('ticket-created');
@@ -114,9 +119,17 @@ export default function BoardPage() {
       socket.off('ticket-moved');
       socket.off('ticket-deleted');
       socket.off('comment-added');
+      socket.off('member-removed');
       socket.disconnect();
     };
   }, [board?.id]);
+
+  const removeMember = async (userId: string) => {
+    try {
+      await api.delete(`/boards/${boardId}/members/${userId}`);
+      setBoard((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.user.id !== userId) } : prev);
+    } catch { /* handled by socket */ }
+  };
 
   const loadBoard = async () => {
     try {
@@ -264,15 +277,29 @@ export default function BoardPage() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-1 pb-2">
                   {board.members.length} {board.members.length === 1 ? 'Member' : 'Members'}
                 </p>
-                {board.members.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors">
-                    <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
-                      <p className="text-xs text-gray-400 capitalize">{m.role}</p>
+                {board.members.map((m) => {
+                  const isCurrentUserBoardAdmin = board.members.find(bm => bm.user.id === currentUser?.id)?.role === 'admin';
+                  return (
+                    <div key={m.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors group">
+                      <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
+                        <p className="text-xs text-gray-400 capitalize">{m.role}</p>
+                      </div>
+                      {isCurrentUserBoardAdmin && m.user.id !== currentUser?.id && (
+                        <button
+                          onClick={() => removeMember(m.user.id)}
+                          title="Remove from board"
+                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -315,15 +342,19 @@ export default function BoardPage() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
-            {board.columns.map((col) => (
-              <KanbanColumn
-                key={col.id}
-                column={col}
-                onTicketClick={(ticket) => setSelectedTicket(ticket)}
-                onAddTicket={(columnId) => { setCreateColumnId(columnId); setShowCreateModal(true); }}
-                boardId={boardId}
-              />
-            ))}
+            {(() => {
+              const activeMemberIds = new Set(board.members.map((m) => m.user.id));
+              return board.columns.map((col) => (
+                <KanbanColumn
+                  key={col.id}
+                  column={col}
+                  onTicketClick={(ticket) => setSelectedTicket(ticket)}
+                  onAddTicket={(columnId) => { setCreateColumnId(columnId); setShowCreateModal(true); }}
+                  boardId={boardId}
+                  activeMemberIds={activeMemberIds}
+                />
+              ));
+            })()}
           </div>
           <DragOverlay>
             {activeTicket && <TicketCard ticket={activeTicket} onClick={() => {}} isDragging />}

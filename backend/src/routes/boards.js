@@ -130,6 +130,7 @@ router.delete('/:id/members/:userId', authenticate, async (req, res) => {
     await prisma.boardMember.deleteMany({
       where: { userId: req.params.userId, boardId: req.params.id },
     });
+    req.io.to(`board:${req.params.id}`).emit('member-removed', { userId: req.params.userId });
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });

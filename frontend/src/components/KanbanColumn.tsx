@@ -9,6 +9,7 @@ interface Props {
   onTicketClick: (ticket: Ticket) => void;
   onAddTicket: (columnId: string) => void;
   boardId: string;
+  activeMemberIds: Set<string>;
 }
 
 const columnConfig: Record<string, { dot: string; badgeBg: string; badgeText: string }> = {
@@ -21,7 +22,7 @@ const columnConfig: Record<string, { dot: string; badgeBg: string; badgeText: st
 
 const defaultConfig = { dot: '#94a3b8', badgeBg: '#f1f5f9', badgeText: '#475569' };
 
-export default function KanbanColumn({ column, onTicketClick, onAddTicket }: Props) {
+export default function KanbanColumn({ column, onTicketClick, onAddTicket, activeMemberIds }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   const cfg = columnConfig[column.name] || defaultConfig;
@@ -79,6 +80,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket }: Pro
                 ticket={ticket}
                 onClick={() => onTicketClick(ticket)}
                 columnColor={cfg.dot}
+                activeMemberIds={activeMemberIds}
               />
             ))}
           </div>

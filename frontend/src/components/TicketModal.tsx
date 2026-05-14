@@ -41,6 +41,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
   const [showDepSearch, setShowDepSearch] = useState(false);
 
   const members = board.members.map((m) => m.user);
+  const activeMemberIds = new Set(members.map((u) => u.id));
+
+  // Include removed-but-still-assigned users in dropdowns
+  const assigneeOptions = ticket.assignee && !activeMemberIds.has(ticket.assignee.id)
+    ? [...members, ticket.assignee] : members;
+  const pmOptions = ticket.productManager && !activeMemberIds.has(ticket.productManager.id)
+    ? [...members, ticket.productManager] : members;
 
   const save = async () => {
     setSaving(true);
@@ -233,15 +240,22 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                       {...inputFocusHandlers}
                     >
                       <option value="">Unassigned</option>
-                      {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      {assigneeOptions.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}{!activeMemberIds.has(u.id) ? ' (inactive)' : ''}
+                        </option>
+                      ))}
                     </select>
                   ),
-                  viewEl: ticket.assignee ? (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <img src={avatarUrl(ticket.assignee.name)} className="w-7 h-7 rounded-full" alt={ticket.assignee.name} />
-                      <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}</span>
-                    </div>
-                  ) : <p className="mt-1.5 text-sm text-gray-400">Unassigned</p>,
+                  viewEl: ticket.assignee ? (() => {
+                    const inactive = !activeMemberIds.has(ticket.assignee!.id);
+                    return (
+                      <div className={`mt-1.5 flex items-center gap-2 ${inactive ? 'opacity-50' : ''}`}>
+                        <img src={avatarUrl(ticket.assignee.name)} className={`w-7 h-7 rounded-full ${inactive ? 'grayscale' : ''}`} alt={ticket.assignee.name} />
+                        <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}{inactive ? <span className="text-xs text-gray-400 ml-1">(inactive)</span> : ''}</span>
+                      </div>
+                    );
+                  })() : <p className="mt-1.5 text-sm text-gray-400">Unassigned</p>,
                 },
                 {
                   label: 'Product Manager',
@@ -255,15 +269,22 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                       {...inputFocusHandlers}
                     >
                       <option value="">None</option>
-                      {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      {pmOptions.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}{!activeMemberIds.has(u.id) ? ' (inactive)' : ''}
+                        </option>
+                      ))}
                     </select>
                   ),
-                  viewEl: ticket.productManager ? (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <img src={avatarUrl(ticket.productManager.name)} className="w-7 h-7 rounded-full" alt={ticket.productManager.name} />
-                      <span className="text-sm font-medium text-gray-800">{ticket.productManager.name}</span>
-                    </div>
-                  ) : <p className="mt-1.5 text-sm text-gray-400">None</p>,
+                  viewEl: ticket.productManager ? (() => {
+                    const inactive = !activeMemberIds.has(ticket.productManager!.id);
+                    return (
+                      <div className={`mt-1.5 flex items-center gap-2 ${inactive ? 'opacity-50' : ''}`}>
+                        <img src={avatarUrl(ticket.productManager.name)} className={`w-7 h-7 rounded-full ${inactive ? 'grayscale' : ''}`} alt={ticket.productManager.name} />
+                        <span className="text-sm font-medium text-gray-800">{ticket.productManager.name}{inactive ? <span className="text-xs text-gray-400 ml-1">(inactive)</span> : ''}</span>
+                      </div>
+                    );
+                  })() : <p className="mt-1.5 text-sm text-gray-400">None</p>,
                 },
                 {
                   label: 'Assigned Date',
@@ -493,26 +514,31 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                   <p className="text-xs text-gray-400">No comments yet</p>
                 </div>
               )}
-              {(ticket.comments || []).map((c) => (
-                <div key={c.id} className="flex gap-2.5">
-                  <img
-                    src={avatarUrl(c.author.name)}
-                    className="w-7 h-7 rounded-full flex-shrink-0 mt-0.5"
-                    alt={c.author.name}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-xs font-semibold text-gray-800">{c.author.name}</span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <div className="rounded-lg px-3 py-2 text-sm leading-relaxed bg-gray-50 border border-gray-100 text-gray-700">
-                      {c.content}
+              {(ticket.comments || []).map((c) => {
+                const inactive = !activeMemberIds.has(c.authorId);
+                return (
+                  <div key={c.id} className="flex gap-2.5">
+                    <img
+                      src={avatarUrl(c.author.name)}
+                      className={`w-7 h-7 rounded-full flex-shrink-0 mt-0.5 ${inactive ? 'grayscale opacity-40' : ''}`}
+                      alt={c.author.name}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className={`text-xs font-semibold ${inactive ? 'text-gray-400' : 'text-gray-800'}`}>
+                          {c.author.name}{inactive ? ' (inactive)' : ''}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div className={`rounded-lg px-3 py-2 text-sm leading-relaxed border ${inactive ? 'bg-gray-50 border-gray-100 text-gray-400' : 'bg-gray-50 border-gray-100 text-gray-700'}`}>
+                        {c.content}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Comment input */}

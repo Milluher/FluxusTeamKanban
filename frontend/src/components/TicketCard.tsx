@@ -17,9 +17,10 @@ interface Props {
   onClick: () => void;
   isDragging?: boolean;
   columnColor?: string;
+  activeMemberIds?: Set<string>;
 }
 
-export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#e8390e' }: Props) {
+export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#e8390e', activeMemberIds }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({ id: ticket.id });
 
   const style: React.CSSProperties = {
@@ -81,14 +82,17 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          {ticket.assignee && (
-            <img
-              src={avatarUrl(ticket.assignee.name)}
-              title={ticket.assignee.name}
-              className="w-6 h-6 rounded-full flex-shrink-0"
-              alt={ticket.assignee.name}
-            />
-          )}
+          {ticket.assignee && (() => {
+            const inactive = activeMemberIds ? !activeMemberIds.has(ticket.assignee!.id) : false;
+            return (
+              <img
+                src={avatarUrl(ticket.assignee.name)}
+                title={`${ticket.assignee.name}${inactive ? ' (inactive)' : ''}`}
+                className={`w-6 h-6 rounded-full flex-shrink-0 ${inactive ? 'grayscale opacity-40' : ''}`}
+                alt={ticket.assignee.name}
+              />
+            );
+          })()}
           {depCount > 0 && (
             <span
               className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-500"
