@@ -12,11 +12,12 @@ router.post('/register', async (req, res) => {
     const { email, name, password } = req.body;
     if (!email || !name || !password)
       return res.status(400).json({ error: 'All fields required' });
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) return res.status(409).json({ error: 'Email already in use' });
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, name, password: hashed },
+      data: { email: normalizedEmail, name, password: hashed },
       select: { id: true, email: true, name: true, role: true },
     });
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
@@ -29,7 +30,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });

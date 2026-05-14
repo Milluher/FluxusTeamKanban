@@ -40,25 +40,107 @@ export default function AuthPage() {
 
         {/* Illustration */}
         <div className="flex justify-center mb-6">
-          <svg width="168" height="96" viewBox="0 0 168 96" fill="none" aria-hidden="true">
-            {/* Column 1 */}
-            <rect x="4" y="10" width="46" height="76" rx="8" fill="white" stroke="#e5e7eb" strokeWidth="1.5"/>
-            <rect x="14" y="20" width="26" height="4" rx="2" fill="#d1d5db"/>
-            <rect x="14" y="30" width="26" height="13" rx="4" fill="#f3f4f6"/>
-            <rect x="14" y="47" width="26" height="13" rx="4" fill="#f3f4f6"/>
-            <rect x="14" y="64" width="16" height="13" rx="4" fill="#f3f4f6"/>
-            {/* Column 2 — highlighted */}
-            <rect x="61" y="10" width="46" height="76" rx="8" fill="white" stroke="#e8390e" strokeWidth="1.5" strokeOpacity="0.35"/>
-            <rect x="71" y="20" width="26" height="4" rx="2" fill="#e8390e" fillOpacity="0.5"/>
-            <rect x="71" y="30" width="26" height="13" rx="4" fill="#fef2f0"/>
-            <rect x="71" y="30" width="4" height="13" rx="2" fill="#e8390e" fillOpacity="0.7"/>
-            <rect x="71" y="47" width="26" height="13" rx="4" fill="#f3f4f6"/>
-            <rect x="71" y="64" width="20" height="13" rx="4" fill="#f3f4f6"/>
-            {/* Column 3 */}
-            <rect x="118" y="10" width="46" height="76" rx="8" fill="white" stroke="#e5e7eb" strokeWidth="1.5"/>
-            <rect x="128" y="20" width="26" height="4" rx="2" fill="#d1d5db"/>
-            <rect x="128" y="30" width="26" height="13" rx="4" fill="#f3f4f6"/>
-            <rect x="128" y="47" width="14" height="13" rx="4" fill="#f3f4f6"/>
+          <svg width="280" height="148" viewBox="0 0 280 148" fill="none" aria-hidden="true">
+            {/* Background subtle glow */}
+            <ellipse cx="140" cy="120" rx="110" ry="20" fill="#e8390e" fillOpacity="0.04"/>
+
+            {/* ── Left figure ── */}
+            {/* Body */}
+            <path d="M28 118 Q28 96 44 96 Q60 96 60 118" fill="#1a1f3c" fillOpacity="0.08"/>
+            {/* Torso */}
+            <rect x="34" y="96" width="20" height="22" rx="6" fill="#1a1f3c" fillOpacity="0.13"/>
+            {/* Head */}
+            <circle cx="44" cy="86" r="10" fill="#1a1f3c" fillOpacity="0.18"/>
+            {/* Face highlight */}
+            <circle cx="41" cy="85" r="2.5" fill="white" fillOpacity="0.5"/>
+            {/* Left arm reaching toward board */}
+            <path d="M54 102 Q68 98 76 95" stroke="#1a1f3c" strokeOpacity="0.2" strokeWidth="3.5" strokeLinecap="round"/>
+            {/* Floating card from left figure */}
+            <rect x="18" y="62" width="32" height="18" rx="5" fill="white" stroke="#e5e7eb" strokeWidth="1.2"/>
+            <rect x="24" y="67" width="18" height="3" rx="1.5" fill="#d1d5db"/>
+            <rect x="24" y="72" width="12" height="3" rx="1.5" fill="#e8390e" fillOpacity="0.4"/>
+            {/* Dotted line from card to board */}
+            <line x1="50" y1="71" x2="76" y2="71" stroke="#e8390e" strokeOpacity="0.25" strokeWidth="1.2" strokeDasharray="3 3"/>
+
+            {/* ── Kanban board (center) ── */}
+            {/* Board shadow */}
+            <rect x="78" y="22" width="124" height="106" rx="12" fill="#1a1f3c" fillOpacity="0.06"/>
+            {/* Board background */}
+            <rect x="76" y="20" width="124" height="106" rx="12" fill="white" stroke="#e5e7eb" strokeWidth="1.5"/>
+            {/* Board top bar */}
+            <rect x="76" y="20" width="124" height="16" rx="12" fill="#1a1f3c" fillOpacity="0.04"/>
+            <rect x="76" y="28" width="124" height="8" fill="#1a1f3c" fillOpacity="0.04"/>
+            {/* Top bar dots */}
+            <circle cx="89" cy="28" r="3" fill="#e8390e" fillOpacity="0.5"/>
+            <circle cx="99" cy="28" r="3" fill="#f59e0b" fillOpacity="0.5"/>
+            <circle cx="109" cy="28" r="3" fill="#34d399" fillOpacity="0.5"/>
+
+            {/* Column 1 — Backlog */}
+            <rect x="84" y="44" width="34" height="74" rx="7" fill="#f8fafc" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="90" y="50" width="22" height="3.5" rx="1.5" fill="#94a3b8"/>
+            <rect x="90" y="58" width="22" height="12" rx="4" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="93" y="61" width="12" height="2.5" rx="1" fill="#cbd5e1"/>
+            <rect x="93" y="65" width="8" height="2.5" rx="1" fill="#e2e8f0"/>
+            <rect x="90" y="74" width="22" height="12" rx="4" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="93" y="77" width="14" height="2.5" rx="1" fill="#cbd5e1"/>
+            <rect x="93" y="81" width="10" height="2.5" rx="1" fill="#e2e8f0"/>
+            <rect x="90" y="90" width="16" height="12" rx="4" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="93" y="93" width="8" height="2.5" rx="1" fill="#e2e8f0"/>
+            <rect x="93" y="97" width="6" height="2.5" rx="1" fill="#e2e8f0"/>
+
+            {/* Column 2 — In Progress (highlighted, orange accent) */}
+            <rect x="123" y="44" width="34" height="74" rx="7" fill="#fff8f6" stroke="#e8390e" strokeWidth="1.2" strokeOpacity="0.4"/>
+            <rect x="129" y="50" width="22" height="3.5" rx="1.5" fill="#e8390e" fillOpacity="0.55"/>
+            {/* Active card — elevated */}
+            <rect x="126" y="56" width="28" height="15" rx="5" fill="white" stroke="#e8390e" strokeWidth="1.2" strokeOpacity="0.5"/>
+            <rect x="126" y="55" width="28" height="15" rx="5" fill="white"/>
+            <rect x="126" y="55" width="4" height="15" rx="3" fill="#e8390e" fillOpacity="0.75"/>
+            <rect x="133" y="58" width="16" height="2.5" rx="1" fill="#1a1f3c" fillOpacity="0.3"/>
+            <rect x="133" y="63" width="10" height="2.5" rx="1" fill="#e8390e" fillOpacity="0.35"/>
+            {/* Small avatar dot on active card */}
+            <circle cx="148" cy="66" r="3" fill="#e8390e" fillOpacity="0.4"/>
+            <rect x="129" y="74" width="22" height="12" rx="4" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="132" y="77" width="12" height="2.5" rx="1" fill="#cbd5e1"/>
+            <rect x="132" y="81" width="8" height="2.5" rx="1" fill="#e2e8f0"/>
+            <rect x="129" y="90" width="22" height="12" rx="4" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="132" y="93" width="16" height="2.5" rx="1" fill="#cbd5e1"/>
+            <rect x="132" y="97" width="10" height="2.5" rx="1" fill="#e2e8f0"/>
+
+            {/* Column 3 — Done (green accent) */}
+            <rect x="162" y="44" width="34" height="74" rx="7" fill="#f0fdf9" stroke="#34d399" strokeWidth="1" strokeOpacity="0.4"/>
+            <rect x="168" y="50" width="22" height="3.5" rx="1.5" fill="#34d399" fillOpacity="0.6"/>
+            <rect x="168" y="58" width="22" height="12" rx="4" fill="white" stroke="#34d399" strokeWidth="1" strokeOpacity="0.4"/>
+            {/* Checkmark on done card */}
+            <path d="M173 64 L175.5 66.5 L180 62" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <rect x="168" y="74" width="22" height="12" rx="4" fill="white" stroke="#34d399" strokeWidth="1" strokeOpacity="0.4"/>
+            <path d="M173 80 L175.5 82.5 L180 78" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <rect x="168" y="90" width="14" height="12" rx="4" fill="white" stroke="#e5e7eb" strokeWidth="1"/>
+            <rect x="171" y="93" width="6" height="2.5" rx="1" fill="#e2e8f0"/>
+
+            {/* ── Right figure ── */}
+            {/* Body */}
+            <path d="M220 118 Q220 96 236 96 Q252 96 252 118" fill="#e8390e" fillOpacity="0.1"/>
+            {/* Torso */}
+            <rect x="226" y="96" width="20" height="22" rx="6" fill="#e8390e" fillOpacity="0.15"/>
+            {/* Head */}
+            <circle cx="236" cy="86" r="10" fill="#e8390e" fillOpacity="0.22"/>
+            {/* Face highlight */}
+            <circle cx="233" cy="85" r="2.5" fill="white" fillOpacity="0.6"/>
+            {/* Right arm reaching toward board */}
+            <path d="M226 102 Q212 98 204 95" stroke="#e8390e" strokeOpacity="0.2" strokeWidth="3.5" strokeLinecap="round"/>
+            {/* Floating card from right figure */}
+            <rect x="230" y="55" width="36" height="18" rx="5" fill="white" stroke="#34d399" strokeWidth="1.2" strokeOpacity="0.6"/>
+            <rect x="236" y="60" width="18" height="2.5" rx="1" fill="#34d399" fillOpacity="0.5"/>
+            <path d="M237 65 L239 67.5 L244 63" stroke="#34d399" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            {/* Dotted line from board to right card */}
+            <line x1="200" y1="65" x2="228" y2="64" stroke="#34d399" strokeOpacity="0.3" strokeWidth="1.2" strokeDasharray="3 3"/>
+
+            {/* Floating spark / confetti accents */}
+            <circle cx="140" cy="14" r="3" fill="#e8390e" fillOpacity="0.35"/>
+            <circle cx="155" cy="10" r="2" fill="#34d399" fillOpacity="0.4"/>
+            <circle cx="125" cy="12" r="2" fill="#1a1f3c" fillOpacity="0.15"/>
+            <circle cx="67" cy="44" r="2" fill="#e8390e" fillOpacity="0.2"/>
+            <circle cx="213" cy="42" r="2" fill="#34d399" fillOpacity="0.25"/>
           </svg>
         </div>
 
