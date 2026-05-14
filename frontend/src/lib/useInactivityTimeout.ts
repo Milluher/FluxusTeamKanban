@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
 
 export function useInactivityTimeout(timeoutMs: number = 10 * 60 * 1000) {
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
+  const logout = useCallback(async () => {
+    await api.post('/auth/logout').catch(() => {});
     localStorage.removeItem('user');
     router.push('/');
   }, [router]);

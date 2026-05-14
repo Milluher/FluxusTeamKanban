@@ -22,7 +22,6 @@ export default function AuthPage() {
         ? { email: form.email, password: form.password }
         : form;
       const { data } = await api.post(endpoint, payload);
-      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       router.push('/dashboard');
     } catch (err: any) {

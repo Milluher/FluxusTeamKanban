@@ -44,8 +44,8 @@ export default function DashboardPage() {
     } finally { setCreating(false); }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    await api.post('/auth/logout').catch(() => {});
     localStorage.removeItem('user');
     router.push('/');
   };

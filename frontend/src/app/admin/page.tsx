@@ -19,6 +19,9 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState('');
   const [resetMsg, setResetMsg] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -28,6 +31,12 @@ export default function AdminPage() {
     setCurrentUser(u);
     api.get('/admin/users').then(({ data }) => setUsers(data)).finally(() => setLoading(false));
   }, []);
+
+  const logout = async () => {
+    await api.post('/auth/logout').catch(() => {});
+    localStorage.removeItem('user');
+    router.push('/');
+  };
 
   const resetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +50,19 @@ export default function AdminPage() {
     } catch (e: any) {
       setResetMsg(e.response?.data?.error || 'Failed');
     } finally { setResetting(false); }
+  };
+
+  const deleteUser = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    setDeleteMsg('');
+    try {
+      await api.delete(`/admin/users/${deleteConfirm.id}`);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteConfirm.id));
+      setDeleteConfirm(null);
+    } catch (e: any) {
+      setDeleteMsg(e.response?.data?.error || 'Failed to delete user');
+    } finally { setDeleting(false); }
   };
 
   if (loading) return (
@@ -60,7 +82,7 @@ export default function AdminPage() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">← <span className="hidden sm:inline ml-1">Dashboard</span></button>
-          <button onClick={() => { localStorage.clear(); router.push('/'); }} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">Logout</button>
+          <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">Logout</button>
         </div>
       </nav>
 
@@ -82,12 +104,20 @@ export default function AdminPage() {
                 </div>
               </div>
               {u.id !== currentUser?.id && (
-                <button
-                  onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
-                  className="text-xs border border-gray-200 rounded-lg px-3 py-2 text-gray-600 min-h-[36px] flex-shrink-0 ml-3"
-                >
-                  Reset
-                </button>
+                <div className="flex flex-col gap-1.5 flex-shrink-0 ml-3">
+                  <button
+                    onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
+                    className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]"
+                  >
+                    Reset pw
+                  </button>
+                  <button
+                    onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }}
+                    className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-500 min-h-[32px]"
+                  >
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
           ))}
@@ -123,12 +153,20 @@ export default function AdminPage() {
                   <td className="px-5 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="px-5 py-3 text-right">
                     {u.id !== currentUser?.id && (
-                      <button
-                        onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
-                        className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors"
-                      >
-                        Reset Password
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
+                          className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors"
+                        >
+                          Reset Password
+                        </button>
+                        <button
+                          onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }}
+                          className="text-xs text-red-500 hover:text-red-700 border border-red-200 rounded px-2 py-1 hover:border-red-400 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -138,6 +176,7 @@ export default function AdminPage() {
         </div>
       </main>
 
+      {/* Reset Password Modal */}
       {resetModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setResetModal(null)}>
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
@@ -166,6 +205,43 @@ export default function AdminPage() {
                 {resetting ? 'Resetting...' : 'Reset Password'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-red-600">Delete User</h3>
+              <button onClick={() => setDeleteConfirm(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+            </div>
+            <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+              <img src={avatarUrl(deleteConfirm.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={deleteConfirm.name} />
+              <div>
+                <p className="font-medium text-sm text-gray-900">{deleteConfirm.name}</p>
+                <p className="text-xs text-gray-500">{deleteConfirm.email}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">This will permanently remove <strong>{deleteConfirm.name}</strong> from the workspace.</p>
+            <p className="text-xs text-gray-400 mb-5">Their ticket history will be preserved. Board memberships and comments will be removed.</p>
+            {deleteMsg && <p className="text-sm text-red-500 mb-3">{deleteMsg}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteUser}
+                disabled={deleting}
+                className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete User'}
+              </button>
+            </div>
           </div>
         </div>
       )}

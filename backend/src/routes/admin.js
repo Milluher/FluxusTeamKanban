@@ -43,4 +43,31 @@ router.delete('/boards/:boardId/members/:userId', authenticate, requireAdmin, as
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
+// Delete user from workspace (admin only, cannot delete self)
+router.delete('/users/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    if (targetId === req.user.id)
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+
+    const target = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    // Transfer ticket ownership (createdById is non-nullable) to the admin performing the action
+    await prisma.ticket.updateMany({
+      where: { createdById: targetId },
+      data: { createdById: req.user.id },
+    });
+
+    // Nullify optional ticket references
+    await prisma.ticket.updateMany({ where: { assigneeId: targetId }, data: { assigneeId: null } });
+    await prisma.ticket.updateMany({ where: { productManagerId: targetId }, data: { productManagerId: null } });
+
+    // Delete user — BoardMember and Comment cascade automatically
+    await prisma.user.delete({ where: { id: targetId } });
+
+    res.json({ success: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
 module.exports = router;

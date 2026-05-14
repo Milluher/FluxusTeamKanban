@@ -7,6 +7,18 @@ const { JWT_SECRET } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const isProd = process.env.NODE_ENV === 'production';
+
+function setCookieToken(res, token) {
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/',
+  });
+}
+
 router.post('/register', async (req, res) => {
   try {
     const { email, name, password } = req.body;
@@ -21,7 +33,8 @@ router.post('/register', async (req, res) => {
       select: { id: true, email: true, name: true, role: true },
     });
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ user, token });
+    setCookieToken(res, token);
+    res.json({ user });
   } catch (e) {
     console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
@@ -35,10 +48,21 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, token });
+    setCookieToken(res, token);
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (e) {
     console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
+});
+
+router.post('/logout', (_req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
+  });
+  res.json({ success: true });
 });
 
 router.get('/me', require('../middleware/auth').authenticate, async (req, res) => {
