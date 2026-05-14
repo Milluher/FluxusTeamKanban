@@ -22,7 +22,7 @@ router.get('/', authenticate, async (req, res) => {
       userRole: b.members[0]?.role ?? 'member',
     }));
     res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Get single board with full data
@@ -55,7 +55,7 @@ router.get('/:id', authenticate, async (req, res) => {
       },
     });
     res.json(board);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Create board
@@ -80,7 +80,7 @@ router.post('/', authenticate, async (req, res) => {
       include: { columns: { orderBy: { order: 'asc' } } },
     });
     res.json(board);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Delete board (admin only)
@@ -92,7 +92,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
     await prisma.board.delete({ where: { id: req.params.id } });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Add member to board (by userId or email)
@@ -117,7 +117,7 @@ router.post('/:id/members', authenticate, async (req, res) => {
     });
     req.io.to(`board:${req.params.id}`).emit('member-added', member);
     res.json(member);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Remove member from board (board admin only)
@@ -131,7 +131,7 @@ router.delete('/:id/members/:userId', authenticate, async (req, res) => {
       where: { userId: req.params.userId, boardId: req.params.id },
     });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 module.exports = router;

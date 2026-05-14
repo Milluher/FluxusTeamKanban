@@ -19,7 +19,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
       orderBy: { createdAt: 'asc' },
     });
     res.json(users);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Reset user password (admin)
@@ -30,7 +30,7 @@ router.post('/users/:id/reset-password', authenticate, requireAdmin, async (req,
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({ where: { id: req.params.id }, data: { password: hashed } });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Remove user from board (admin)
@@ -40,7 +40,7 @@ router.delete('/boards/:boardId/members/:userId', authenticate, requireAdmin, as
       where: { userId: req.params.userId, boardId: req.params.boardId },
     });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 module.exports = router;

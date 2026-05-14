@@ -22,7 +22,7 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ user, token });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
@@ -36,7 +36,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, token });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
@@ -62,7 +62,7 @@ router.patch('/change-password', require('../middleware/auth').authenticate, asy
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } });
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 

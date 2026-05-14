@@ -15,7 +15,7 @@ router.post('/', authenticate, async (req, res) => {
     });
     req.io.to(`board:${boardId}`).emit('comment-added', { ticketId, comment });
     res.json(comment);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 router.delete('/:id', authenticate, async (req, res) => {
@@ -25,7 +25,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     if (comment.authorId !== req.user.id) return res.status(403).json({ error: 'Not authorized' });
     await prisma.comment.delete({ where: { id: req.params.id } });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 module.exports = router;

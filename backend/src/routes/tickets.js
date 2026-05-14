@@ -42,7 +42,7 @@ router.post('/', authenticate, async (req, res) => {
     });
     req.io.to(`board:${boardId || column.boardId}`).emit('ticket-created', ticket);
     res.json(ticket);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Get single ticket
@@ -51,7 +51,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: ticketInclude });
     if (!ticket) return res.status(404).json({ error: 'Not found' });
     res.json(ticket);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Update ticket
@@ -73,7 +73,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     const ticket = await prisma.ticket.update({ where: { id: req.params.id }, data, include: ticketInclude });
     req.io.to(`board:${boardId}`).emit('ticket-updated', ticket);
     res.json(ticket);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Move ticket (drag-and-drop)
@@ -89,7 +89,7 @@ router.patch('/:id/move', authenticate, async (req, res) => {
     });
     req.io.to(`board:${boardId}`).emit('ticket-moved', ticket);
     res.json(ticket);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Delete ticket
@@ -99,7 +99,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     await prisma.ticket.delete({ where: { id: req.params.id } });
     req.io.to(`board:${boardId}`).emit('ticket-deleted', req.params.id);
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Add dependency
@@ -113,7 +113,7 @@ router.post('/:id/dependencies', authenticate, async (req, res) => {
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: ticketInclude });
     req.io.to(`board:${boardId}`).emit('ticket-updated', ticket);
     res.json(dep);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Remove dependency
@@ -126,7 +126,7 @@ router.delete('/:id/dependencies/:depId', authenticate, async (req, res) => {
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: ticketInclude });
     req.io.to(`board:${boardId}`).emit('ticket-updated', ticket);
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Search tickets (for dependency picker)
@@ -142,7 +142,7 @@ router.get('/', authenticate, async (req, res) => {
       select: { id: true, title: true, status: true },
     });
     res.json(tickets);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 module.exports = router;

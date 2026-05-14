@@ -11,7 +11,7 @@ router.get('/', authenticate, async (req, res) => {
       select: { id: true, name: true, email: true, role: true },
     });
     res.json(users);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 module.exports = router;

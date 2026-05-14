@@ -14,7 +14,7 @@ router.post('/boards/:boardId/invitations', authenticate, async (req, res) => {
     });
     const inviteUrl = `${process.env.FRONTEND_URL || 'https://fluxusteamkanban.vercel.app'}/invite/${invitation.token}`;
     res.json({ token: invitation.token, inviteUrl, expiresAt });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Get invitation info (public — no auth)
@@ -28,7 +28,7 @@ router.get('/invitations/:token', async (req, res) => {
     if (invitation.used) return res.status(410).json({ error: 'Invitation already used' });
     if (new Date() > invitation.expiresAt) return res.status(410).json({ error: 'Invitation expired' });
     res.json({ boardId: invitation.boardId, boardName: invitation.board.name, token: invitation.token });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 // Accept invitation (authenticated)
@@ -48,7 +48,7 @@ router.post('/invitations/:token/accept', authenticate, async (req, res) => {
 
     await prisma.invitation.update({ where: { token: req.params.token }, data: { used: true } });
     res.json({ boardId: invitation.boardId });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
 module.exports = router;
