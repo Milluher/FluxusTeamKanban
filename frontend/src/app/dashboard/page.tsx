@@ -21,7 +21,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (!stored) { router.push('/'); return; }
-    setUser(JSON.parse(stored));
+    const u = JSON.parse(stored);
+    if (u.mustChangePassword) { router.push('/change-password'); return; }
+    setUser(u);
     loadBoards();
   }, []);
 

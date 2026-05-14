@@ -49,7 +49,7 @@ router.post('/login', async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     setCookieToken(res, token);
-    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, mustChangePassword: user.mustChangePassword } });
   } catch (e) {
     console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
@@ -84,7 +84,7 @@ router.patch('/change-password', require('../middleware/auth').authenticate, asy
     const valid = await bcrypt.compare(currentPassword, user.password);
     if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
     const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } });
+    await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed, mustChangePassword: false } });
     res.json({ success: true });
   } catch (e) {
     console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });

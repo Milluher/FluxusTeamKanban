@@ -23,7 +23,7 @@ export default function AuthPage() {
         : form;
       const { data } = await api.post(endpoint, payload);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/dashboard');
+      router.push(data.user.mustChangePassword ? '/change-password' : '/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Something went wrong');
     } finally {

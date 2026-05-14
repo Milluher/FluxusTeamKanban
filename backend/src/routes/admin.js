@@ -28,7 +28,10 @@ router.post('/users/:id/reset-password', authenticate, requireAdmin, async (req,
     const { newPassword } = req.body;
     if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
     const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { id: req.params.id }, data: { password: hashed } });
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { password: hashed, mustChangePassword: true },
+    });
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });

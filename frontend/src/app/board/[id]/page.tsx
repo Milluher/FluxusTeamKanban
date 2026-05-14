@@ -46,7 +46,9 @@ export default function BoardPage() {
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (!stored) { router.push('/'); return; }
-    setCurrentUser(JSON.parse(stored));
+    const u = JSON.parse(stored);
+    if (u.mustChangePassword) { router.push('/change-password'); return; }
+    setCurrentUser(u);
     loadBoard();
   }, [boardId]);
 
