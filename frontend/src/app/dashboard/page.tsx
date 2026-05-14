@@ -6,8 +6,10 @@ import api from '@/lib/api';
 import { Board, User } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
 import ProfileModal from '@/components/ProfileModal';
+import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 
 export default function DashboardPage() {
+  useInactivityTimeout();
   const [boards, setBoards] = useState<Board[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [newBoardName, setNewBoardName] = useState('');

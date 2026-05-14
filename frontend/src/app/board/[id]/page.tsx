@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 import {
   DndContext,
   DragEndEvent,
@@ -36,7 +37,10 @@ export default function BoardPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createColumnId, setCreateColumnId] = useState<string>('');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const membersPanelRef = useRef<HTMLDivElement>(null);
 
+  useInactivityTimeout();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   useEffect(() => {
@@ -45,6 +49,16 @@ export default function BoardPage() {
     setCurrentUser(JSON.parse(stored));
     loadBoard();
   }, [boardId]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (membersPanelRef.current && !membersPanelRef.current.contains(e.target as Node)) {
+        setShowMembersPanel(false);
+      }
+    };
+    if (showMembersPanel) document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showMembersPanel]);
 
   useEffect(() => {
     if (!board) return;
@@ -219,26 +233,48 @@ export default function BoardPage() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {/* Member avatars — max 3 on mobile, max 5 on desktop */}
-          <div className="flex -space-x-1.5">
-            {board.members.slice(0, 3).map((m) => (
-              <img
-                key={m.id}
-                src={avatarUrl(m.user.name)}
-                title={m.user.name}
-                className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 sm:hidden"
-                alt={m.user.name}
-              />
-            ))}
-            {board.members.slice(0, 5).map((m) => (
-              <img
-                key={`d-${m.id}`}
-                src={avatarUrl(m.user.name)}
-                title={m.user.name}
-                className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 hidden sm:block"
-                alt={m.user.name}
-              />
-            ))}
+          {/* Member avatars — clickable to show member list */}
+          <div className="relative" ref={membersPanelRef}>
+            <button
+              onClick={() => setShowMembersPanel((p) => !p)}
+              className="flex -space-x-1.5 cursor-pointer"
+              aria-label="View board members"
+              title="View members"
+            >
+              {board.members.slice(0, 3).map((m) => (
+                <img
+                  key={m.id}
+                  src={avatarUrl(m.user.name)}
+                  className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 sm:hidden"
+                  alt={m.user.name}
+                />
+              ))}
+              {board.members.slice(0, 5).map((m) => (
+                <img
+                  key={`d-${m.id}`}
+                  src={avatarUrl(m.user.name)}
+                  className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 hidden sm:block"
+                  alt={m.user.name}
+                />
+              ))}
+            </button>
+
+            {showMembersPanel && (
+              <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[220px] py-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-1 pb-2">
+                  {board.members.length} {board.members.length === 1 ? 'Member' : 'Members'}
+                </p>
+                {board.members.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors">
+                    <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
+                      <p className="text-xs text-gray-400 capitalize">{m.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Invite button — icon only on mobile, icon + text on desktop */}

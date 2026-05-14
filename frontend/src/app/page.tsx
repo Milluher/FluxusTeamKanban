@@ -9,6 +9,7 @@ export default function AuthPage() {
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotMsg, setShowForgotMsg] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +37,31 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
       <div className="w-full max-w-sm">
+
+        {/* Illustration */}
+        <div className="flex justify-center mb-6">
+          <svg width="168" height="96" viewBox="0 0 168 96" fill="none" aria-hidden="true">
+            {/* Column 1 */}
+            <rect x="4" y="10" width="46" height="76" rx="8" fill="white" stroke="#e5e7eb" strokeWidth="1.5"/>
+            <rect x="14" y="20" width="26" height="4" rx="2" fill="#d1d5db"/>
+            <rect x="14" y="30" width="26" height="13" rx="4" fill="#f3f4f6"/>
+            <rect x="14" y="47" width="26" height="13" rx="4" fill="#f3f4f6"/>
+            <rect x="14" y="64" width="16" height="13" rx="4" fill="#f3f4f6"/>
+            {/* Column 2 — highlighted */}
+            <rect x="61" y="10" width="46" height="76" rx="8" fill="white" stroke="#e8390e" strokeWidth="1.5" strokeOpacity="0.35"/>
+            <rect x="71" y="20" width="26" height="4" rx="2" fill="#e8390e" fillOpacity="0.5"/>
+            <rect x="71" y="30" width="26" height="13" rx="4" fill="#fef2f0"/>
+            <rect x="71" y="30" width="4" height="13" rx="2" fill="#e8390e" fillOpacity="0.7"/>
+            <rect x="71" y="47" width="26" height="13" rx="4" fill="#f3f4f6"/>
+            <rect x="71" y="64" width="20" height="13" rx="4" fill="#f3f4f6"/>
+            {/* Column 3 */}
+            <rect x="118" y="10" width="46" height="76" rx="8" fill="white" stroke="#e5e7eb" strokeWidth="1.5"/>
+            <rect x="128" y="20" width="26" height="4" rx="2" fill="#d1d5db"/>
+            <rect x="128" y="30" width="26" height="13" rx="4" fill="#f3f4f6"/>
+            <rect x="128" y="47" width="14" height="13" rx="4" fill="#f3f4f6"/>
+          </svg>
+        </div>
+
         {/* Card */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
 
@@ -111,7 +137,18 @@ export default function AuthPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-gray-500">Password</label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotMsg((p) => !p)}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <input
                 type="password"
                 value={form.password}
@@ -129,6 +166,12 @@ export default function AuthPage() {
                 required
               />
             </div>
+
+            {showForgotMsg && mode === 'login' && (
+              <div className="rounded-lg px-4 py-3 text-sm text-gray-600 bg-gray-50 border border-gray-200">
+                Contact Femi to reset your password.
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg px-4 py-3 text-sm font-medium text-red-700 bg-red-50 border border-red-200">
@@ -151,9 +194,6 @@ export default function AuthPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-5">
-            Demo: admin@fluxus.com / password123
-          </p>
         </div>
       </div>
     </div>
