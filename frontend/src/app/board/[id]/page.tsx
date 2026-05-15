@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 import {
@@ -29,6 +29,7 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = params.id as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [board, setBoard] = useState<Board | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -62,6 +63,15 @@ export default function BoardPage() {
     if (showMembersPanel) document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [showMembersPanel]);
+
+  // Open ticket from URL param (e.g. from notification click)
+  useEffect(() => {
+    if (!board) return;
+    const ticketId = searchParams.get('ticket');
+    if (!ticketId) return;
+    const ticket = board.columns.flatMap((c) => c.tickets).find((t) => t.id === ticketId);
+    if (ticket) setSelectedTicket(ticket);
+  }, [board?.id, searchParams]);
 
   useEffect(() => {
     if (!board) return;

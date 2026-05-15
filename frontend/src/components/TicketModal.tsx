@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Ticket, Board, User, Comment } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
@@ -36,6 +36,9 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState(-1);
+  const commentInputRef = useRef<HTMLInputElement>(null);
   const [depSearch, setDepSearch] = useState('');
   const [depResults, setDepResults] = useState<any[]>([]);
   const [showDepSearch, setShowDepSearch] = useState(false);
@@ -98,6 +101,47 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
   };
 
   const getUserName = (id: string) => members.find((u) => u.id === id)?.name || 'Unknown';
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setComment(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const before = val.slice(0, cursor);
+    const lastAt = before.lastIndexOf('@');
+    if (lastAt === -1) { setMentionQuery(null); return; }
+    const charBefore = lastAt > 0 ? before[lastAt - 1] : ' ';
+    if (charBefore !== ' ') { setMentionQuery(null); return; }
+    const query = before.slice(lastAt + 1);
+    setMentionQuery(query);
+    setMentionStart(lastAt);
+  };
+
+  const selectMention = (member: User) => {
+    const after = comment.slice(mentionStart + 1 + (mentionQuery?.length ?? 0));
+    setComment(`${comment.slice(0, mentionStart)}@${member.name} ${after}`);
+    setMentionQuery(null);
+    setTimeout(() => commentInputRef.current?.focus(), 0);
+  };
+
+  const filteredMentions = mentionQuery !== null
+    ? members.filter((m) => m.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+    : [];
+
+  const renderCommentContent = (content: string) => {
+    if (members.length === 0) return <>{content}</>;
+    const escaped = members.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const pattern = new RegExp(`@(${escaped.join('|')})`, 'g');
+    const parts = content.split(pattern);
+    return (
+      <>
+        {parts.map((part, i) =>
+          i % 2 === 1
+            ? <span key={i} className="font-semibold" style={{ color: '#e8390e' }}>@{part}</span>
+            : <span key={i}>{part}</span>
+        )}
+      </>
+    );
+  };
 
   const inputStyle: React.CSSProperties = {
     background: 'white',
@@ -533,7 +577,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                         </span>
                       </div>
                       <div className={`rounded-lg px-3 py-2 text-sm leading-relaxed border ${inactive ? 'bg-gray-50 border-gray-100 text-gray-400' : 'bg-gray-50 border-gray-100 text-gray-700'}`}>
-                        {c.content}
+                        {renderCommentContent(c.content)}
                       </div>
                     </div>
                   </div>
@@ -550,27 +594,46 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                   alt={currentUser?.name || 'User'}
                 />
                 <div className="flex-1 flex flex-col gap-2">
-                  <input
-                    type="text"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    className="w-full px-3 py-2 text-base sm:text-sm text-gray-800 placeholder-gray-400"
-                    style={{
-                      background: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      outline: 'none',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#e8390e';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  />
+                  <div className="relative">
+                    <input
+                      ref={commentInputRef}
+                      type="text"
+                      value={comment}
+                      onChange={handleCommentChange}
+                      onKeyDown={(e) => { if (e.key === 'Escape') setMentionQuery(null); }}
+                      placeholder="Add a comment… type @ to mention"
+                      className="w-full px-3 py-2 text-base sm:text-sm text-gray-800 placeholder-gray-400"
+                      style={{
+                        background: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#e8390e';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                    {mentionQuery !== null && filteredMentions.length > 0 && (
+                      <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-36 overflow-y-auto">
+                        {filteredMentions.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); selectMention(m); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 transition-colors text-left"
+                          >
+                            <img src={avatarUrl(m.name)} className="w-6 h-6 rounded-full flex-shrink-0" alt={m.name} />
+                            <span className="font-medium">{m.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="submit"
                     disabled={submittingComment || !comment.trim()}

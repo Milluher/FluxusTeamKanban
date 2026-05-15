@@ -73,7 +73,8 @@ export default function NotificationBell({ userId }: Props) {
       setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, read: true } : x));
     }
     setOpen(false);
-    if (n.boardId) router.push(`/board/${n.boardId}`);
+    if (n.boardId && n.ticketId) router.push(`/board/${n.boardId}?ticket=${n.ticketId}`);
+    else if (n.boardId) router.push(`/board/${n.boardId}`);
   };
 
   const timeAgo = (iso: string) => {

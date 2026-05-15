@@ -14,6 +14,42 @@ router.post('/', authenticate, async (req, res) => {
       include: { author: { select: { id: true, name: true } } },
     });
     req.io.to(`board:${boardId}`).emit('comment-added', { ticketId, comment });
+
+    // Process @mention notifications
+    if (boardId) {
+      const boardMembers = await prisma.boardMember.findMany({
+        where: { boardId },
+        include: { user: { select: { id: true, name: true } } },
+      });
+
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { title: true },
+      });
+
+      const commenterName = comment.author.name;
+      const notified = new Set();
+
+      for (const member of boardMembers) {
+        if (member.user.id === req.user.id) continue;
+        if (content.includes(`@${member.user.name}`)) {
+          if (notified.has(member.user.id)) continue;
+          notified.add(member.user.id);
+          const notification = await prisma.notification.create({
+            data: {
+              userId: member.user.id,
+              type: 'comment_mention',
+              title: `${commenterName} mentioned you`,
+              body: `In "${ticket?.title}": ${content}`,
+              ticketId,
+              boardId,
+            },
+          });
+          req.io.to(`user:${member.user.id}`).emit('notification', notification);
+        }
+      }
+    }
+
     res.json(comment);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
