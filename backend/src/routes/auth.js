@@ -7,7 +7,8 @@ const { JWT_SECRET } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const isProd = process.env.NODE_ENV === 'production';
+// Use secure cross-origin cookie settings whenever deployed to Railway (any environment name)
+const isProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 
 function setCookieToken(res, token) {
   res.cookie('token', token, {
