@@ -34,21 +34,25 @@ export default function AuthPage() {
   const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
-    <div className="auth-page min-h-screen flex items-center justify-center px-4">
-      <style>{`
-        .auth-page {
-          background-image: url(/auth-bg-mobile.png);
-          background-size: cover;
-          background-position: center;
-          background-repeat: no-repeat;
-        }
-        @media (min-width: 768px) {
-          .auth-page {
-            background-image: url(/auth-bg-desktop.png);
-          }
-        }
-      `}</style>
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-screen flex items-center justify-center px-4">
+      {/* Background images — fixed so they always fill the viewport */}
+      <Image
+        src="/auth-bg-mobile.png"
+        alt=""
+        fill
+        priority
+        className="object-cover md:hidden"
+        style={{ zIndex: -1 }}
+      />
+      <Image
+        src="/auth-bg-desktop.png"
+        alt=""
+        fill
+        priority
+        className="object-cover hidden md:block"
+        style={{ zIndex: -1 }}
+      />
+      <div className="w-full max-w-sm relative">
 
         {/* Card */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
