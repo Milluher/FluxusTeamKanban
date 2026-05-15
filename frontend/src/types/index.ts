@@ -67,8 +67,8 @@ export interface Sprint {
   id: string;
   boardId: string;
   title: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   createdAt: string;
   status: string;
   _count: { tickets: number; members: number };

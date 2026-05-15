@@ -49,6 +49,9 @@ export default function BoardPage() {
   const [sprintForm, setSprintForm] = useState({ title: '', startDate: '', endDate: '' });
   const [creatingSprintLoading, setCreatingSprintLoading] = useState(false);
   const [deletingSprintId, setDeletingSprintId] = useState<string | null>(null);
+  const [editDatesSprintId, setEditDatesSprintId] = useState<string | null>(null);
+  const [editDatesForm, setEditDatesForm] = useState({ startDate: '', endDate: '' });
+  const [updatingDates, setUpdatingDates] = useState(false);
 
   // Ticket filter state
   const [filterMyTickets, setFilterMyTickets] = useState(true);
@@ -245,7 +248,7 @@ export default function BoardPage() {
 
   const createSprint = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sprintForm.title || !sprintForm.startDate || !sprintForm.endDate) return;
+    if (!sprintForm.title) return;
     setCreatingSprintLoading(true);
     try {
       const { data } = await api.post(`/boards/${boardId}/sprints`, sprintForm);
@@ -273,7 +276,23 @@ export default function BoardPage() {
     } catch { /* silent — board is still functional */ }
   };
 
-  const formatDate = (dateStr: string) => {
+  const updateSprintDates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editDatesSprintId) return;
+    setUpdatingDates(true);
+    try {
+      const { data } = await api.patch(`/boards/${boardId}/sprints/${editDatesSprintId}`, {
+        startDate: editDatesForm.startDate || null,
+        endDate: editDatesForm.endDate || null,
+      });
+      setSprints((prev) => prev.map((s) => s.id === editDatesSprintId ? { ...s, startDate: data.startDate, endDate: data.endDate } : s));
+      if (activeSprint?.id === editDatesSprintId) setActiveSprint((prev) => prev ? { ...prev, startDate: data.startDate, endDate: data.endDate } : prev);
+      setEditDatesSprintId(null);
+    } finally { setUpdatingDates(false); }
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
@@ -590,25 +609,37 @@ export default function BoardPage() {
                             onClick={() => { setActiveSprint(sprint); setFilterMyTickets(true); }}
                             className="relative bg-white rounded-xl border border-gray-200 p-4 cursor-pointer transition-all duration-150 hover:shadow-md hover:border-gray-300 group"
                           >
-                            {/* Delete — admin only */}
+                            {/* Admin actions — edit dates + delete */}
                             {isAdmin && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); deleteSprint(sprint.id); }}
-                                disabled={deletingSprintId === sprint.id}
-                                className="absolute top-2.5 right-2.5 w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 opacity-0 group-hover:opacity-100 transition-all hover:text-red-500 hover:bg-red-50 disabled:opacity-50"
-                                title="Delete sprint"
-                              >
-                                {deletingSprintId === sprint.id ? (
-                                  <span className="text-xs">...</span>
-                                ) : (
+                              <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditDatesSprintId(sprint.id); setEditDatesForm({ startDate: sprint.startDate ? sprint.startDate.slice(0, 10) : '', endDate: sprint.endDate ? sprint.endDate.slice(0, 10) : '' }); }}
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                                  title="Edit dates"
+                                >
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="3 6 5 6 21 6"/>
-                                    <path d="M19 6l-1 14H6L5 6"/>
-                                    <path d="M10 11v6M14 11v6"/>
-                                    <path d="M9 6V4h6v2"/>
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                   </svg>
-                                )}
-                              </button>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); deleteSprint(sprint.id); }}
+                                  disabled={deletingSprintId === sprint.id}
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-50 transition-all"
+                                  title="Delete sprint"
+                                >
+                                  {deletingSprintId === sprint.id ? (
+                                    <span className="text-xs">...</span>
+                                  ) : (
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <polyline points="3 6 5 6 21 6"/>
+                                      <path d="M19 6l-1 14H6L5 6"/>
+                                      <path d="M10 11v6M14 11v6"/>
+                                      <path d="M9 6V4h6v2"/>
+                                    </svg>
+                                  )}
+                                </button>
+                              </div>
                             )}
 
                             {/* Title */}
@@ -774,6 +805,57 @@ export default function BoardPage() {
         />
       )}
 
+      {/* Edit Sprint Dates Modal */}
+      {editDatesSprintId && isAdmin && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setEditDatesSprintId(null)}>
+          <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>Edit Sprint Dates</h3>
+              <button onClick={() => setEditDatesSprintId(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+            </div>
+            <form onSubmit={updateSprintDates} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Start Date</label>
+                  <input
+                    type="date"
+                    value={editDatesForm.startDate}
+                    onChange={(e) => setEditDatesForm({ ...editDatesForm, startDate: e.target.value })}
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 outline-none"
+                    style={{ color: '#111827' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = '#e8390e'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">End Date</label>
+                  <input
+                    type="date"
+                    value={editDatesForm.endDate}
+                    onChange={(e) => setEditDatesForm({ ...editDatesForm, endDate: e.target.value })}
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 outline-none"
+                    style={{ color: '#111827' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = '#e8390e'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setEditDatesSprintId(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
+                <button
+                  type="submit"
+                  disabled={updatingDates}
+                  className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
+                  style={{ background: '#e8390e' }}
+                >
+                  {updatingDates ? 'Saving...' : 'Save Dates'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Create Sprint Modal */}
       {showCreateSprint && isAdmin && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => { setShowCreateSprint(false); setSprintForm({ title: '', startDate: '', endDate: '' }); }}>
@@ -799,7 +881,7 @@ export default function BoardPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Start Date <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Start Date</label>
                   <input
                     type="date"
                     value={sprintForm.startDate}
@@ -811,7 +893,7 @@ export default function BoardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">End Date <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">End Date</label>
                   <input
                     type="date"
                     value={sprintForm.endDate}
@@ -827,7 +909,7 @@ export default function BoardPage() {
                 <button type="button" onClick={() => { setShowCreateSprint(false); setSprintForm({ title: '', startDate: '', endDate: '' }); }} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
                 <button
                   type="submit"
-                  disabled={creatingSprintLoading || !sprintForm.title || !sprintForm.startDate || !sprintForm.endDate}
+                  disabled={creatingSprintLoading || !sprintForm.title}
                   className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
                   style={{ background: '#e8390e' }}
                 >

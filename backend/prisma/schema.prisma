@@ -154,8 +154,8 @@ model Sprint {
   id        String   @id @default(uuid())
   boardId   String
   title     String
-  startDate DateTime
-  endDate   DateTime
+  startDate DateTime?
+  endDate   DateTime?
   status    String   @default("backlog")
   createdAt DateTime @default(now())
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)

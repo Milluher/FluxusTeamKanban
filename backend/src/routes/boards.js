@@ -189,9 +189,14 @@ router.post('/:id/sprints', authenticate, async (req, res) => {
       if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can create sprints' });
     }
     const { title, startDate, endDate } = req.body;
-    if (!title || !startDate || !endDate) return res.status(400).json({ error: 'title, startDate and endDate required' });
+    if (!title) return res.status(400).json({ error: 'title is required' });
     const sprint = await prisma.sprint.create({
-      data: { boardId: req.params.id, title, startDate: new Date(startDate), endDate: new Date(endDate) },
+      data: {
+        boardId: req.params.id,
+        title,
+        ...(startDate ? { startDate: new Date(startDate) } : {}),
+        ...(endDate ? { endDate: new Date(endDate) } : {}),
+      },
       include: { tickets: { select: { assigneeId: true } } },
     });
     const result = { ...sprint, _count: { tickets: 0, members: 0 } };
@@ -209,12 +214,19 @@ router.patch('/:id/sprints/:sprintId', authenticate, async (req, res) => {
       });
       if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can update sprints' });
     }
-    const { status } = req.body;
-    const allowed = ['backlog', 'active', 'completed'];
-    if (!status || !allowed.includes(status)) return res.status(400).json({ error: 'Invalid status. Must be backlog, active, or completed.' });
+    const { status, startDate, endDate } = req.body;
+    const updateData = {};
+    if (status !== undefined) {
+      const allowed = ['backlog', 'active', 'completed'];
+      if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status. Must be backlog, active, or completed.' });
+      updateData.status = status;
+    }
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (Object.keys(updateData).length === 0) return res.status(400).json({ error: 'Nothing to update.' });
     const sprint = await prisma.sprint.update({
       where: { id: req.params.sprintId },
-      data: { status },
+      data: updateData,
       include: { tickets: { select: { assigneeId: true } } },
     });
     const memberIds = new Set(sprint.tickets.map((t) => t.assigneeId).filter(Boolean));
