@@ -68,4 +68,29 @@ router.patch('/change-password', require('../middleware/auth').authenticate, asy
   }
 });
 
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6)
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const resetToken = await prisma.passwordResetToken.findUnique({
+      where: { token: req.params.token },
+    });
+    if (!resetToken || resetToken.used || new Date() > resetToken.expiresAt)
+      return res.status(400).json({ error: 'This reset link is invalid or has expired' });
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { password: hashed },
+    });
+    await prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { used: true },
+    });
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
 module.exports = router;

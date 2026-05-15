@@ -40,7 +40,24 @@ router.post('/', authenticate, async (req, res) => {
       },
       include: ticketInclude,
     });
-    req.io.to(`board:${boardId || column.boardId}`).emit('ticket-created', ticket);
+    const targetBoardId = boardId || column.boardId;
+    req.io.to(`board:${targetBoardId}`).emit('ticket-created', ticket);
+
+    // Notify assignee
+    if (assigneeId && assigneeId !== req.user.id) {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: assigneeId,
+          type: 'ticket_assigned',
+          title: 'You were assigned a ticket',
+          body: `"${ticket.title}"`,
+          ticketId: ticket.id,
+          boardId: targetBoardId,
+        },
+      });
+      req.io.to(`user:${assigneeId}`).emit('notification', notification);
+    }
+
     res.json(ticket);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -70,8 +87,26 @@ router.patch('/:id', authenticate, async (req, res) => {
       const col = await prisma.column.findUnique({ where: { id: columnId } });
       if (col) { data.columnId = columnId; data.status = col.name; }
     }
+    const prevTicket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { assigneeId: true } });
     const ticket = await prisma.ticket.update({ where: { id: req.params.id }, data, include: ticketInclude });
     req.io.to(`board:${boardId}`).emit('ticket-updated', ticket);
+
+    // Notify new assignee if assignee changed
+    const newAssigneeId = ticket.assigneeId;
+    if (newAssigneeId && newAssigneeId !== prevTicket?.assigneeId && newAssigneeId !== req.user.id) {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: newAssigneeId,
+          type: 'ticket_assigned',
+          title: 'You were assigned a ticket',
+          body: `"${ticket.title}"`,
+          ticketId: ticket.id,
+          boardId: boardId || null,
+        },
+      });
+      req.io.to(`user:${newAssigneeId}`).emit('notification', notification);
+    }
+
     res.json(ticket);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });

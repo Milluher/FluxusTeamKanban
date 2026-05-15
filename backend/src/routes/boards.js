@@ -63,6 +63,9 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
+    const requestingUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } });
+    if (!requestingUser || requestingUser.role !== 'admin')
+      return res.status(403).json({ error: 'Only admins can create boards' });
     const board = await prisma.board.create({
       data: {
         name,

@@ -15,13 +15,16 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [resetModal, setResetModal] = useState<AdminUser | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [resetMsg, setResetMsg] = useState('');
-  const [resetting, setResetting] = useState(false);
+  const [linkModal, setLinkModal] = useState<AdminUser | null>(null);
+  const [resetLink, setResetLink] = useState('');
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [linkMsg, setLinkMsg] = useState('');
+  const [copied, setCopied] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState('');
+
+  const isSuperAdmin = currentUser?.email === 'femi@fluxx.ng';
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -38,18 +41,37 @@ export default function AdminPage() {
     router.push('/');
   };
 
-  const resetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resetModal) return;
-    setResetting(true);
-    setResetMsg('');
+  const generateLink = async (user: AdminUser) => {
+    setLinkModal(user);
+    setResetLink('');
+    setLinkMsg('');
+    setCopied(false);
+    setGeneratingLink(true);
     try {
-      await api.post(`/admin/users/${resetModal.id}/reset-password`, { newPassword });
-      setResetMsg('Password reset successfully');
-      setNewPassword('');
+      const { data } = await api.post(`/admin/users/${user.id}/reset-link`);
+      setResetLink(data.link);
     } catch (e: any) {
-      setResetMsg(e.response?.data?.error || 'Failed');
-    } finally { setResetting(false); }
+      setLinkMsg(e.response?.data?.error || 'Failed to generate link');
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const copyLink = async () => {
+    if (!resetLink) return;
+    await navigator.clipboard.writeText(resetLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleRole = async (u: AdminUser) => {
+    const newRole = u.role === 'admin' ? 'standard' : 'admin';
+    try {
+      const { data } = await api.patch(`/admin/users/${u.id}/role`, { role: newRole });
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: data.role } : x));
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to update role');
+    }
   };
 
   const deleteUser = async () => {
@@ -92,31 +114,24 @@ export default function AdminPage() {
         {/* Mobile card list */}
         <div className="sm:hidden bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
           {users.map((u) => (
-            <div key={u.id} className="px-4 py-4 flex items-center justify-between">
+            <div key={u.id} className="px-4 py-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <img src={avatarUrl(u.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={u.name} />
                 <div className="min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">{u.name}</p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
-                    {u.role}
-                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>{u.role}</span>
                 </div>
               </div>
               {u.id !== currentUser?.id && (
-                <div className="flex flex-col gap-1.5 flex-shrink-0 ml-3">
-                  <button
-                    onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
-                    className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]"
-                  >
-                    Reset pw
-                  </button>
-                  <button
-                    onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }}
-                    className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-500 min-h-[32px]"
-                  >
-                    Delete
-                  </button>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button onClick={() => generateLink(u)} className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]">Reset pw</button>
+                  {isSuperAdmin && u.email !== 'femi@fluxx.ng' && (
+                    <button onClick={() => toggleRole(u)} className={`text-xs border rounded-lg px-3 py-1.5 min-h-[32px] ${u.role === 'admin' ? 'border-orange-200 text-orange-600' : 'border-blue-200 text-blue-600'}`}>
+                      {u.role === 'admin' ? 'Revoke admin' : 'Make admin'}
+                    </button>
+                  )}
+                  <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-500 min-h-[32px]">Delete</button>
                 </div>
               )}
             </div>
@@ -146,24 +161,21 @@ export default function AdminPage() {
                   </td>
                   <td className="px-5 py-3 text-gray-500">{u.email}</td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
-                      {u.role}
-                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>{u.role}</span>
                   </td>
                   <td className="px-5 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="px-5 py-3 text-right">
                     {u.id !== currentUser?.id && (
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => { setResetModal(u); setResetMsg(''); setNewPassword(''); }}
-                          className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors"
-                        >
+                        <button onClick={() => generateLink(u)} className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors">
                           Reset Password
                         </button>
-                        <button
-                          onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }}
-                          className="text-xs text-red-500 hover:text-red-700 border border-red-200 rounded px-2 py-1 hover:border-red-400 transition-colors"
-                        >
+                        {isSuperAdmin && u.email !== 'femi@fluxx.ng' && (
+                          <button onClick={() => toggleRole(u)} className={`text-xs border rounded px-2 py-1 transition-colors ${u.role === 'admin' ? 'border-orange-200 text-orange-500 hover:border-orange-400' : 'border-blue-200 text-blue-500 hover:border-blue-400'}`}>
+                            {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                          </button>
+                        )}
+                        <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs text-red-500 hover:text-red-700 border border-red-200 rounded px-2 py-1 hover:border-red-400 transition-colors">
                           Delete
                         </button>
                       </div>
@@ -176,40 +188,36 @@ export default function AdminPage() {
         </div>
       </main>
 
-      {/* Reset Password Modal */}
-      {resetModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setResetModal(null)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
+      {/* Reset Link Modal */}
+      {linkModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setLinkModal(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold" style={{ color: '#1a1f3c' }}>Reset Password</h3>
-              <button onClick={() => setResetModal(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <h3 className="font-semibold" style={{ color: '#1a1f3c' }}>Password Reset Link</h3>
+              <button onClick={() => setLinkModal(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">Set a new password for <strong>{resetModal.name}</strong></p>
-            <form onSubmit={resetPassword} className="space-y-3">
-              <input
-                type="text"
-                placeholder="New password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                required
-                minLength={6}
-              />
-              {resetMsg && <p className={`text-sm ${resetMsg.includes('success') ? 'text-green-600' : 'text-red-500'}`}>{resetMsg}</p>}
-              <button
-                type="submit"
-                disabled={resetting}
-                className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: '#e8390e' }}
-              >
-                {resetting ? 'Resetting...' : 'Reset Password'}
-              </button>
-            </form>
+            <p className="text-sm text-gray-500 mb-4">Share this link with <strong>{linkModal.name}</strong>. It expires in 24 hours.</p>
+            {generatingLink && <p className="text-sm text-gray-400">Generating link...</p>}
+            {linkMsg && <p className="text-sm text-red-500">{linkMsg}</p>}
+            {resetLink && (
+              <div className="space-y-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-xs text-gray-600 break-all font-mono">
+                  {resetLink}
+                </div>
+                <button
+                  onClick={copyLink}
+                  className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-colors"
+                  style={{ background: copied ? '#34d399' : '#e8390e' }}
+                >
+                  {copied ? 'Copied!' : 'Copy Link'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Delete User Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setDeleteConfirm(null)}>
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
@@ -228,17 +236,8 @@ export default function AdminPage() {
             <p className="text-xs text-gray-400 mb-5">Their ticket history will be preserved. Board memberships and comments will be removed.</p>
             {deleteMsg && <p className="text-sm text-red-500 mb-3">{deleteMsg}</p>}
             <div className="flex gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={deleteUser}
-                disabled={deleting}
-                className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
-              >
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
+              <button onClick={deleteUser} disabled={deleting} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">
                 {deleting ? 'Deleting...' : 'Delete User'}
               </button>
             </div>

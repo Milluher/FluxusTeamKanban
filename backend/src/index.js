@@ -11,6 +11,7 @@ const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
 const invitationRoutes = require('./routes/invitations');
 const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 const server = http.createServer(app);
@@ -39,10 +40,13 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', invitationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 io.on('connection', (socket) => {
   socket.on('join-board', (boardId) => socket.join(`board:${boardId}`));
   socket.on('leave-board', (boardId) => socket.leave(`board:${boardId}`));
+  socket.on('join-user', (userId) => socket.join(`user:${userId}`));
+  socket.on('leave-user', (userId) => socket.leave(`user:${userId}`));
 });
 
 const PORT = process.env.PORT || 4000;

@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { Board, User } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
 import ProfileModal from '@/components/ProfileModal';
+import NotificationBell from '@/components/NotificationBell';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 
 export default function DashboardPage() {
@@ -61,6 +62,7 @@ export default function DashboardPage() {
           <span className="font-bold text-base tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+          {user && <NotificationBell userId={user.id} />}
           {user?.role === 'admin' && (
             <>
               {/* Mobile: gear icon only */}
@@ -110,7 +112,7 @@ export default function DashboardPage() {
               {boards.length} {boards.length === 1 ? 'board' : 'boards'} in your workspace
             </p>
           </div>
-          <button
+          {user?.role === 'admin' && (<button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold border transition-all duration-150"
             style={{
@@ -129,11 +131,11 @@ export default function DashboardPage() {
           >
             <span className="text-base leading-none font-bold">+</span>
             New Board
-          </button>
+          </button>)}
         </div>
 
         {/* Create board inline form */}
-        {showCreate && (
+        {showCreate && user?.role === 'admin' && (
           <form
             onSubmit={createBoard}
             className="bg-white border border-gray-200 rounded-xl p-4 mb-5 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center shadow-sm w-full"

@@ -22,17 +22,24 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
-// Reset user password (admin)
-router.post('/users/:id/reset-password', authenticate, requireAdmin, async (req, res) => {
+// Generate password reset link (admin)
+router.post('/users/:id/reset-link', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { id: req.params.id },
-      data: { password: hashed, mustChangePassword: true },
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    // Expire any existing unused tokens for this user
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: req.params.id, used: false },
+      data: { used: true },
     });
-    res.json({ success: true });
+    const resetToken = await prisma.passwordResetToken.create({
+      data: {
+        userId: req.params.id,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+    const link = `https://fluxusteamkanban.vercel.app/reset-password/${resetToken.token}`;
+    res.json({ link });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
@@ -70,6 +77,27 @@ router.delete('/users/:id', authenticate, requireAdmin, async (req, res) => {
     await prisma.user.delete({ where: { id: targetId } });
 
     res.json({ success: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
+// Change user role — only femi@fluxx.ng (super-admin)
+router.patch('/users/:id/role', authenticate, async (req, res) => {
+  try {
+    if (req.user.email !== 'femi@fluxx.ng')
+      return res.status(403).json({ error: 'Only the workspace owner can change user roles' });
+    const { role } = req.body;
+    if (!['standard', 'admin'].includes(role))
+      return res.status(400).json({ error: 'Invalid role' });
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.email === 'femi@fluxx.ng')
+      return res.status(400).json({ error: 'Cannot change owner role' });
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { role },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    });
+    res.json(updated);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 

@@ -23,6 +23,7 @@ import TicketCard from '@/components/TicketCard';
 import TicketModal from '@/components/TicketModal';
 import CreateTicketModal from '@/components/CreateTicketModal';
 import InviteMemberModal from '@/components/InviteMemberModal';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function BoardPage() {
   const params = useParams();
@@ -305,6 +306,8 @@ export default function BoardPage() {
               </div>
             )}
           </div>
+
+          {currentUser && <NotificationBell userId={currentUser.id} />}
 
           {/* Invite button — icon only on mobile, icon + text on desktop */}
           <button

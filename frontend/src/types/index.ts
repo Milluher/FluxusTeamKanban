@@ -60,3 +60,14 @@ export interface Board {
   columns: Column[];
   members: { id: string; role: string; user: User }[];
 }
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  ticketId?: string;
+  boardId?: string;
+  read: boolean;
+  createdAt: string;
+}
