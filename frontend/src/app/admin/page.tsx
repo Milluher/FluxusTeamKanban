@@ -32,8 +32,8 @@ export default function AdminPage() {
     api.get('/admin/users').then(({ data }) => setUsers(data)).finally(() => setLoading(false));
   }, []);
 
-  const logout = async () => {
-    await api.post('/auth/logout').catch(() => {});
+  const logout = () => {
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/');
   };

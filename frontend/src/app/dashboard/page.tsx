@@ -46,8 +46,8 @@ export default function DashboardPage() {
     } finally { setCreating(false); }
   };
 
-  const logout = async () => {
-    await api.post('/auth/logout').catch(() => {});
+  const logout = () => {
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/');
   };

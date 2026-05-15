@@ -22,6 +22,7 @@ export default function AuthPage() {
         ? { email: form.email, password: form.password }
         : form;
       const { data } = await api.post(endpoint, payload);
+      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       router.push(data.user.mustChangePassword ? '/change-password' : '/dashboard');
     } catch (err: any) {
@@ -34,25 +35,8 @@ export default function AuthPage() {
   const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4">
-      {/* Background images — fixed so they always fill the viewport */}
-      <Image
-        src="/auth-bg-mobile.png"
-        alt=""
-        fill
-        priority
-        className="object-cover md:hidden"
-        style={{ zIndex: -1 }}
-      />
-      <Image
-        src="/auth-bg-desktop.png"
-        alt=""
-        fill
-        priority
-        className="object-cover hidden md:block"
-        style={{ zIndex: -1 }}
-      />
-      <div className="w-full max-w-sm relative">
+    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
+      <div className="w-full max-w-sm">
 
         {/* Card */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
