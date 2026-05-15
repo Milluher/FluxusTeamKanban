@@ -104,9 +104,16 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
-// Add member to board (by userId or email)
+// Add member to board (system admin or board admin only)
 router.post('/:id/members', authenticate, async (req, res) => {
   try {
+    const isSystemAdmin = req.user.role === 'admin';
+    if (!isSystemAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+      });
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can invite members to this board' });
+    }
     const { email, userId } = req.body;
     let user;
     if (userId) {

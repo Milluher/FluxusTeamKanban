@@ -33,7 +33,6 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
     padding: '12px',
     cursor: 'pointer',
     position: 'relative',
-    minHeight: '72px',
     ...(isDragging
       ? {
           transform: 'rotate(1.5deg)',
@@ -44,7 +43,6 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
   };
 
   const commentCount = ticket._count?.comments ?? ticket.comments?.length ?? 0;
-  const depCount = ticket.dependsOn?.length ?? 0;
 
   return (
     <div
@@ -68,57 +66,63 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         }
       }}
     >
-      <p className="text-sm font-medium text-gray-800 mb-2.5 line-clamp-2 leading-5">
+      {/* Title */}
+      <p className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 leading-5">
         {ticket.title}
       </p>
 
-      {ticket.type && (
-        <div className="mb-2">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TYPE_STYLES[ticket.type] || 'bg-gray-100 text-gray-600'}`}>
-            {ticket.type}
+      {/* Description — up to 3 lines */}
+      {ticket.description && (
+        <p className="text-xs text-gray-400 leading-relaxed mb-2.5 line-clamp-3">
+          {ticket.description}
+        </p>
+      )}
+
+      {/* Project */}
+      {ticket.project && (
+        <div className="mb-2.5">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500">
+            {ticket.project}
           </span>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          {ticket.assignee && (() => {
-            const inactive = activeMemberIds ? !activeMemberIds.has(ticket.assignee!.id) : false;
-            return (
+      {/* Footer: assignee + type + comment count */}
+      <div className="flex items-center justify-between gap-2 mt-1">
+        {ticket.assignee ? (() => {
+          const inactive = activeMemberIds ? !activeMemberIds.has(ticket.assignee!.id) : false;
+          return (
+            <div className={`flex items-center gap-1.5 min-w-0 ${inactive ? 'opacity-40' : ''}`}>
               <img
                 src={avatarUrl(ticket.assignee.name)}
-                title={`${ticket.assignee.name}${inactive ? ' (inactive)' : ''}`}
-                className={`w-6 h-6 rounded-full flex-shrink-0 ${inactive ? 'grayscale opacity-40' : ''}`}
+                className={`w-5 h-5 rounded-full flex-shrink-0 ${inactive ? 'grayscale' : ''}`}
                 alt={ticket.assignee.name}
               />
-            );
-          })()}
-          {depCount > 0 && (
+              <span className="text-xs text-gray-500 truncate max-w-[90px]">{ticket.assignee.name}</span>
+            </div>
+          );
+        })() : (
+          <span className="text-xs text-gray-300">Unassigned</span>
+        )}
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {ticket.type && (
+            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${TYPE_STYLES[ticket.type] || 'bg-gray-100 text-gray-600'}`}>
+              {ticket.type}
+            </span>
+          )}
+          {commentCount > 0 && (
             <span
-              className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-500"
-              title={`${depCount} dependenc${depCount === 1 ? 'y' : 'ies'}`}
+              className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-400"
               style={{ background: '#f3f4f6' }}
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
-              {depCount}
+              {commentCount}
             </span>
           )}
         </div>
-
-        {commentCount > 0 && (
-          <span
-            className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-400"
-            style={{ background: '#f3f4f6' }}
-          >
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            {commentCount}
-          </span>
-        )}
       </div>
     </div>
   );

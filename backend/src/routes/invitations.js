@@ -5,9 +5,16 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Generate invite link (board admin or app admin only)
+// Generate invite link (system admin or board admin only)
 router.post('/boards/:boardId/invitations', authenticate, async (req, res) => {
   try {
+    const isSystemAdmin = req.user.role === 'admin';
+    if (!isSystemAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.boardId } },
+      });
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can generate invite links' });
+    }
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     const invitation = await prisma.invitation.create({
       data: { boardId: req.params.boardId, createdBy: req.user.id, expiresAt },

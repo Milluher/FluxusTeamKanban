@@ -319,7 +319,8 @@ export default function BoardPage() {
 
           {currentUser && <NotificationBell userId={currentUser.id} />}
 
-          {/* Invite button — icon only on mobile, icon + text on desktop */}
+          {/* Invite button — only for system admins or board admins */}
+          {(currentUser?.role === 'admin' || board.members.find(m => m.user.id === currentUser?.id)?.role === 'admin') && (
           <button
             onClick={() => setShowInviteModal(true)}
             className="flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
@@ -345,6 +346,7 @@ export default function BoardPage() {
             </svg>
             <span className="hidden sm:inline">Invite</span>
           </button>
+          )}
         </div>
       </nav>
 
