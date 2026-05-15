@@ -52,7 +52,18 @@ export default function ForceChangePasswordPage() {
   const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
+    <div className="auth-page min-h-screen flex items-center justify-center px-4">
+      <style>{`
+        .auth-page {
+          background-image: url(/auth-bg-mobile.png);
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        @media (min-width: 768px) {
+          .auth-page { background-image: url(/auth-bg-desktop.png); }
+        }
+      `}</style>
       <div className="w-full max-w-sm">
 
         {/* Card */}
