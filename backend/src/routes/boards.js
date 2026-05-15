@@ -151,4 +151,58 @@ router.delete('/:id/members/:userId', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
+// --- Sprint routes ---
+
+// List sprints for a board
+router.get('/:id/sprints', authenticate, async (req, res) => {
+  try {
+    const sprints = await prisma.sprint.findMany({
+      where: { boardId: req.params.id },
+      include: { tickets: { select: { assigneeId: true } } },
+      orderBy: { startDate: 'asc' },
+    });
+    const result = sprints.map((s) => {
+      const memberIds = new Set(s.tickets.map((t) => t.assigneeId).filter(Boolean));
+      return { ...s, _count: { tickets: s.tickets.length, members: memberIds.size } };
+    });
+    res.json(result);
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
+// Create sprint (admin only)
+router.post('/:id/sprints', authenticate, async (req, res) => {
+  try {
+    const isSystemAdmin = req.user.role === 'admin';
+    if (!isSystemAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+      });
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can create sprints' });
+    }
+    const { title, startDate, endDate } = req.body;
+    if (!title || !startDate || !endDate) return res.status(400).json({ error: 'title, startDate and endDate required' });
+    const sprint = await prisma.sprint.create({
+      data: { boardId: req.params.id, title, startDate: new Date(startDate), endDate: new Date(endDate) },
+      include: { tickets: { select: { assigneeId: true } } },
+    });
+    const result = { ...sprint, _count: { tickets: 0, members: 0 } };
+    res.json(result);
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
+// Delete sprint (admin only)
+router.delete('/:id/sprints/:sprintId', authenticate, async (req, res) => {
+  try {
+    const isSystemAdmin = req.user.role === 'admin';
+    if (!isSystemAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+      });
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can delete sprints' });
+    }
+    await prisma.sprint.delete({ where: { id: req.params.sprintId } });
+    res.json({ success: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
 module.exports = router;

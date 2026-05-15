@@ -1,0 +1,17 @@
+ALTER TABLE "Ticket" ADD COLUMN "sprintId" TEXT;
+
+CREATE TABLE "Sprint" (
+  "id" TEXT NOT NULL,
+  "boardId" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
+  "startDate" TIMESTAMP(3) NOT NULL,
+  "endDate" TIMESTAMP(3) NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Sprint_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "Sprint" ADD CONSTRAINT "Sprint_boardId_fkey"
+  FOREIGN KEY ("boardId") REFERENCES "Board"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_sprintId_fkey"
+  FOREIGN KEY ("sprintId") REFERENCES "Sprint"("id") ON DELETE SET NULL ON UPDATE CASCADE;

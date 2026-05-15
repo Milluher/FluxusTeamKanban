@@ -43,6 +43,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
   const [depResults, setDepResults] = useState<any[]>([]);
   const [showDepSearch, setShowDepSearch] = useState(false);
 
+  useEffect(() => {
+    api.get(`/tickets/${ticket.id}`).then(({ data }) => {
+      onUpdate(data);
+    }).catch(() => {});
+  }, []);
+
   const members = board.members.map((m) => m.user);
   const activeMemberIds = new Set(members.map((u) => u.id));
 

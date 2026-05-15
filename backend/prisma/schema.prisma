@@ -35,6 +35,7 @@ model Board {
   columns     Column[]
   members     BoardMember[]
   invitations Invitation[]
+  sprints     Sprint[]
 }
 
 model BoardMember {
@@ -74,6 +75,8 @@ model Ticket {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   order            Int       @default(0)
+  sprintId         String?
+  sprint           Sprint?   @relation(fields: [sprintId], references: [id], onDelete: SetNull)
 
   column         Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
   assignee       User?    @relation("AssigneeRelation", fields: [assigneeId], references: [id])
@@ -144,4 +147,15 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Sprint {
+  id        String   @id @default(uuid())
+  boardId   String
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tickets   Ticket[]
 }

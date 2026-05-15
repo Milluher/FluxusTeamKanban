@@ -37,6 +37,7 @@ export interface Ticket {
   order: number;
   type?: string;
   project?: string;
+  sprintId?: string;
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };
@@ -59,6 +60,16 @@ export interface Board {
   name: string;
   columns: Column[];
   members: { id: string; role: string; user: User }[];
+}
+
+export interface Sprint {
+  id: string;
+  boardId: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  _count: { tickets: number; members: number };
 }
 
 export interface Notification {

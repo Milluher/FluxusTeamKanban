@@ -17,9 +17,10 @@ interface Props {
   board: Board;
   onClose: () => void;
   onCreate: (ticket: Ticket) => void;
+  sprintId?: string;
 }
 
-export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate }: Props) {
+export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId }: Props) {
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -46,6 +47,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         assignedDate: form.assignedDate || undefined,
         columnId,
         boardId,
+        sprintId: sprintId || undefined,
       });
       onCreate(data);
     } catch (err: any) {
