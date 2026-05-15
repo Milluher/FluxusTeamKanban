@@ -17,6 +17,8 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [deleteBoard, setDeleteBoard] = useState<Board | null>(null);
+  const [deletingBoard, setDeletingBoard] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,6 +47,18 @@ export default function DashboardPage() {
       setNewBoardName('');
       setShowCreate(false);
     } finally { setCreating(false); }
+  };
+
+  const confirmDeleteBoard = async () => {
+    if (!deleteBoard) return;
+    setDeletingBoard(true);
+    try {
+      await api.delete(`/boards/${deleteBoard.id}`);
+      setBoards((prev) => prev.filter((b) => b.id !== deleteBoard.id));
+      setDeleteBoard(null);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to delete board');
+    } finally { setDeletingBoard(false); }
   };
 
   const logout = () => {
@@ -178,19 +192,33 @@ export default function DashboardPage() {
 
           const BoardCard = ({ board }: { board: typeof boards[0] }) => (
             <div
-              key={board.id}
-              onClick={() => router.push(`/board/${board.id}`)}
-              className="bg-white border border-gray-200 rounded-xl cursor-pointer transition-all duration-150 relative overflow-hidden hover:shadow-sm"
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#e8390e'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+              className="bg-white border border-gray-200 rounded-xl transition-all duration-150 relative overflow-hidden hover:shadow-sm group"
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#e8390e'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#e5e7eb'; }}
             >
               <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style={{ background: '#e8390e' }} />
-              <div className="pl-5 pr-5 py-4 sm:py-5">
+              <div
+                className="pl-5 pr-5 py-4 sm:py-5 cursor-pointer"
+                onClick={() => router.push(`/board/${board.id}`)}
+              >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h3 className="font-semibold text-base truncate" style={{ color: '#1a1f3c' }}>{board.name}</h3>
-                  {(board as any).userRole !== 'admin' && (
-                    <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 font-medium">Shared</span>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {(board as any).userRole !== 'admin' && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 font-medium">Shared</span>
+                    )}
+                    {user?.role === 'admin' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteBoard(board); }}
+                        title="Delete board"
+                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-gray-400">
                   <span className="flex items-center gap-1.5">
@@ -256,6 +284,25 @@ export default function DashboardPage() {
           onClose={() => setShowProfile(false)}
           onLogout={logout}
         />
+      )}
+
+      {deleteBoard && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setDeleteBoard(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-red-600">Delete Board</h3>
+              <button onClick={() => setDeleteBoard(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+            </div>
+            <p className="text-sm text-gray-600 mb-1">Are you sure you want to delete <strong>{deleteBoard.name}</strong>?</p>
+            <p className="text-xs text-gray-400 mb-5">This will permanently delete the board and all its tickets. This cannot be undone.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteBoard(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
+              <button onClick={confirmDeleteBoard} disabled={deletingBoard} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">
+                {deletingBoard ? 'Deleting...' : 'Delete Board'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

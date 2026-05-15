@@ -5,21 +5,21 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get all boards for current user
+// Get all boards for current user (admins see all boards)
 router.get('/', authenticate, async (req, res) => {
   try {
+    const isAdmin = req.user.role === 'admin';
     const boards = await prisma.board.findMany({
-      where: { members: { some: { userId: req.user.id } } },
+      where: isAdmin ? undefined : { members: { some: { userId: req.user.id } } },
       include: {
         _count: { select: { members: true } },
         columns: { orderBy: { order: 'asc' }, select: { id: true, name: true, order: true, _count: { select: { tickets: true } } } },
         members: { where: { userId: req.user.id }, select: { role: true } },
       },
     });
-    // Attach userRole at the top level for convenience
     const result = boards.map((b) => ({
       ...b,
-      userRole: b.members[0]?.role ?? 'member',
+      userRole: b.members[0]?.role ?? (isAdmin ? 'admin' : 'member'),
     }));
     res.json(result);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
@@ -28,10 +28,13 @@ router.get('/', authenticate, async (req, res) => {
 // Get single board with full data
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
-    });
-    if (!membership) return res.status(403).json({ error: 'Access denied' });
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+      });
+      if (!membership) return res.status(403).json({ error: 'Access denied' });
+    }
 
     const board = await prisma.board.findUnique({
       where: { id: req.params.id },
@@ -86,13 +89,16 @@ router.post('/', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
-// Delete board (admin only)
+// Delete board (system admin or board admin)
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    const membership = await prisma.boardMember.findUnique({
-      where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
-    });
-    if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+    const isSystemAdmin = req.user.role === 'admin';
+    if (!isSystemAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+      });
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+    }
     await prisma.board.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
