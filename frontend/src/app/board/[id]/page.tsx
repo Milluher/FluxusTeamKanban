@@ -50,6 +50,10 @@ export default function BoardPage() {
   const [creatingSprintLoading, setCreatingSprintLoading] = useState(false);
   const [deletingSprintId, setDeletingSprintId] = useState<string | null>(null);
 
+  // Ticket filter state
+  const [filterMyTickets, setFilterMyTickets] = useState(true);
+  const [mentionedTicketIds, setMentionedTicketIds] = useState<Set<string>>(new Set());
+
   useInactivityTimeout();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -154,10 +158,19 @@ export default function BoardPage() {
 
   const loadBoard = async () => {
     try {
-      const { data } = await api.get(`/boards/${boardId}`);
+      const [{ data }, { data: sprintData }, { data: notifs }] = await Promise.all([
+        api.get(`/boards/${boardId}`),
+        api.get(`/boards/${boardId}/sprints`),
+        api.get('/notifications'),
+      ]);
       setBoard(data);
-      const { data: sprintData } = await api.get(`/boards/${boardId}/sprints`);
       setSprints(sprintData);
+      const ids = new Set<string>(
+        notifs
+          .filter((n: any) => n.type === 'comment_mention' && n.ticketId)
+          .map((n: any) => n.ticketId as string)
+      );
+      setMentionedTicketIds(ids);
     } catch { router.push('/dashboard'); }
     finally { setLoading(false); }
   };
@@ -278,6 +291,15 @@ export default function BoardPage() {
         tickets: col.tickets.filter((t) => t.sprintId === activeSprint.id),
       }))
     : board.columns;
+
+  const visibleColumns = activeSprint && filterMyTickets
+    ? sprintColumns.map((col) => ({
+        ...col,
+        tickets: col.tickets.filter((t) =>
+          t.assigneeId === currentUser?.id || mentionedTicketIds.has(t.id)
+        ),
+      }))
+    : sprintColumns;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
@@ -418,13 +440,36 @@ export default function BoardPage() {
           <span className="text-xs hidden sm:inline" style={{ color: 'rgba(255,255,255,0.5)' }}>
             {formatDate(activeSprint.startDate)} &rarr; {formatDate(activeSprint.endDate)}
           </span>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,57,14,0.2)', color: '#e8390e' }}>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(232,57,14,0.2)', color: '#e8390e' }}>
               {activeSprint._count.tickets} tickets
             </span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
               {activeSprint._count.members} members
             </span>
+            {/* Filter toggle */}
+            <div className="flex rounded-lg overflow-hidden text-xs font-semibold" style={{ border: '1px solid rgba(255,255,255,0.25)' }}>
+              <button
+                onClick={() => setFilterMyTickets(true)}
+                className="px-3 py-1.5 transition-all"
+                style={{
+                  background: filterMyTickets ? 'white' : 'transparent',
+                  color: filterMyTickets ? '#1a1f3c' : 'rgba(255,255,255,0.65)',
+                }}
+              >
+                Mine
+              </button>
+              <button
+                onClick={() => setFilterMyTickets(false)}
+                className="px-3 py-1.5 transition-all"
+                style={{
+                  background: !filterMyTickets ? 'white' : 'transparent',
+                  color: !filterMyTickets ? '#1a1f3c' : 'rgba(255,255,255,0.65)',
+                }}
+              >
+                All
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -480,7 +525,7 @@ export default function BoardPage() {
               {sprints.map((sprint) => (
                 <div
                   key={sprint.id}
-                  onClick={() => setActiveSprint(sprint)}
+                  onClick={() => { setActiveSprint(sprint); setFilterMyTickets(true); }}
                   className="relative bg-white rounded-xl border border-gray-200 p-5 cursor-pointer transition-all duration-150 hover:shadow-md hover:border-gray-300 group"
                 >
                   {/* Delete button — admin only */}
@@ -550,7 +595,7 @@ export default function BoardPage() {
             <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 160px)' }}>
               {(() => {
                 const activeMemberIds = new Set(board.members.map((m) => m.user.id));
-                return sprintColumns.map((col) => (
+                return visibleColumns.map((col) => (
                   <KanbanColumn
                     key={col.id}
                     column={col}
