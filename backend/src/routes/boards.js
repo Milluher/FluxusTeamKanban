@@ -64,24 +64,30 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create board
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, type = 'sprint' } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
+    if (!['sprint', 'kanban'].includes(type)) return res.status(400).json({ error: 'type must be sprint or kanban' });
     const requestingUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } });
     if (!requestingUser || requestingUser.role !== 'admin')
       return res.status(403).json({ error: 'Only admins can create boards' });
+    const sprintColumns = [
+      { name: 'Backlog', order: 0 },
+      { name: 'To Do', order: 1 },
+      { name: 'In Progress', order: 2 },
+      { name: 'Review', order: 3 },
+      { name: 'Done', order: 4 },
+    ];
+    const kanbanColumns = [
+      { name: 'To Do', order: 0 },
+      { name: 'In Progress', order: 1 },
+      { name: 'Done', order: 2 },
+    ];
     const board = await prisma.board.create({
       data: {
         name,
+        type,
         members: { create: { userId: req.user.id, role: 'admin' } },
-        columns: {
-          create: [
-            { name: 'Backlog', order: 0 },
-            { name: 'To Do', order: 1 },
-            { name: 'In Progress', order: 2 },
-            { name: 'Review', order: 3 },
-            { name: 'Done', order: 4 },
-          ],
-        },
+        columns: { create: type === 'kanban' ? kanbanColumns : sprintColumns },
       },
       include: { columns: { orderBy: { order: 'asc' } } },
     });
@@ -143,6 +149,9 @@ router.delete('/:id/members/:userId', authenticate, async (req, res) => {
       where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
     });
     if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Not authorized' });
+    const target = await prisma.user.findUnique({ where: { id: req.params.userId }, select: { email: true } });
+    if (target?.email === 'femi@fluxx.ng')
+      return res.status(403).json({ error: 'The workspace owner cannot be removed from boards' });
     await prisma.boardMember.deleteMany({
       where: { userId: req.params.userId, boardId: req.params.id },
     });
@@ -186,6 +195,30 @@ router.post('/:id/sprints', authenticate, async (req, res) => {
       include: { tickets: { select: { assigneeId: true } } },
     });
     const result = { ...sprint, _count: { tickets: 0, members: 0 } };
+    res.json(result);
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
+// Update sprint status (admin only)
+router.patch('/:id/sprints/:sprintId', authenticate, async (req, res) => {
+  try {
+    const isSystemAdmin = req.user.role === 'admin';
+    if (!isSystemAdmin) {
+      const membership = await prisma.boardMember.findUnique({
+        where: { userId_boardId: { userId: req.user.id, boardId: req.params.id } },
+      });
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Only admins can update sprints' });
+    }
+    const { status } = req.body;
+    const allowed = ['backlog', 'active', 'completed'];
+    if (!status || !allowed.includes(status)) return res.status(400).json({ error: 'Invalid status. Must be backlog, active, or completed.' });
+    const sprint = await prisma.sprint.update({
+      where: { id: req.params.sprintId },
+      data: { status },
+      include: { tickets: { select: { assigneeId: true } } },
+    });
+    const memberIds = new Set(sprint.tickets.map((t) => t.assigneeId).filter(Boolean));
+    const result = { ...sprint, _count: { tickets: sprint.tickets.length, members: memberIds.size } };
     res.json(result);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });

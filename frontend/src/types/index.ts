@@ -58,6 +58,7 @@ export interface Column {
 export interface Board {
   id: string;
   name: string;
+  type: string;
   columns: Column[];
   members: { id: string; role: string; user: User }[];
 }
@@ -69,6 +70,7 @@ export interface Sprint {
   startDate: string;
   endDate: string;
   createdAt: string;
+  status: string;
   _count: { tickets: number; members: number };
 }
 

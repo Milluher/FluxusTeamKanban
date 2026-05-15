@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [newBoardName, setNewBoardName] = useState('');
+  const [newBoardType, setNewBoardType] = useState<'sprint' | 'kanban'>('sprint');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -42,9 +43,10 @@ export default function DashboardPage() {
     if (!newBoardName.trim()) return;
     setCreating(true);
     try {
-      const { data } = await api.post('/boards', { name: newBoardName });
+      const { data } = await api.post('/boards', { name: newBoardName, type: newBoardType });
       setBoards((prev) => [...prev, data]);
       setNewBoardName('');
+      setNewBoardType('sprint');
       setShowCreate(false);
     } finally { setCreating(false); }
   };
@@ -148,41 +150,101 @@ export default function DashboardPage() {
           </button>)}
         </div>
 
-        {/* Create board inline form */}
+        {/* Create board modal */}
         {showCreate && user?.role === 'admin' && (
-          <form
-            onSubmit={createBoard}
-            className="bg-white border border-gray-200 rounded-xl p-4 mb-5 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center shadow-sm w-full"
-            style={{ borderColor: '#e8390e' }}
-          >
-            <input
-              autoFocus
-              type="text"
-              value={newBoardName}
-              onChange={(e) => setNewBoardName(e.target.value)}
-              placeholder="Board name..."
-              className="flex-1 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent min-h-[44px] px-1"
-            />
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={creating}
-                className="flex-1 sm:flex-none px-4 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
-                style={{ background: '#e8390e' }}
-                onMouseEnter={(e) => { if (!creating) e.currentTarget.style.background = '#c73009'; }}
-                onMouseLeave={(e) => { if (!creating) e.currentTarget.style.background = '#e8390e'; }}
-              >
-                {creating ? 'Creating...' : 'Create'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreate(false)}
-                className="flex-1 sm:flex-none px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-500 border border-gray-200 bg-white transition-all duration-150 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          <div className="fixed inset-0 flex items-end sm:items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowCreate(false)}>
+            <form
+              onSubmit={createBoard}
+              className="w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-xl shadow-xl border border-gray-200 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="font-bold text-base" style={{ color: '#1a1f3c' }}>New Board</h3>
+                <button type="button" onClick={() => setShowCreate(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 bg-gray-100 hover:bg-gray-200 text-lg">×</button>
+              </div>
+              <div className="px-5 py-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Board Name</label>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={newBoardName}
+                    onChange={(e) => setNewBoardName(e.target.value)}
+                    placeholder="e.g. Product Roadmap"
+                    className="w-full px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none rounded-lg border border-gray-200 transition-all"
+                    onFocus={(e) => { e.currentTarget.style.borderColor = '#e8390e'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-2">Board Type</label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {([
+                      {
+                        value: 'sprint',
+                        label: 'Sprint Board',
+                        desc: 'Manage tickets in sprints with full lifecycle tracking.',
+                        icon: (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                        ),
+                      },
+                      {
+                        value: 'kanban',
+                        label: 'Kanban Board',
+                        desc: 'Simple To Do → In Progress → Done flow, no sprints.',
+                        icon: (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="10" y="3" width="5" height="12" rx="1.5"/><rect x="17" y="3" width="5" height="8" rx="1.5"/>
+                          </svg>
+                        ),
+                      },
+                    ] as const).map((opt) => {
+                      const active = newBoardType === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setNewBoardType(opt.value)}
+                          className="flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all duration-150"
+                          style={{
+                            borderColor: active ? '#e8390e' : '#e5e7eb',
+                            background: active ? '#fff7f5' : 'white',
+                            boxShadow: active ? '0 0 0 2px rgba(232,57,14,0.15)' : 'none',
+                          }}
+                        >
+                          <span style={{ color: active ? '#e8390e' : '#9ca3af' }}>{opt.icon}</span>
+                          <span className="text-xs font-bold" style={{ color: active ? '#e8390e' : '#1a1f3c' }}>{opt.label}</span>
+                          <span className="text-xs leading-snug" style={{ color: '#9ca3af' }}>{opt.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="px-5 pb-5 flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 bg-white transition-all hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating || !newBoardName.trim()}
+                  className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50"
+                  style={{ background: '#e8390e' }}
+                  onMouseEnter={(e) => { if (!creating) e.currentTarget.style.background = '#c73009'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
+                >
+                  {creating ? 'Creating...' : 'Create Board'}
+                </button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* Boards grid */}
@@ -204,6 +266,9 @@ export default function DashboardPage() {
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h3 className="font-semibold text-base truncate" style={{ color: '#1a1f3c' }}>{board.name}</h3>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${board.type === 'kanban' ? 'bg-purple-50 text-purple-500' : 'bg-orange-50 text-orange-500'}`}>
+                      {board.type === 'kanban' ? 'Kanban' : 'Sprint'}
+                    </span>
                     {(board as any).userRole !== 'admin' && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 font-medium">Shared</span>
                     )}

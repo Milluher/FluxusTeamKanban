@@ -120,13 +120,17 @@ export default function AdminPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">{u.name}</p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>{u.role}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+                    {u.email === 'femi@fluxx.ng' ? 'super-admin' : u.role}
+                  </span>
                 </div>
               </div>
-              {u.id !== currentUser?.id && (
+              {u.email === 'femi@fluxx.ng' ? (
+                <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}>Owner</span>
+              ) : u.id !== currentUser?.id && (
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <button onClick={() => generateLink(u)} className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]">Reset pw</button>
-                  {isSuperAdmin && u.email !== 'femi@fluxx.ng' && (
+                  {isSuperAdmin && (
                     <button onClick={() => toggleRole(u)} className={`text-xs border rounded-lg px-3 py-1.5 min-h-[32px] ${u.role === 'admin' ? 'border-orange-200 text-orange-600' : 'border-blue-200 text-blue-600'}`}>
                       {u.role === 'admin' ? 'Revoke admin' : 'Make admin'}
                     </button>
@@ -161,16 +165,20 @@ export default function AdminPage() {
                   </td>
                   <td className="px-5 py-3 text-gray-500">{u.email}</td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>{u.role}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.email === 'femi@fluxx.ng' ? 'bg-orange-50 text-orange-600' : u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+                      {u.email === 'femi@fluxx.ng' ? 'super-admin' : u.role}
+                    </span>
                   </td>
                   <td className="px-5 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="px-5 py-3 text-right">
-                    {u.id !== currentUser?.id && (
+                    {u.email === 'femi@fluxx.ng' ? (
+                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}>Owner</span>
+                    ) : u.id !== currentUser?.id && (
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => generateLink(u)} className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors">
                           Reset Password
                         </button>
-                        {isSuperAdmin && u.email !== 'femi@fluxx.ng' && (
+                        {isSuperAdmin && (
                           <button onClick={() => toggleRole(u)} className={`text-xs border rounded px-2 py-1 transition-colors ${u.role === 'admin' ? 'border-orange-200 text-orange-500 hover:border-orange-400' : 'border-blue-200 text-blue-500 hover:border-blue-400'}`}>
                             {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
                           </button>

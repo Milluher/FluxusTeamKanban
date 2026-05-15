@@ -29,6 +29,7 @@ model User {
 model Board {
   id        String   @id @default(uuid())
   name      String
+  type      String   @default("sprint") // "sprint" | "kanban"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -155,6 +156,7 @@ model Sprint {
   title     String
   startDate DateTime
   endDate   DateTime
+  status    String   @default("backlog")
   createdAt DateTime @default(now())
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   tickets   Ticket[]

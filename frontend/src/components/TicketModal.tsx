@@ -19,12 +19,13 @@ interface Props {
   currentUser: User;
   sprints?: Sprint[];
   isAdmin?: boolean;
+  boardType?: string;
   onClose: () => void;
   onUpdate: (ticket: Ticket) => void;
   onDelete: (id: string) => void;
 }
 
-export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, onClose, onUpdate, onDelete }: Props) {
+export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: ticket.title,
@@ -310,7 +311,17 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     );
                   })() : <p className="mt-1.5 text-sm text-gray-400">Unassigned</p>,
                 },
-                {
+                boardType === 'kanban' ? {
+                  label: 'Creator',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
+                  editEl: null,
+                  viewEl: (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <img src={avatarUrl(ticket.createdBy.name)} className="w-7 h-7 rounded-full" alt={ticket.createdBy.name} />
+                      <span className="text-sm font-medium text-gray-800">{ticket.createdBy.name}</span>
+                    </div>
+                  ),
+                } : {
                   label: 'Product Manager',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
                   editEl: (

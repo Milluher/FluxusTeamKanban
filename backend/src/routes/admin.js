@@ -46,6 +46,9 @@ router.post('/users/:id/reset-link', authenticate, requireAdmin, async (req, res
 // Remove user from board (admin)
 router.delete('/boards/:boardId/members/:userId', authenticate, requireAdmin, async (req, res) => {
   try {
+    const target = await prisma.user.findUnique({ where: { id: req.params.userId }, select: { email: true } });
+    if (target?.email === 'femi@fluxx.ng')
+      return res.status(403).json({ error: 'The workspace owner cannot be removed from boards' });
     await prisma.boardMember.deleteMany({
       where: { userId: req.params.userId, boardId: req.params.boardId },
     });
@@ -62,6 +65,8 @@ router.delete('/users/:id', authenticate, requireAdmin, async (req, res) => {
 
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.email === 'femi@fluxx.ng')
+      return res.status(403).json({ error: 'The workspace owner cannot be deleted' });
 
     // Transfer ticket ownership (createdById is non-nullable) to the admin performing the action
     await prisma.ticket.updateMany({

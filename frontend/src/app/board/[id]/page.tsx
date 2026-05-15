@@ -265,6 +265,14 @@ export default function BoardPage() {
     } finally { setDeletingSprintId(null); }
   };
 
+  const moveSprint = async (sprintId: string, status: string) => {
+    try {
+      const { data } = await api.patch(`/boards/${boardId}/sprints/${sprintId}`, { status });
+      setSprints((prev) => prev.map((s) => s.id === sprintId ? { ...s, status: data.status } : s));
+      if (activeSprint?.id === sprintId) setActiveSprint((prev) => prev ? { ...prev, status: data.status } : prev);
+    } catch { /* silent — board is still functional */ }
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
@@ -418,7 +426,7 @@ export default function BoardPage() {
       </nav>
 
       {/* Sprint ticket view banner */}
-      {activeSprint && (
+      {activeSprint && board.type !== 'kanban' && (
         <div
           className="flex-shrink-0 flex items-center gap-3 px-4 sm:px-6 py-2.5 border-b border-gray-200"
           style={{ background: '#1a1f3c' }}
@@ -474,8 +482,32 @@ export default function BoardPage() {
         </div>
       )}
 
-      {/* Main content: Sprint Overview or Kanban */}
-      {!activeSprint ? (
+      {/* Main content: Direct Kanban (kanban board), Sprint Overview, or Sprint Ticket View */}
+      {board.type === 'kanban' ? (
+        /* Direct Kanban Board */
+        <div className="flex-1 overflow-x-auto pb-4 board-scroll">
+          <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
+              {(() => {
+                const activeMemberIds = new Set(board.members.map((m) => m.user.id));
+                return board.columns.map((col) => (
+                  <KanbanColumn
+                    key={col.id}
+                    column={col}
+                    onTicketClick={(ticket) => setSelectedTicket(ticket)}
+                    onAddTicket={(columnId) => { setCreateColumnId(columnId); setShowCreateModal(true); }}
+                    boardId={boardId}
+                    activeMemberIds={activeMemberIds}
+                  />
+                ));
+              })()}
+            </div>
+            <DragOverlay>
+              {activeTicket && <TicketCard ticket={activeTicket} onClick={() => {}} isDragging />}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      ) : !activeSprint ? (
         /* Sprint Overview */
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8">
           {/* Header */}
@@ -501,7 +533,7 @@ export default function BoardPage() {
           </div>
 
 
-          {/* Sprint grid */}
+          {/* Sprint status kanban */}
           {sprints.length === 0 && !showCreateSprint ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div
@@ -521,70 +553,158 @@ export default function BoardPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sprints.map((sprint) => (
-                <div
-                  key={sprint.id}
-                  onClick={() => { setActiveSprint(sprint); setFilterMyTickets(true); }}
-                  className="relative bg-white rounded-xl border border-gray-200 p-5 cursor-pointer transition-all duration-150 hover:shadow-md hover:border-gray-300 group"
-                >
-                  {/* Delete button — admin only */}
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteSprint(sprint.id); }}
-                      disabled={deletingSprintId === sprint.id}
-                      className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 opacity-0 group-hover:opacity-100 transition-all hover:text-red-500 hover:bg-red-50 disabled:opacity-50"
-                      title="Delete sprint"
-                    >
-                      {deletingSprintId === sprint.id ? (
-                        <span className="text-xs">...</span>
-                      ) : (
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/>
-                          <path d="M19 6l-1 14H6L5 6"/>
-                          <path d="M10 11v6M14 11v6"/>
-                          <path d="M9 6V4h6v2"/>
-                        </svg>
-                      )}
-                    </button>
-                  )}
+            (() => {
+              const sprintCols: { key: string; label: string; color: string; bg: string; border: string }[] = [
+                { key: 'backlog', label: 'Backlog', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+                { key: 'active', label: 'Active', color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd' },
+                { key: 'completed', label: 'Completed', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+              ];
+              return (
+                <div className="flex gap-4 overflow-x-auto pb-2" style={{ minHeight: 200 }}>
+                  {sprintCols.map((col) => {
+                    const colSprints = sprints.filter((s) => (s.status ?? 'backlog') === col.key);
+                    return (
+                      <div key={col.key} className="flex-1 min-w-[240px] max-w-sm flex flex-col gap-3">
+                        {/* Column header */}
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs uppercase tracking-wider"
+                          style={{ background: col.bg, border: `1px solid ${col.border}`, color: col.color }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ background: col.color }}
+                          />
+                          {col.label}
+                          <span
+                            className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ background: col.border, color: col.color }}
+                          >
+                            {colSprints.length}
+                          </span>
+                        </div>
 
-                  {/* Sprint title */}
-                  <h3 className="text-base font-bold pr-8 mb-2" style={{ color: '#1a1f3c' }}>{sprint.title}</h3>
+                        {/* Sprint cards */}
+                        {colSprints.map((sprint) => (
+                          <div
+                            key={sprint.id}
+                            onClick={() => { setActiveSprint(sprint); setFilterMyTickets(true); }}
+                            className="relative bg-white rounded-xl border border-gray-200 p-4 cursor-pointer transition-all duration-150 hover:shadow-md hover:border-gray-300 group"
+                          >
+                            {/* Delete — admin only */}
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteSprint(sprint.id); }}
+                                disabled={deletingSprintId === sprint.id}
+                                className="absolute top-2.5 right-2.5 w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 opacity-0 group-hover:opacity-100 transition-all hover:text-red-500 hover:bg-red-50 disabled:opacity-50"
+                                title="Delete sprint"
+                              >
+                                {deletingSprintId === sprint.id ? (
+                                  <span className="text-xs">...</span>
+                                ) : (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6l-1 14H6L5 6"/>
+                                    <path d="M10 11v6M14 11v6"/>
+                                    <path d="M9 6V4h6v2"/>
+                                  </svg>
+                                )}
+                              </button>
+                            )}
 
-                  {/* Date range */}
-                  <p className="text-xs text-gray-400 mb-4">
-                    {formatDate(sprint.startDate)} &rarr; {formatDate(sprint.endDate)}
-                  </p>
+                            {/* Title */}
+                            <h3 className="text-sm font-bold pr-7 mb-1" style={{ color: '#1a1f3c' }}>{sprint.title}</h3>
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
-                      </svg>
-                      {sprint._count.tickets} {sprint._count.tickets === 1 ? 'ticket' : 'tickets'}
-                    </span>
-                    <span
-                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
-                      style={{ background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                      </svg>
-                      {sprint._count.members} {sprint._count.members === 1 ? 'member' : 'members'}
-                    </span>
-                  </div>
+                            {/* Date range */}
+                            <p className="text-xs text-gray-400 mb-3">
+                              {formatDate(sprint.startDate)} &rarr; {formatDate(sprint.endDate)}
+                            </p>
+
+                            {/* Stats */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <span
+                                className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                                style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}
+                              >
+                                {sprint._count.tickets} {sprint._count.tickets === 1 ? 'ticket' : 'tickets'}
+                              </span>
+                              <span
+                                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                                style={{ background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }}
+                              >
+                                {sprint._count.members} {sprint._count.members === 1 ? 'member' : 'members'}
+                              </span>
+                            </div>
+
+                            {/* Move buttons — admin only */}
+                            {isAdmin && (
+                              <div className="flex gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                                {col.key === 'backlog' && (
+                                  <button
+                                    onClick={() => moveSprint(sprint.id, 'active')}
+                                    className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
+                                    style={{ background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0ea5e9'; e.currentTarget.style.color = 'white'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f9ff'; e.currentTarget.style.color = '#0ea5e9'; }}
+                                  >
+                                    Start &rarr;
+                                  </button>
+                                )}
+                                {col.key === 'active' && (
+                                  <>
+                                    <button
+                                      onClick={() => moveSprint(sprint.id, 'backlog')}
+                                      className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
+                                      style={{ background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = '#6b7280'; e.currentTarget.style.color = 'white'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.color = '#6b7280'; }}
+                                    >
+                                      &larr; Reset
+                                    </button>
+                                    <button
+                                      onClick={() => moveSprint(sprint.id, 'completed')}
+                                      className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
+                                      style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = 'white'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
+                                    >
+                                      Complete ✓
+                                    </button>
+                                  </>
+                                )}
+                                {col.key === 'completed' && (
+                                  <button
+                                    onClick={() => moveSprint(sprint.id, 'active')}
+                                    className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
+                                    style={{ background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0ea5e9'; e.currentTarget.style.color = 'white'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f9ff'; e.currentTarget.style.color = '#0ea5e9'; }}
+                                  >
+                                    &larr; Reopen
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {colSprints.length === 0 && (
+                          <div
+                            className="rounded-xl border border-dashed p-6 text-center text-xs text-gray-400"
+                            style={{ borderColor: col.border }}
+                          >
+                            No {col.label.toLowerCase()} sprints
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              );
+            })()
           )}
         </div>
       ) : (
-        /* Sprint Ticket View (filtered kanban) */
+        /* Sprint Ticket View (filtered kanban — sprint boards only) */
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
           <DndContext
             sensors={sensors}
@@ -623,6 +743,7 @@ export default function BoardPage() {
           currentUser={currentUser!}
           sprints={sprints}
           isAdmin={isAdmin}
+          boardType={board.type}
           onClose={() => setSelectedTicket(null)}
           onUpdate={(updated) => {
             setBoard((prev) => updateTicketInBoard(prev, updated));
@@ -649,6 +770,7 @@ export default function BoardPage() {
             setShowCreateModal(false);
           }}
           sprintId={activeSprint?.id}
+          boardType={board.type}
         />
       )}
 

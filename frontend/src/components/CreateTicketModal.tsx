@@ -18,9 +18,10 @@ interface Props {
   onClose: () => void;
   onCreate: (ticket: Ticket) => void;
   sprintId?: string;
+  boardType?: string;
 }
 
-export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId }: Props) {
+export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId, boardType = 'sprint' }: Props) {
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -145,21 +146,23 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                 {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                Product Manager
-              </label>
-              <select
-                value={form.productManagerId}
-                onChange={(e) => setForm({ ...form, productManagerId: e.target.value })}
-                className="px-3 py-2.5 text-sm transition-all duration-150"
-                style={inputStyle}
-                {...focusHandlers}
-              >
-                <option value="">None</option>
-                {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
+            {boardType !== 'kanban' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                  Product Manager
+                </label>
+                <select
+                  value={form.productManagerId}
+                  onChange={(e) => setForm({ ...form, productManagerId: e.target.value })}
+                  className="px-3 py-2.5 text-sm transition-all duration-150"
+                  style={inputStyle}
+                  {...focusHandlers}
+                >
+                  <option value="">None</option>
+                  {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
