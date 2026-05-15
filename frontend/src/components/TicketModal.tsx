@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { Ticket, Board, User, Comment } from '@/types';
+import { Ticket, Board, User, Comment, Sprint } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
 
 const TICKET_TYPES = [
@@ -17,12 +17,14 @@ interface Props {
   boardId: string;
   board: Board;
   currentUser: User;
+  sprints?: Sprint[];
+  isAdmin?: boolean;
   onClose: () => void;
   onUpdate: (ticket: Ticket) => void;
   onDelete: (id: string) => void;
 }
 
-export default function TicketModal({ ticket, boardId, board, currentUser, onClose, onUpdate, onDelete }: Props) {
+export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, onClose, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: ticket.title,
@@ -32,6 +34,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
     assignedDate: ticket.assignedDate ? ticket.assignedDate.split('T')[0] : '',
     type: ticket.type || '',
     project: ticket.project || '',
+    sprintId: ticket.sprintId || '',
   });
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
@@ -411,6 +414,30 @@ export default function TicketModal({ ticket, boardId, board, currentUser, onClo
                   ),
                   viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-400">—</span>}</p>,
                 },
+                ...(sprints.length > 0 ? [{
+                  label: 'Sprint',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>,
+                  editEl: isAdmin ? (
+                    <select
+                      value={form.sprintId}
+                      onChange={(e) => setForm({ ...form, sprintId: e.target.value })}
+                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                      style={inputStyle}
+                      {...inputFocusHandlers}
+                    >
+                      <option value="">No sprint</option>
+                      {sprints.map((s) => (
+                        <option key={s.id} value={s.id}>{s.title}</option>
+                      ))}
+                    </select>
+                  ) : null,
+                  viewEl: (() => {
+                    const s = sprints.find((s) => s.id === ticket.sprintId);
+                    return s
+                      ? <span className="mt-1.5 inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{s.title}</span>
+                      : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                  })(),
+                }] : []),
               ].map(({ label, icon, editEl, viewEl }) => (
                 <div key={label} className="rounded-lg p-3 bg-gray-50 border border-gray-100">
                   <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">
