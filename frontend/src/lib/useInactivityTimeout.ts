@@ -2,7 +2,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function useInactivityTimeout(timeoutMs: number = 10 * 60 * 1000) {
+export function useInactivityTimeout(timeoutMs: number = 60 * 60 * 1000) {
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
