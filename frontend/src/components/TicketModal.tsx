@@ -39,6 +39,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     columnId: ticket.columnId,
   });
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -446,24 +447,38 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   label: 'Project',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.47 0 12 0S6 2.53 6 4.64c0 .48.11.92.18 1.36H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8-4c1.59 0 3 1.41 3 2.64 0 .47-.18.88-.45 1.36H9.45C9.18 5.52 9 5.11 9 4.64 9 3.41 10.41 2 12 2zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>,
                   editEl: (
-                    <>
+                    <div className="relative mt-1.5">
                       <input
                         type="text"
-                        list={`project-options-${ticket.id}`}
                         value={form.project}
                         onChange={(e) => setForm({ ...form, project: e.target.value })}
-                        className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                        onFocus={() => setShowProjectDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowProjectDropdown(false), 150)}
+                        className="w-full px-2.5 py-2 text-sm"
                         style={inputStyle}
                         {...inputFocusHandlers}
-                        placeholder="Project name..."
+                        placeholder="Type or select a project..."
                         autoComplete="off"
                       />
-                      <datalist id={`project-options-${ticket.id}`}>
-                        {projectOptions.map((p) => (
-                          <option key={p} value={p} />
-                        ))}
-                      </datalist>
-                    </>
+                      {showProjectDropdown && projectOptions.filter((p) =>
+                        !form.project || p.toLowerCase().includes(form.project.toLowerCase())
+                      ).length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                          {projectOptions
+                            .filter((p) => !form.project || p.toLowerCase().includes(form.project.toLowerCase()))
+                            .map((p) => (
+                              <button
+                                key={p}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, project: p }); setShowProjectDropdown(false); }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                              >
+                                {p}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
                   ),
                   viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-400">—</span>}</p>,
                 },
