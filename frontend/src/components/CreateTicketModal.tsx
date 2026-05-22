@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { Board, Ticket } from '@/types';
 
@@ -33,6 +33,18 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [projectOptions, setProjectOptions] = useState<string[]>([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`board-projects-${boardId}`);
+    const fromStorage: string[] = stored ? JSON.parse(stored) : [];
+    const fromBoard = board.columns
+      .flatMap((c) => c.tickets)
+      .map((t) => t.project)
+      .filter((p): p is string => !!p);
+    setProjectOptions([...new Set([...fromBoard, ...fromStorage])]);
+  }, [boardId]);
 
   const members = board.members.map((m) => m.user);
 
@@ -51,6 +63,13 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         sprintId: sprintId || undefined,
       });
       onCreate(data);
+      if (form.project) {
+        const stored = localStorage.getItem(`board-projects-${boardId}`);
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        if (!existing.includes(form.project)) {
+          localStorage.setItem(`board-projects-${boardId}`, JSON.stringify([...existing, form.project]));
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create ticket');
     } finally { setSaving(false); }
@@ -201,15 +220,37 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
             <label className="block text-xs font-semibold text-gray-500 mb-1.5">
               Project
             </label>
-            <input
-              type="text"
-              value={form.project}
-              onChange={(e) => setForm({ ...form, project: e.target.value })}
-              className="px-3 py-2.5 text-sm transition-all duration-150"
-              style={inputStyle}
-              {...focusHandlers}
-              placeholder="Project name..."
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={form.project}
+                onChange={(e) => setForm({ ...form, project: e.target.value })}
+                onFocus={(e) => { setShowProjectDropdown(true); focusHandlers.onFocus(e); }}
+                onBlur={(e) => { setTimeout(() => setShowProjectDropdown(false), 150); focusHandlers.onBlur(e); }}
+                className="px-3 py-2.5 text-sm transition-all duration-150"
+                style={inputStyle}
+                placeholder="Type or select a project..."
+                autoComplete="off"
+              />
+              {showProjectDropdown && projectOptions.filter((p) =>
+                !form.project || p.toLowerCase().includes(form.project.toLowerCase())
+              ).length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                  {projectOptions
+                    .filter((p) => !form.project || p.toLowerCase().includes(form.project.toLowerCase()))
+                    .map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, project: p }); setShowProjectDropdown(false); }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {error && (
