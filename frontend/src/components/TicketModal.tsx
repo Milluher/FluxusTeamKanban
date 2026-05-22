@@ -36,7 +36,9 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     type: ticket.type || '',
     project: ticket.project || '',
     sprintId: ticket.sprintId || '',
+    columnId: ticket.columnId,
   });
+  const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -53,6 +55,16 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const stored = localStorage.getItem(`board-projects-${boardId}`);
+    const fromStorage: string[] = stored ? JSON.parse(stored) : [];
+    const fromBoard = board.columns
+      .flatMap((c) => c.tickets)
+      .map((t) => t.project)
+      .filter((p): p is string => !!p);
+    setProjectOptions([...new Set([...fromBoard, ...fromStorage])]);
+  }, [boardId]);
+
   const members = board.members.map((m) => m.user);
   const activeMemberIds = new Set(members.map((u) => u.id));
 
@@ -68,6 +80,15 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
       const { data } = await api.patch(`/tickets/${ticket.id}`, { ...form, boardId });
       onUpdate(data);
       setEditing(false);
+      if (form.project) {
+        const stored = localStorage.getItem(`board-projects-${boardId}`);
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        if (!existing.includes(form.project)) {
+          const updated = [...existing, form.project];
+          localStorage.setItem(`board-projects-${boardId}`, JSON.stringify(updated));
+          setProjectOptions((prev) => [...new Set([...prev, form.project])]);
+        }
+      }
     } finally { setSaving(false); }
   };
 
@@ -368,7 +389,19 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 {
                   label: 'Status',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>,
-                  editEl: null,
+                  editEl: (
+                    <select
+                      value={form.columnId}
+                      onChange={(e) => setForm({ ...form, columnId: e.target.value })}
+                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                      style={inputStyle}
+                      {...inputFocusHandlers}
+                    >
+                      {board.columns.map((col) => (
+                        <option key={col.id} value={col.id}>{col.name}</option>
+                      ))}
+                    </select>
+                  ),
                   viewEl: (
                     <div className="mt-1.5">
                       <span
@@ -413,15 +446,24 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   label: 'Project',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.47 0 12 0S6 2.53 6 4.64c0 .48.11.92.18 1.36H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8-4c1.59 0 3 1.41 3 2.64 0 .47-.18.88-.45 1.36H9.45C9.18 5.52 9 5.11 9 4.64 9 3.41 10.41 2 12 2zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>,
                   editEl: (
-                    <input
-                      type="text"
-                      value={form.project}
-                      onChange={(e) => setForm({ ...form, project: e.target.value })}
-                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
-                      style={inputStyle}
-                      {...inputFocusHandlers}
-                      placeholder="Project name..."
-                    />
+                    <>
+                      <input
+                        type="text"
+                        list={`project-options-${ticket.id}`}
+                        value={form.project}
+                        onChange={(e) => setForm({ ...form, project: e.target.value })}
+                        className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                        style={inputStyle}
+                        {...inputFocusHandlers}
+                        placeholder="Project name..."
+                        autoComplete="off"
+                      />
+                      <datalist id={`project-options-${ticket.id}`}>
+                        {projectOptions.map((p) => (
+                          <option key={p} value={p} />
+                        ))}
+                      </datalist>
+                    </>
                   ),
                   viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-400">—</span>}</p>,
                 },
@@ -472,16 +514,16 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={4}
-                  className="w-full px-3 py-2.5 text-sm resize-none"
-                  style={{ ...inputStyle, borderRadius: '8px' }}
+                  rows={10}
+                  className="w-full px-3 py-2.5 text-sm resize-y"
+                  style={{ ...inputStyle, borderRadius: '8px', minHeight: '160px' }}
                   {...inputFocusHandlers}
                   placeholder="Add a description..."
                 />
               ) : (
                 <div
-                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
-                  style={{ color: ticket.description ? '#374151' : '#9ca3af' }}
+                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50 whitespace-pre-wrap"
+                  style={{ color: ticket.description ? '#374151' : '#9ca3af', minHeight: '120px' }}
                 >
                   {ticket.description || 'No description provided.'}
                 </div>
