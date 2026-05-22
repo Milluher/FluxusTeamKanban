@@ -16,12 +16,16 @@ const ticketInclude = {
     orderBy: { createdAt: 'asc' },
     include: { author: { select: { id: true, name: true } } },
   },
+  sprintHistories: {
+    orderBy: { addedAt: 'asc' },
+    include: { sprint: { select: { id: true, title: true } } },
+  },
 };
 
 // Create ticket
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project, sprintId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project, epic, sprintId } = req.body;
     if (!title || !columnId) return res.status(400).json({ error: 'Title and columnId required' });
     const column = await prisma.column.findUnique({ where: { id: columnId } });
     if (!column) return res.status(404).json({ error: 'Column not found' });
@@ -37,6 +41,7 @@ router.post('/', authenticate, async (req, res) => {
         createdById: req.user.id,
         type: type || null,
         project: project || null,
+        epic: epic || null,
         sprintId: sprintId || null,
       },
       include: ticketInclude,
@@ -75,7 +80,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // Update ticket
 router.patch('/:id', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project, sprintId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project, epic, sprintId } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
@@ -84,12 +89,17 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (assignedDate !== undefined) data.assignedDate = assignedDate ? new Date(assignedDate) : null;
     if (type !== undefined) data.type = type || null;
     if (project !== undefined) data.project = project || null;
+    if (epic !== undefined) data.epic = epic || null;
     if (sprintId !== undefined) data.sprintId = sprintId || null;
     if (columnId) {
       const col = await prisma.column.findUnique({ where: { id: columnId } });
       if (col) { data.columnId = columnId; data.status = col.name; }
     }
-    const prevTicket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { assigneeId: true } });
+    const prevTicket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { assigneeId: true, sprintId: true } });
+    // Record sprint history if ticket is being moved from one sprint to another
+    if (sprintId !== undefined && prevTicket?.sprintId && prevTicket.sprintId !== (sprintId || null)) {
+      await prisma.sprintHistory.create({ data: { ticketId: req.params.id, sprintId: prevTicket.sprintId } });
+    }
     const ticket = await prisma.ticket.update({ where: { id: req.params.id }, data, include: ticketInclude });
     req.io.to(`board:${boardId}`).emit('ticket-updated', ticket);
 

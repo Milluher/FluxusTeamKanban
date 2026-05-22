@@ -73,6 +73,7 @@ model Ticket {
   createdById      String
   type             String?
   project          String?
+  epic             String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   order            Int       @default(0)
@@ -88,6 +89,7 @@ model Ticket {
   // Self-referential many-to-many for dependencies
   dependsOn      Dependency[] @relation("DependentTicket")
   dependedOnBy   Dependency[] @relation("BlockingTicket")
+  sprintHistories SprintHistory[]
 }
 
 model Dependency {
@@ -160,4 +162,15 @@ model Sprint {
   createdAt DateTime @default(now())
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   tickets   Ticket[]
+  sprintHistories SprintHistory[]
+}
+
+model SprintHistory {
+  id       String   @id @default(uuid())
+  ticketId String
+  sprintId String
+  addedAt  DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
 }

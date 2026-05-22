@@ -35,11 +35,14 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     assignedDate: ticket.assignedDate ? ticket.assignedDate.split('T')[0] : '',
     type: ticket.type || '',
     project: ticket.project || '',
+    epic: ticket.epic || '',
     sprintId: ticket.sprintId || '',
     columnId: ticket.columnId,
   });
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [epicOptions, setEpicOptions] = useState<string[]>([]);
+  const [showEpicDropdown, setShowEpicDropdown] = useState(false);
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -59,11 +62,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   useEffect(() => {
     const stored = localStorage.getItem(`board-projects-${boardId}`);
     const fromStorage: string[] = stored ? JSON.parse(stored) : [];
-    const fromBoard = board.columns
-      .flatMap((c) => c.tickets)
-      .map((t) => t.project)
-      .filter((p): p is string => !!p);
+    const fromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.project).filter((p): p is string => !!p);
     setProjectOptions([...new Set([...fromBoard, ...fromStorage])]);
+
+    const storedEpics = localStorage.getItem(`board-epics-${boardId}`);
+    const epicsFromStorage: string[] = storedEpics ? JSON.parse(storedEpics) : [];
+    const epicsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.epic).filter((p): p is string => !!p);
+    setEpicOptions([...new Set([...epicsFromBoard, ...epicsFromStorage])]);
   }, [boardId]);
 
   const members = board.members.map((m) => m.user);
@@ -88,6 +93,15 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
           const updated = [...existing, form.project];
           localStorage.setItem(`board-projects-${boardId}`, JSON.stringify(updated));
           setProjectOptions((prev) => [...new Set([...prev, form.project])]);
+        }
+      }
+      if (form.epic) {
+        const stored = localStorage.getItem(`board-epics-${boardId}`);
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        if (!existing.includes(form.epic)) {
+          const updated = [...existing, form.epic];
+          localStorage.setItem(`board-epics-${boardId}`, JSON.stringify(updated));
+          setEpicOptions((prev) => [...new Set([...prev, form.epic])]);
         }
       }
     } finally { setSaving(false); }
@@ -481,6 +495,46 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   ),
                   viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-400">—</span>}</p>,
                 },
+                ...(boardType !== 'kanban' ? [{
+                  label: 'Epic',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/></svg>,
+                  editEl: (
+                    <div className="relative mt-1.5">
+                      <input
+                        type="text"
+                        value={form.epic}
+                        onChange={(e) => setForm({ ...form, epic: e.target.value })}
+                        onFocus={(e) => { setShowEpicDropdown(true); inputFocusHandlers.onFocus(e); }}
+                        onBlur={(e) => { setTimeout(() => setShowEpicDropdown(false), 150); inputFocusHandlers.onBlur(e); }}
+                        className="w-full px-2.5 py-2 text-sm"
+                        style={inputStyle}
+                        placeholder="Type or select an epic..."
+                        autoComplete="off"
+                      />
+                      {showEpicDropdown && epicOptions.filter((p) =>
+                        !form.epic || p.toLowerCase().includes(form.epic.toLowerCase())
+                      ).length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                          {epicOptions
+                            .filter((p) => !form.epic || p.toLowerCase().includes(form.epic.toLowerCase()))
+                            .map((p) => (
+                              <button
+                                key={p}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, epic: p }); setShowEpicDropdown(false); }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                              >
+                                {p}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ),
+                  viewEl: ticket.epic
+                    ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">{ticket.epic}</span>
+                    : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                }] : []),
                 ...(sprints.length > 0 ? [{
                   label: 'Sprint',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>,
@@ -500,9 +554,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   ) : null,
                   viewEl: (() => {
                     const s = sprints.find((s) => s.id === ticket.sprintId);
-                    return s
-                      ? <span className="mt-1.5 inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{s.title}</span>
-                      : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                    const isOriginal = !(ticket.sprintHistories?.length);
+                    return s ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{s.title}</span>
+                        {isOriginal && <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Original Sprint</span>}
+                      </div>
+                    ) : <p className="mt-1.5 text-sm text-gray-400">—</p>;
                   })(),
                 }] : []),
               ].map(({ label, icon, editEl, viewEl }) => (
@@ -543,6 +601,33 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 </div>
               )}
             </div>
+
+            {/* Sprint History (sprint boards only) */}
+            {boardType !== 'kanban' && ticket.sprintId && (
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                    <polyline points="12 8 12 12 14 14"/>
+                    <path d="M3.05 11a9 9 0 1 0 .5-2.67"/>
+                    <polyline points="3 4 3 11 10 11"/>
+                  </svg>
+                  Sprint History
+                </label>
+                {(ticket.sprintHistories?.length ?? 0) === 0 ? (
+                  <p className="text-xs text-gray-400 py-1">Original Sprint — this ticket has not been moved between sprints.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {ticket.sprintHistories!.map((h) => (
+                      <div key={h.id} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 border border-gray-100">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 flex-shrink-0" />
+                        <span className="text-xs font-medium text-gray-700">{h.sprint.title}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{new Date(h.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Dependencies */}
             <div>

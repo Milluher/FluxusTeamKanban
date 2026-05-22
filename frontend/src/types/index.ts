@@ -37,6 +37,7 @@ export interface Ticket {
   order: number;
   type?: string;
   project?: string;
+  epic?: string;
   sprintId?: string;
   assignee?: User;
   productManager?: User;
@@ -45,6 +46,7 @@ export interface Ticket {
   dependsOn?: Dependency[];
   dependedOnBy?: { id: string; ticket: { id: string; title: string; status: string } }[];
   comments?: Comment[];
+  sprintHistories?: { id: string; sprintId: string; addedAt: string; sprint: { id: string; title: string } }[];
 }
 
 export interface Column {

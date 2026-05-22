@@ -30,20 +30,25 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     assignedDate: '',
     type: '',
     project: '',
+    epic: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [epicOptions, setEpicOptions] = useState<string[]>([]);
+  const [showEpicDropdown, setShowEpicDropdown] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(`board-projects-${boardId}`);
     const fromStorage: string[] = stored ? JSON.parse(stored) : [];
-    const fromBoard = board.columns
-      .flatMap((c) => c.tickets)
-      .map((t) => t.project)
-      .filter((p): p is string => !!p);
+    const fromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.project).filter((p): p is string => !!p);
     setProjectOptions([...new Set([...fromBoard, ...fromStorage])]);
+
+    const storedEpics = localStorage.getItem(`board-epics-${boardId}`);
+    const epicsFromStorage: string[] = storedEpics ? JSON.parse(storedEpics) : [];
+    const epicsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.epic).filter((p): p is string => !!p);
+    setEpicOptions([...new Set([...epicsFromBoard, ...epicsFromStorage])]);
   }, [boardId]);
 
   const members = board.members.map((m) => m.user);
@@ -68,6 +73,13 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         const existing: string[] = stored ? JSON.parse(stored) : [];
         if (!existing.includes(form.project)) {
           localStorage.setItem(`board-projects-${boardId}`, JSON.stringify([...existing, form.project]));
+        }
+      }
+      if (form.epic) {
+        const stored = localStorage.getItem(`board-epics-${boardId}`);
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        if (!existing.includes(form.epic)) {
+          localStorage.setItem(`board-epics-${boardId}`, JSON.stringify([...existing, form.epic]));
         }
       }
     } catch (err: any) {
@@ -252,6 +264,45 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               )}
             </div>
           </div>
+
+          {boardType !== 'kanban' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                Epic
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={form.epic}
+                  onChange={(e) => setForm({ ...form, epic: e.target.value })}
+                  onFocus={(e) => { setShowEpicDropdown(true); focusHandlers.onFocus(e); }}
+                  onBlur={(e) => { setTimeout(() => setShowEpicDropdown(false), 150); focusHandlers.onBlur(e); }}
+                  className="px-3 py-2.5 text-sm transition-all duration-150"
+                  style={inputStyle}
+                  placeholder="Type or select an epic..."
+                  autoComplete="off"
+                />
+                {showEpicDropdown && epicOptions.filter((p) =>
+                  !form.epic || p.toLowerCase().includes(form.epic.toLowerCase())
+                ).length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                    {epicOptions
+                      .filter((p) => !form.epic || p.toLowerCase().includes(form.epic.toLowerCase()))
+                      .map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, epic: p }); setShowEpicDropdown(false); }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                        >
+                          {p}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-lg px-3 py-2.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200">
