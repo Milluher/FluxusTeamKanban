@@ -452,11 +452,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                         type="text"
                         value={form.project}
                         onChange={(e) => setForm({ ...form, project: e.target.value })}
-                        onFocus={() => setShowProjectDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowProjectDropdown(false), 150)}
+                        onFocus={(e) => { setShowProjectDropdown(true); inputFocusHandlers.onFocus(e); }}
+                        onBlur={(e) => { setTimeout(() => setShowProjectDropdown(false), 150); inputFocusHandlers.onBlur(e); }}
                         className="w-full px-2.5 py-2 text-sm"
                         style={inputStyle}
-                        {...inputFocusHandlers}
                         placeholder="Type or select a project..."
                         autoComplete="off"
                       />
