@@ -14,6 +14,7 @@ import {
   useSensors,
   closestCorners,
 } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import api from '@/lib/api';
 import socket from '@/lib/socket';
 import { Board, Ticket, User, Sprint } from '@/types';
@@ -211,16 +212,47 @@ export default function BoardPage() {
     const ticketId = active.id as string;
     const overId = over.id as string;
 
+    if (ticketId === overId) return;
+
+    const ticket = findTicket(ticketId);
+    if (!ticket) return;
+
     // Determine target column
     let targetColumnId = overId;
-    // Check if over a ticket
     const overTicket = findTicket(overId);
     if (overTicket) targetColumnId = overTicket.columnId;
 
-    const ticket = findTicket(ticketId);
-    if (!ticket || ticket.columnId === targetColumnId) return;
+    if (ticket.columnId === targetColumnId) {
+      // Same-column reorder
+      const col = board.columns.find((c) => c.id === targetColumnId);
+      if (!col) return;
+      const oldIndex = col.tickets.findIndex((t) => t.id === ticketId);
+      const newIndex = col.tickets.findIndex((t) => t.id === overId);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-    // Optimistic update
+      const reordered = arrayMove(col.tickets, oldIndex, newIndex);
+
+      setBoard((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((c) =>
+            c.id === targetColumnId ? { ...c, tickets: reordered } : c
+          ),
+        };
+      });
+
+      try {
+        await api.patch('/tickets/reorder', {
+          columnId: targetColumnId,
+          boardId,
+          ticketIds: reordered.map((t) => t.id),
+        });
+      } catch { loadBoard(); }
+      return;
+    }
+
+    // Cross-column move
     setBoard((prev) => {
       if (!prev) return prev;
       return {

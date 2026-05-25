@@ -12,6 +12,13 @@ const TYPE_STYLES: Record<string, string> = {
   frontend: 'bg-green-50 text-green-600',
 };
 
+const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  low:    { label: 'Low',       color: '#6b7280', bg: '#f9fafb', border: '#d1d5db' },
+  medium: { label: 'Medium',    color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
+  high:   { label: 'High',      color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+  urgent: { label: 'Urgent 🔥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+};
+
 interface Props {
   ticket: Ticket;
   onClick: () => void;
@@ -23,6 +30,8 @@ interface Props {
 export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#e8390e', activeMemberIds }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({ id: ticket.id });
 
+  const priorityCfg = ticket.priority ? PRIORITY_CONFIG[ticket.priority] : null;
+
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -33,6 +42,7 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
     padding: '12px',
     cursor: 'pointer',
     position: 'relative',
+    ...(priorityCfg && !isDragging ? { borderLeft: `3px solid ${priorityCfg.border}` } : {}),
     ...(isDragging
       ? {
           transform: 'rotate(1.5deg)',
@@ -113,6 +123,14 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         )}
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {priorityCfg && (
+            <span
+              className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+              style={{ background: priorityCfg.bg, color: priorityCfg.color, border: `1px solid ${priorityCfg.border}` }}
+            >
+              {priorityCfg.label}
+            </span>
+          )}
           {ticket.type && (
             <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${TYPE_STYLES[ticket.type] || 'bg-gray-100 text-gray-600'}`}>
               {ticket.type}

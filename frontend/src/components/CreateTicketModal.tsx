@@ -11,6 +11,13 @@ const TICKET_TYPES = [
   { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-600 border-green-200' },
 ];
 
+const PRIORITIES = [
+  { value: 'low',    label: 'Low',       style: { color: '#6b7280', background: '#f9fafb', border: '1px solid #d1d5db' } },
+  { value: 'medium', label: 'Medium',    style: { color: '#b45309', background: '#fffbeb', border: '1px solid #fcd34d' } },
+  { value: 'high',   label: 'High',      style: { color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa' } },
+  { value: 'urgent', label: 'Urgent 🔥', style: { color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' } },
+];
+
 interface Props {
   columnId: string;
   boardId: string;
@@ -29,6 +36,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     productManagerId: '',
     assignedDate: '',
     type: '',
+    priority: '',
     project: '',
     epic: '',
   });
@@ -223,6 +231,25 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                   className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-all duration-150 ${t.color} ${form.type === t.value ? 'ring-2 ring-orange-400 ring-offset-1' : ''}`}
                 >
                   {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Priority
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PRIORITIES.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, priority: form.priority === p.value ? '' : p.value })}
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-all duration-150 ${form.priority === p.value ? 'ring-2 ring-offset-1 ring-gray-400' : ''}`}
+                  style={p.style}
+                >
+                  {p.label}
                 </button>
               ))}
             </div>

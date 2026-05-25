@@ -36,6 +36,7 @@ export interface Ticket {
   updatedAt: string;
   order: number;
   type?: string;
+  priority?: string;
   project?: string;
   epic?: string;
   sprintId?: string;

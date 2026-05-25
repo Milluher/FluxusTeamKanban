@@ -25,7 +25,7 @@ const ticketInclude = {
 // Create ticket
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project, epic, sprintId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, sprintId } = req.body;
     if (!title || !columnId) return res.status(400).json({ error: 'Title and columnId required' });
     const column = await prisma.column.findUnique({ where: { id: columnId } });
     if (!column) return res.status(404).json({ error: 'Column not found' });
@@ -40,6 +40,7 @@ router.post('/', authenticate, async (req, res) => {
         assignedDate: assignedDate ? new Date(assignedDate) : null,
         createdById: req.user.id,
         type: type || null,
+        priority: priority || null,
         project: project || null,
         epic: epic || null,
         sprintId: sprintId || null,
@@ -77,10 +78,24 @@ router.get('/:id', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
+// Reorder tickets within a column (must come before /:id routes)
+router.patch('/reorder', authenticate, async (req, res) => {
+  try {
+    const { columnId, ticketIds, boardId } = req.body;
+    if (!columnId || !Array.isArray(ticketIds) || !ticketIds.length) {
+      return res.status(400).json({ error: 'columnId and ticketIds required' });
+    }
+    await prisma.$transaction(
+      ticketIds.map((id, index) => prisma.ticket.update({ where: { id }, data: { order: index } }))
+    );
+    res.json({ success: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
 // Update ticket
 router.patch('/:id', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, project, epic, sprintId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, sprintId } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
@@ -88,6 +103,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (productManagerId !== undefined) data.productManagerId = productManagerId || null;
     if (assignedDate !== undefined) data.assignedDate = assignedDate ? new Date(assignedDate) : null;
     if (type !== undefined) data.type = type || null;
+    if (priority !== undefined) data.priority = priority || null;
     if (project !== undefined) data.project = project || null;
     if (epic !== undefined) data.epic = epic || null;
     if (sprintId !== undefined) data.sprintId = sprintId || null;

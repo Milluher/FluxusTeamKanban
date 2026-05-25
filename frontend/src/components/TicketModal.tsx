@@ -12,6 +12,13 @@ const TICKET_TYPES = [
   { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-600 border-green-200' },
 ];
 
+const PRIORITIES = [
+  { value: 'low',    label: 'Low',       style: { color: '#6b7280', background: '#f9fafb', border: '1px solid #d1d5db' } },
+  { value: 'medium', label: 'Medium',    style: { color: '#b45309', background: '#fffbeb', border: '1px solid #fcd34d' } },
+  { value: 'high',   label: 'High',      style: { color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa' } },
+  { value: 'urgent', label: 'Urgent 🔥', style: { color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' } },
+];
+
 interface Props {
   ticket: Ticket;
   boardId: string;
@@ -34,6 +41,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     productManagerId: ticket.productManagerId || '',
     assignedDate: ticket.assignedDate ? ticket.assignedDate.split('T')[0] : '',
     type: ticket.type || '',
+    priority: ticket.priority || '',
     project: ticket.project || '',
     epic: ticket.epic || '',
     sprintId: ticket.sprintId || '',
@@ -456,6 +464,33 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       }`}>{ticket.type}</span>
                     </div>
                   ) : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                },
+                {
+                  label: 'Priority',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.18L18 8v8l-6 3.75L6 16V8l6-3.82z"/></svg>,
+                  editEl: (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {PRIORITIES.map((p) => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setForm({ ...form, priority: form.priority === p.value ? '' : p.value })}
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full transition-all duration-150 ${form.priority === p.value ? 'ring-2 ring-offset-1 ring-gray-400' : ''}`}
+                          style={p.style}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  ),
+                  viewEl: (() => {
+                    const pcfg = ticket.priority ? PRIORITIES.find((p) => p.value === ticket.priority) : null;
+                    return pcfg ? (
+                      <div className="mt-1.5">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={pcfg.style}>{pcfg.label}</span>
+                      </div>
+                    ) : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                  })(),
                 },
                 {
                   label: 'Project',
