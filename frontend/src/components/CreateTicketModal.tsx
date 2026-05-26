@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Board, Ticket } from '@/types';
 
@@ -42,6 +42,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
@@ -159,11 +160,17 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               Description
             </label>
             <textarea
+              ref={descriptionRef}
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, description: e.target.value });
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+              }}
               rows={3}
-              className="px-3 py-2.5 text-sm placeholder-gray-400 resize-none transition-all duration-150"
-              style={inputStyle}
+              className="px-3 py-2.5 text-sm placeholder-gray-400 transition-all duration-150"
+              style={{ ...inputStyle, resize: 'none', overflow: 'hidden', minHeight: '80px' }}
               {...focusHandlers}
               placeholder="Add more context (optional)..."
             />

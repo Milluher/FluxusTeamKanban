@@ -58,6 +58,11 @@ export default function BoardPage() {
   const [filterMyTickets, setFilterMyTickets] = useState(true);
   const [mentionedTicketIds, setMentionedTicketIds] = useState<Set<string>>(new Set());
 
+  // Board filter state (type, project, priority)
+  const [filterType, setFilterType] = useState('');
+  const [filterProject, setFilterProject] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+
   useInactivityTimeout();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -344,6 +349,21 @@ export default function BoardPage() {
 
   const isAdmin = currentUser?.role === 'admin' || board.members.find(m => m.user.id === currentUser?.id)?.role === 'admin';
 
+  // Unique filter options derived from all board tickets
+  const allBoardTickets = board.columns.flatMap((c) => c.tickets);
+  const uniqueTypes = [...new Set(allBoardTickets.map((t) => t.type).filter((v): v is string => !!v))].sort();
+  const uniqueProjects = [...new Set(allBoardTickets.map((t) => t.project).filter((v): v is string => !!v))].sort();
+  const priorityOrder = ['low', 'medium', 'high', 'urgent'];
+  const uniquePriorities = priorityOrder.filter((p) => allBoardTickets.some((t) => t.priority === p));
+  const activeFilterCount = [filterType, filterProject, filterPriority].filter(Boolean).length;
+
+  const applyTicketFilters = (tickets: Ticket[]) =>
+    tickets.filter((t) =>
+      (!filterType || t.type === filterType) &&
+      (!filterProject || t.project === filterProject) &&
+      (!filterPriority || t.priority === filterPriority)
+    );
+
   const sprintColumns = activeSprint
     ? board.columns.map((col) => ({
         ...col,
@@ -351,7 +371,7 @@ export default function BoardPage() {
       }))
     : board.columns;
 
-  const visibleColumns = activeSprint && filterMyTickets
+  const myTicketsColumns = activeSprint && filterMyTickets
     ? sprintColumns.map((col) => ({
         ...col,
         tickets: col.tickets.filter((t) =>
@@ -359,6 +379,16 @@ export default function BoardPage() {
         ),
       }))
     : sprintColumns;
+
+  const visibleColumns = myTicketsColumns.map((col) => ({
+    ...col,
+    tickets: applyTicketFilters(col.tickets),
+  }));
+
+  const filteredKanbanColumns = board.columns.map((col) => ({
+    ...col,
+    tickets: applyTicketFilters(col.tickets),
+  }));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
@@ -533,6 +563,128 @@ export default function BoardPage() {
         </div>
       )}
 
+      {/* Filter bar — shown in kanban view and sprint ticket view */}
+      {(board.type === 'kanban' || activeSprint) && (
+        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 overflow-x-auto">
+          {/* Label */}
+          <div className="flex items-center gap-1.5 flex-shrink-0 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            <span className="hidden sm:inline">Filter</span>
+          </div>
+
+          {/* Priority pills */}
+          {uniquePriorities.length > 0 && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {uniquePriorities.map((p) => {
+                const cfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
+                  low:    { label: 'Low',       color: '#6b7280', bg: '#f9fafb', border: '#d1d5db' },
+                  medium: { label: 'Medium',    color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
+                  high:   { label: 'High',      color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+                  urgent: { label: 'Urgent 🔥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                };
+                const c = cfg[p];
+                const active = filterPriority === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setFilterPriority(active ? '' : p)}
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full transition-all duration-150 flex-shrink-0"
+                    style={{
+                      color: c.color,
+                      background: active ? c.border : c.bg,
+                      border: `1px solid ${c.border}`,
+                      boxShadow: active ? `0 0 0 2px ${c.border}` : 'none',
+                    }}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Separator */}
+          {uniquePriorities.length > 0 && uniqueTypes.length > 0 && (
+            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+          )}
+
+          {/* Type pills */}
+          {uniqueTypes.length > 0 && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {uniqueTypes.map((type) => {
+                const typeBg: Record<string, string> = {
+                  mobile: '#eff6ff', design: '#fdf2f8', product: '#f5f3ff',
+                  backend: '#f3f4f6', frontend: '#f0fdf4',
+                };
+                const typeColor: Record<string, string> = {
+                  mobile: '#2563eb', design: '#db2777', product: '#7c3aed',
+                  backend: '#4b5563', frontend: '#16a34a',
+                };
+                const active = filterType === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setFilterType(active ? '' : type)}
+                    className="text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-150 capitalize flex-shrink-0"
+                    style={{
+                      color: typeColor[type] || '#4b5563',
+                      background: typeBg[type] || '#f3f4f6',
+                      border: `1px solid ${active ? (typeColor[type] || '#4b5563') : 'transparent'}`,
+                      boxShadow: active ? `0 0 0 2px ${typeBg[type] || '#f3f4f6'}` : 'none',
+                    }}
+                  >
+                    {type}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Separator */}
+          {uniqueProjects.length > 0 && (uniquePriorities.length > 0 || uniqueTypes.length > 0) && (
+            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+          )}
+
+          {/* Project select */}
+          {uniqueProjects.length > 0 && (
+            <select
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150"
+              style={{
+                border: filterProject ? '1px solid #e8390e' : '1px solid #e5e7eb',
+                background: filterProject ? '#fff7f5' : 'white',
+                color: filterProject ? '#e8390e' : '#6b7280',
+              }}
+            >
+              <option value="">All Projects</option>
+              {uniqueProjects.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          )}
+
+          {/* Clear filters */}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); }}
+              className="ml-auto flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
+              style={{ color: '#e8390e', background: '#fff7f5', border: '1px solid #fbd5c8' }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Clear {activeFilterCount > 1 ? `(${activeFilterCount})` : ''}
+            </button>
+          )}
+
+          {/* No filterable content placeholder */}
+          {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && (
+            <span className="text-xs text-gray-300">No filters available</span>
+          )}
+        </div>
+      )}
+
       {/* Main content: Direct Kanban (kanban board), Sprint Overview, or Sprint Ticket View */}
       {board.type === 'kanban' ? (
         /* Direct Kanban Board */
@@ -541,7 +693,7 @@ export default function BoardPage() {
             <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
               {(() => {
                 const activeMemberIds = new Set(board.members.map((m) => m.user.id));
-                return board.columns.map((col) => (
+                return filteredKanbanColumns.map((col) => (
                   <KanbanColumn
                     key={col.id}
                     column={col}
