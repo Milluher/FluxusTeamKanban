@@ -10,9 +10,11 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import api from '@/lib/api';
@@ -64,7 +66,11 @@ export default function BoardPage() {
   const [filterPriority, setFilterPriority] = useState('');
 
   useInactivityTimeout();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -204,75 +210,113 @@ export default function BoardPage() {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const ticket = findTicket(active.id as string);
+    const ticket = findTicket(event.active.id as string);
     setActiveTicket(ticket || null);
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveTicket(null);
+  // Resolve which column an over-id belongs to
+  const resolveColumnId = (overId: string): string | null => {
+    if (!board) return null;
+    // Check if it's a column id
+    if (board.columns.some((c) => c.id === overId)) return overId;
+    // Check if it's a ticket id
+    const overTicket = findTicket(overId);
+    if (overTicket) return overTicket.columnId;
+    return null;
+  };
+
+  // Live update during drag — moves ticket between columns as cursor crosses boundaries
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over || !board) return;
 
     const ticketId = active.id as string;
     const overId = over.id as string;
-
     if (ticketId === overId) return;
 
     const ticket = findTicket(ticketId);
     if (!ticket) return;
 
-    // Determine target column
-    let targetColumnId = overId;
-    const overTicket = findTicket(overId);
-    if (overTicket) targetColumnId = overTicket.columnId;
+    const targetColumnId = resolveColumnId(overId);
+    if (!targetColumnId || ticket.columnId === targetColumnId) return;
 
-    if (ticket.columnId === targetColumnId) {
-      // Same-column reorder
-      const col = board.columns.find((c) => c.id === targetColumnId);
+    setBoard((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        columns: prev.columns.map((col) => {
+          if (col.id === ticket.columnId) {
+            return { ...col, tickets: col.tickets.filter((t) => t.id !== ticketId) };
+          }
+          if (col.id === targetColumnId) {
+            const overTicket = findTicket(overId);
+            const insertIdx = overTicket
+              ? col.tickets.findIndex((t) => t.id === overId)
+              : col.tickets.length;
+            const updated = [...col.tickets];
+            updated.splice(Math.max(insertIdx, 0), 0, { ...ticket, columnId: targetColumnId });
+            return { ...col, tickets: updated };
+          }
+          return col;
+        }),
+      };
+    });
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const originalTicket = activeTicket; // snapshot of ticket at drag start
+    setActiveTicket(null);
+
+    const { active, over } = event;
+
+    // Dropped outside any valid target — restore
+    if (!over || !board || !originalTicket) {
+      if (!over) loadBoard();
+      return;
+    }
+
+    const ticketId = active.id as string;
+    const overId = over.id as string;
+    if (ticketId === overId) return;
+
+    // Current ticket state (reflects live moves from handleDragOver)
+    const currentTicket = findTicket(ticketId);
+    if (!currentTicket) return;
+
+    if (originalTicket.columnId === currentTicket.columnId) {
+      // Same-column reorder — handleDragOver didn't move it, apply arrayMove now
+      const col = board.columns.find((c) => c.id === currentTicket.columnId);
       if (!col) return;
       const oldIndex = col.tickets.findIndex((t) => t.id === ticketId);
       const newIndex = col.tickets.findIndex((t) => t.id === overId);
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
       const reordered = arrayMove(col.tickets, oldIndex, newIndex);
-
       setBoard((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           columns: prev.columns.map((c) =>
-            c.id === targetColumnId ? { ...c, tickets: reordered } : c
+            c.id === col.id ? { ...c, tickets: reordered } : c
           ),
         };
       });
-
       try {
         await api.patch('/tickets/reorder', {
-          columnId: targetColumnId,
+          columnId: col.id,
           boardId,
           ticketIds: reordered.map((t) => t.id),
         });
       } catch { loadBoard(); }
-      return;
+    } else {
+      // Cross-column: board state already updated by handleDragOver — just persist
+      try {
+        await api.patch(`/tickets/${ticketId}/move`, {
+          columnId: currentTicket.columnId,
+          boardId,
+        });
+      } catch { loadBoard(); }
     }
-
-    // Cross-column move
-    setBoard((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        columns: prev.columns.map((col) => {
-          if (col.id === ticket.columnId) return { ...col, tickets: col.tickets.filter((t) => t.id !== ticketId) };
-          if (col.id === targetColumnId) return { ...col, tickets: [...col.tickets, { ...ticket, columnId: targetColumnId }] };
-          return col;
-        }),
-      };
-    });
-
-    try {
-      await api.patch(`/tickets/${ticketId}/move`, { columnId: targetColumnId, boardId });
-    } catch { loadBoard(); }
   };
 
   const findTicket = (id: string): Ticket | undefined => {
@@ -689,7 +733,7 @@ export default function BoardPage() {
       {board.type === 'kanban' ? (
         /* Direct Kanban Board */
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
-          <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
               {(() => {
                 const activeMemberIds = new Set(board.members.map((m) => m.user.id));
@@ -923,7 +967,7 @@ export default function BoardPage() {
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
