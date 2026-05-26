@@ -10,11 +10,13 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
-  MouseSensor,
-  TouchSensor,
   useSensor,
   useSensors,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
+  UniqueIdentifier,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import api from '@/lib/api';
@@ -45,6 +47,8 @@ export default function BoardPage() {
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const membersPanelRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<Board | null>(null);
+  // Tracks the column a ticket was dragged into — set in handleDragOver, read in handleDragEnd
+  const dragTargetColRef = useRef<string | null>(null);
 
   // Sprint state
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -71,10 +75,21 @@ export default function BoardPage() {
   useEffect(() => { boardRef.current = board; }, [board]);
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
+
+  // Multi-container collision detection: prefer pointer-within (accurate column detection),
+  // fall back to rect intersection, then closest center.
+  const collisionDetection = useCallback((args: Parameters<typeof closestCenter>[0]) => {
+    const pointerHits = pointerWithin(args);
+    if (pointerHits.length > 0) {
+      const firstHit = getFirstCollision(pointerHits, 'id');
+      if (firstHit != null) return pointerHits;
+    }
+    const rectHits = rectIntersection(args);
+    if (rectHits.length > 0) return rectHits;
+    return closestCenter(args);
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -216,6 +231,7 @@ export default function BoardPage() {
   const handleDragStart = (event: DragStartEvent) => {
     const ticket = findTicket(event.active.id as string);
     setActiveTicket(ticket || null);
+    dragTargetColRef.current = null;
   };
 
   // Live update during drag — moves ticket between columns as cursor crosses boundaries.
@@ -251,6 +267,9 @@ export default function BoardPage() {
       }
       if (!targetColId || sourceColId === targetColId) return prev;
 
+      // Track where the ticket landed so handleDragEnd can persist it reliably
+      dragTargetColRef.current = targetColId;
+
       // Find insert position (when hovering over a specific ticket)
       const overTicketIdx = prev.columns
         .find((c) => c.id === targetColId)
@@ -275,66 +294,52 @@ export default function BoardPage() {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    const originalTicket = activeTicket; // snapshot of ticket at drag start
+    const originalTicket = activeTicket; // snapshot at drag start
     setActiveTicket(null);
 
     const { active, over } = event;
+    const ticketId = active.id as string;
+    const crossColTarget = dragTargetColRef.current;
+    dragTargetColRef.current = null;
 
     if (!over || !originalTicket) {
-      if (!over) loadBoard();
+      if (!over && !crossColTarget) loadBoard();
       return;
     }
 
-    const ticketId = active.id as string;
+    if (crossColTarget && crossColTarget !== originalTicket.columnId) {
+      // Cross-column: handleDragOver already updated board state, just persist to server
+      try {
+        await api.patch(`/tickets/${ticketId}/move`, { columnId: crossColTarget, boardId });
+      } catch { loadBoard(); }
+      return;
+    }
+
+    // Same-column reorder
     const overId = over.id as string;
     if (ticketId === overId) return;
 
-    // Read current board state from ref — always up-to-date, no stale closure
     const currentBoard = boardRef.current;
     if (!currentBoard) return;
+    const col = currentBoard.columns.find((c) => c.id === originalTicket.columnId);
+    if (!col) return;
 
-    // Find ticket's current position in the latest board state
-    let currentTicket: Ticket | undefined;
-    let currentCol: (typeof currentBoard.columns)[0] | undefined;
-    for (const col of currentBoard.columns) {
-      const t = col.tickets.find((t) => t.id === ticketId);
-      if (t) { currentTicket = t; currentCol = col; break; }
-    }
-    if (!currentTicket || !currentCol) return;
+    const oldIndex = col.tickets.findIndex((t) => t.id === ticketId);
+    const newIndex = col.tickets.findIndex((t) => t.id === overId);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-    if (originalTicket.columnId === currentTicket.columnId) {
-      // Same-column reorder — handleDragOver didn't move it, apply arrayMove now
-      const oldIndex = currentCol.tickets.findIndex((t) => t.id === ticketId);
-      const newIndex = currentCol.tickets.findIndex((t) => t.id === overId);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-
-      const reordered = arrayMove(currentCol.tickets, oldIndex, newIndex);
-      const colId = currentCol.id;
-      setBoard((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          columns: prev.columns.map((c) =>
-            c.id === colId ? { ...c, tickets: reordered } : c
-          ),
-        };
-      });
-      try {
-        await api.patch('/tickets/reorder', {
-          columnId: colId,
-          boardId,
-          ticketIds: reordered.map((t) => t.id),
-        });
-      } catch { loadBoard(); }
-    } else {
-      // Cross-column: board state already updated by handleDragOver — just persist
-      try {
-        await api.patch(`/tickets/${ticketId}/move`, {
-          columnId: currentTicket.columnId,
-          boardId,
-        });
-      } catch { loadBoard(); }
-    }
+    const reordered = arrayMove(col.tickets, oldIndex, newIndex);
+    const colId = col.id;
+    setBoard((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        columns: prev.columns.map((c) => c.id === colId ? { ...c, tickets: reordered } : c),
+      };
+    });
+    try {
+      await api.patch('/tickets/reorder', { columnId: colId, boardId, ticketIds: reordered.map((t) => t.id) });
+    } catch { loadBoard(); }
   };
 
   const findTicket = (id: string): Ticket | undefined => {
@@ -751,7 +756,7 @@ export default function BoardPage() {
       {board.type === 'kanban' ? (
         /* Direct Kanban Board */
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
               {(() => {
                 const activeMemberIds = new Set(board.members.map((m) => m.user.id));
@@ -985,8 +990,9 @@ export default function BoardPage() {
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={collisionDetection}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 160px)' }}>
