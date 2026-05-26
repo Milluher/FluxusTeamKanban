@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Board, Ticket } from '@/types';
-import RichTextEditor from './RichTextEditor';
+import dynamic from 'next/dynamic';
+const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
 const TICKET_TYPES = [
   { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
