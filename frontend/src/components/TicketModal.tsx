@@ -626,15 +626,18 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   placeholder="Add a description..."
                   minHeight={160}
                 />
-              ) : (
+              ) : ticket.description ? (
                 <div
                   className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50 rich-editor-content"
-                  style={{ color: ticket.description ? '#374151' : '#9ca3af', minHeight: '120px' }}
-                  {...(ticket.description
-                    ? { dangerouslySetInnerHTML: { __html: ticket.description } }
-                    : {})}
+                  style={{ color: '#374151', minHeight: '120px' }}
+                  dangerouslySetInnerHTML={{ __html: ticket.description }}
+                />
+              ) : (
+                <div
+                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
+                  style={{ color: '#9ca3af', minHeight: '120px' }}
                 >
-                  {!ticket.description && 'No description provided.'}
+                  No description provided.
                 </div>
               )}
             </div>
