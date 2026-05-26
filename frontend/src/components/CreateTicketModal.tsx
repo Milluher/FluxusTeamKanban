@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Board, Ticket } from '@/types';
+import RichTextEditor from './RichTextEditor';
 
 const TICKET_TYPES = [
   { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
@@ -42,7 +43,6 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
@@ -159,20 +159,11 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
             <label className="block text-xs font-semibold text-gray-500 mb-1.5">
               Description
             </label>
-            <textarea
-              ref={descriptionRef}
-              value={form.description}
-              onChange={(e) => {
-                setForm({ ...form, description: e.target.value });
-                const el = e.target;
-                el.style.height = 'auto';
-                el.style.height = el.scrollHeight + 'px';
-              }}
-              rows={3}
-              className="px-3 py-2.5 text-sm placeholder-gray-400 transition-all duration-150"
-              style={{ ...inputStyle, resize: 'none', overflow: 'hidden', minHeight: '80px' }}
-              {...focusHandlers}
+            <RichTextEditor
+              content={form.description}
+              onChange={(html) => setForm({ ...form, description: html })}
               placeholder="Add more context (optional)..."
+              minHeight={100}
             />
           </div>
 

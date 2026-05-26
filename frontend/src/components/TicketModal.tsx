@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Ticket, Board, User, Comment, Sprint } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
+import RichTextEditor from './RichTextEditor';
 
 const TICKET_TYPES = [
   { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
@@ -618,21 +619,21 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 Description
               </label>
               {editing ? (
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={10}
-                  className="w-full px-3 py-2.5 text-sm resize-y"
-                  style={{ ...inputStyle, borderRadius: '8px', minHeight: '160px' }}
-                  {...inputFocusHandlers}
+                <RichTextEditor
+                  content={form.description}
+                  onChange={(html) => setForm({ ...form, description: html })}
                   placeholder="Add a description..."
+                  minHeight={160}
                 />
               ) : (
                 <div
-                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50 whitespace-pre-wrap"
+                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50 rich-editor-content"
                   style={{ color: ticket.description ? '#374151' : '#9ca3af', minHeight: '120px' }}
+                  {...(ticket.description
+                    ? { dangerouslySetInnerHTML: { __html: ticket.description } }
+                    : {})}
                 >
-                  {ticket.description || 'No description provided.'}
+                  {!ticket.description && 'No description provided.'}
                 </div>
               )}
             </div>
