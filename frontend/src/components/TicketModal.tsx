@@ -136,9 +136,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
 
   const searchDeps = async (q: string) => {
     setDepSearch(q);
-    if (q.length < 2) { setDepResults([]); return; }
-    const { data } = await api.get(`/tickets?boardId=${boardId}&q=${q}`);
-    setDepResults(data.filter((t: any) => t.id !== ticket.id));
+    const url = q.trim() ? `/tickets?boardId=${boardId}&q=${q}` : `/tickets?boardId=${boardId}`;
+    const { data } = await api.get(url);
+    const existingDepIds = new Set((ticket.dependsOn || []).map((d) => d.dependsOnId));
+    setDepResults(data.filter((t: any) => t.id !== ticket.id && !existingDepIds.has(t.id)));
   };
 
   const addDep = async (depId: string) => {
@@ -680,7 +681,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   Dependencies
                 </label>
                 <button
-                  onClick={() => setShowDepSearch(!showDepSearch)}
+                  onClick={() => {
+                    const next = !showDepSearch;
+                    setShowDepSearch(next);
+                    if (next) { setDepSearch(''); searchDeps(''); }
+                    else { setDepSearch(''); setDepResults([]); }
+                  }}
                   className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all duration-150"
                   style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
