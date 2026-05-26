@@ -44,6 +44,7 @@ export default function BoardPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const membersPanelRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<Board | null>(null);
 
   // Sprint state
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -66,6 +67,9 @@ export default function BoardPage() {
   const [filterPriority, setFilterPriority] = useState('');
 
   useInactivityTimeout();
+  // Keep boardRef always pointing at latest board so drag handlers can read current state
+  useEffect(() => { boardRef.current = board; }, [board]);
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -214,47 +218,54 @@ export default function BoardPage() {
     setActiveTicket(ticket || null);
   };
 
-  // Resolve which column an over-id belongs to
-  const resolveColumnId = (overId: string): string | null => {
-    if (!board) return null;
-    // Check if it's a column id
-    if (board.columns.some((c) => c.id === overId)) return overId;
-    // Check if it's a ticket id
-    const overTicket = findTicket(overId);
-    if (overTicket) return overTicket.columnId;
-    return null;
-  };
-
-  // Live update during drag — moves ticket between columns as cursor crosses boundaries
+  // Live update during drag — moves ticket between columns as cursor crosses boundaries.
+  // All state reads happen inside setBoard's functional updater (receives latest prev, no stale closure).
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over || !board) return;
+    if (!over) return;
 
     const ticketId = active.id as string;
     const overId = over.id as string;
     if (ticketId === overId) return;
 
-    const ticket = findTicket(ticketId);
-    if (!ticket) return;
-
-    const targetColumnId = resolveColumnId(overId);
-    if (!targetColumnId || ticket.columnId === targetColumnId) return;
-
     setBoard((prev) => {
       if (!prev) return prev;
+
+      // Find dragged ticket and its source column in the latest state
+      let ticket: Ticket | undefined;
+      let sourceColId: string | undefined;
+      for (const col of prev.columns) {
+        const t = col.tickets.find((t) => t.id === ticketId);
+        if (t) { ticket = t; sourceColId = col.id; break; }
+      }
+      if (!ticket || !sourceColId) return prev;
+
+      // Resolve target column from the latest state
+      let targetColId: string | undefined;
+      if (prev.columns.some((c) => c.id === overId)) {
+        targetColId = overId;
+      } else {
+        for (const col of prev.columns) {
+          if (col.tickets.some((t) => t.id === overId)) { targetColId = col.id; break; }
+        }
+      }
+      if (!targetColId || sourceColId === targetColId) return prev;
+
+      // Find insert position (when hovering over a specific ticket)
+      const overTicketIdx = prev.columns
+        .find((c) => c.id === targetColId)
+        ?.tickets.findIndex((t) => t.id === overId) ?? -1;
+
       return {
         ...prev,
         columns: prev.columns.map((col) => {
-          if (col.id === ticket.columnId) {
+          if (col.id === sourceColId) {
             return { ...col, tickets: col.tickets.filter((t) => t.id !== ticketId) };
           }
-          if (col.id === targetColumnId) {
-            const overTicket = findTicket(overId);
-            const insertIdx = overTicket
-              ? col.tickets.findIndex((t) => t.id === overId)
-              : col.tickets.length;
+          if (col.id === targetColId) {
             const updated = [...col.tickets];
-            updated.splice(Math.max(insertIdx, 0), 0, { ...ticket, columnId: targetColumnId });
+            const insertIdx = overTicketIdx >= 0 ? overTicketIdx : updated.length;
+            updated.splice(insertIdx, 0, { ...ticket!, columnId: targetColId });
             return { ...col, tickets: updated };
           }
           return col;
@@ -269,8 +280,7 @@ export default function BoardPage() {
 
     const { active, over } = event;
 
-    // Dropped outside any valid target — restore
-    if (!over || !board || !originalTicket) {
+    if (!over || !originalTicket) {
       if (!over) loadBoard();
       return;
     }
@@ -279,31 +289,39 @@ export default function BoardPage() {
     const overId = over.id as string;
     if (ticketId === overId) return;
 
-    // Current ticket state (reflects live moves from handleDragOver)
-    const currentTicket = findTicket(ticketId);
-    if (!currentTicket) return;
+    // Read current board state from ref — always up-to-date, no stale closure
+    const currentBoard = boardRef.current;
+    if (!currentBoard) return;
+
+    // Find ticket's current position in the latest board state
+    let currentTicket: Ticket | undefined;
+    let currentCol: (typeof currentBoard.columns)[0] | undefined;
+    for (const col of currentBoard.columns) {
+      const t = col.tickets.find((t) => t.id === ticketId);
+      if (t) { currentTicket = t; currentCol = col; break; }
+    }
+    if (!currentTicket || !currentCol) return;
 
     if (originalTicket.columnId === currentTicket.columnId) {
       // Same-column reorder — handleDragOver didn't move it, apply arrayMove now
-      const col = board.columns.find((c) => c.id === currentTicket.columnId);
-      if (!col) return;
-      const oldIndex = col.tickets.findIndex((t) => t.id === ticketId);
-      const newIndex = col.tickets.findIndex((t) => t.id === overId);
+      const oldIndex = currentCol.tickets.findIndex((t) => t.id === ticketId);
+      const newIndex = currentCol.tickets.findIndex((t) => t.id === overId);
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-      const reordered = arrayMove(col.tickets, oldIndex, newIndex);
+      const reordered = arrayMove(currentCol.tickets, oldIndex, newIndex);
+      const colId = currentCol.id;
       setBoard((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           columns: prev.columns.map((c) =>
-            c.id === col.id ? { ...c, tickets: reordered } : c
+            c.id === colId ? { ...c, tickets: reordered } : c
           ),
         };
       });
       try {
         await api.patch('/tickets/reorder', {
-          columnId: col.id,
+          columnId: colId,
           boardId,
           ticketIds: reordered.map((t) => t.id),
         });
