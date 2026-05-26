@@ -44,6 +44,13 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Dependency state
+  const [selectedDeps, setSelectedDeps] = useState<{ id: string; title: string; status: string }[]>([]);
+  const [depSearch, setDepSearch] = useState('');
+  const [depResults, setDepResults] = useState<{ id: string; title: string; status: string }[]>([]);
+  const [showDepSearch, setShowDepSearch] = useState(false);
+
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
@@ -63,6 +70,13 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
 
   const members = board.members.map((m) => m.user);
 
+  const searchDeps = async (q: string) => {
+    setDepSearch(q);
+    const url = q.trim() ? `/tickets?boardId=${boardId}&q=${q}` : `/tickets?boardId=${boardId}`;
+    const { data } = await api.get(url);
+    setDepResults(data.filter((t: any) => !selectedDeps.some((d) => d.id === t.id)));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) { setError('Title is required'); return; }
@@ -77,6 +91,12 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         boardId,
         sprintId: sprintId || undefined,
       });
+      // Add selected dependencies
+      await Promise.all(
+        selectedDeps.map((dep) =>
+          api.post(`/tickets/${data.id}/dependencies`, { dependsOnId: dep.id, boardId })
+        )
+      );
       onCreate(data);
       if (form.project) {
         const stored = localStorage.getItem(`board-projects-${boardId}`);
@@ -329,6 +349,100 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               </div>
             </div>
           )}
+
+          {/* Dependencies */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                Dependencies
+                {selectedDeps.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: '#fff7f5', color: '#e8390e' }}>
+                    {selectedDeps.length}
+                  </span>
+                )}
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !showDepSearch;
+                  setShowDepSearch(next);
+                  if (next) { setDepSearch(''); searchDeps(''); }
+                  else { setDepSearch(''); setDepResults([]); }
+                }}
+                className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all duration-150"
+                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
+              >
+                + Add
+              </button>
+            </div>
+
+            {showDepSearch && (
+              <div className="mb-2 relative">
+                <input
+                  autoFocus
+                  type="text"
+                  value={depSearch}
+                  onChange={(e) => searchDeps(e.target.value)}
+                  placeholder="Search tickets..."
+                  className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 transition-all duration-150"
+                  style={inputStyle}
+                  {...focusHandlers}
+                />
+                {depResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 rounded-lg shadow-lg z-30 mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200">
+                    {depResults.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeps((prev) => [...prev, t]);
+                          setDepResults((prev) => prev.filter((r) => r.id !== t.id));
+                          setDepSearch('');
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-all duration-100 first:rounded-t-lg last:rounded-b-lg text-gray-800 hover:bg-gray-50"
+                      >
+                        <span className="font-medium truncate">{t.title}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0 ml-2">{t.status}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {depResults.length === 0 && depSearch.length > 0 && (
+                  <p className="text-xs text-gray-400 mt-1.5 px-1">No tickets found</p>
+                )}
+              </div>
+            )}
+
+            {selectedDeps.length > 0 && (
+              <div className="space-y-1.5">
+                {selectedDeps.map((dep) => (
+                  <div key={dep.id} className="flex items-center justify-between rounded-lg px-3 py-2 bg-gray-50 border border-gray-100">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700 truncate">{dep.title}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">{dep.status}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDeps((prev) => prev.filter((d) => d.id !== dep.id))}
+                      className="text-xs font-medium ml-2 flex-shrink-0 px-2 py-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-150"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {error && (
             <div className="rounded-lg px-3 py-2.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200">
