@@ -676,8 +676,25 @@ export default function BoardPage() {
           )}
 
           {/* Separator */}
-          {uniquePriorities.length > 0 && (uniqueProjects.length > 0 || uniqueEpics.length > 0) && (
+          {uniquePriorities.length > 0 && (uniqueTypes.length > 0 || uniqueProjects.length > 0 || uniqueEpics.length > 0) && (
             <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+          )}
+
+          {/* Type select */}
+          {uniqueTypes.length > 0 && (
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150 capitalize"
+              style={{
+                border: filterType ? '1px solid #e8390e' : '1px solid #e5e7eb',
+                background: filterType ? '#fff7f5' : 'white',
+                color: filterType ? '#e8390e' : '#6b7280',
+              }}
+            >
+              <option value="">All Types</option>
+              {uniqueTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
           )}
 
           {/* Project select */}
@@ -729,7 +746,7 @@ export default function BoardPage() {
           )}
 
           {/* No filterable content placeholder */}
-          {uniquePriorities.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && (
+          {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && (
             <span className="text-xs text-gray-300">No filters available</span>
           )}
         </div>
