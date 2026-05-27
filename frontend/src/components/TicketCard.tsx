@@ -131,11 +131,6 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
               {priorityCfg.label}
             </span>
           )}
-          {ticket.type && (
-            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${TYPE_STYLES[ticket.type] || 'bg-gray-100 text-gray-600'}`}>
-              {ticket.type}
-            </span>
-          )}
           {commentCount > 0 && (
             <span
               className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-400"

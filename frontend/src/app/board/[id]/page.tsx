@@ -69,6 +69,7 @@ export default function BoardPage() {
   const [filterType, setFilterType] = useState('');
   const [filterProject, setFilterProject] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
+  const [filterEpic, setFilterEpic] = useState('');
 
   useInactivityTimeout();
   // Keep boardRef always pointing at latest board so drag handlers can read current state
@@ -420,15 +421,17 @@ export default function BoardPage() {
   const allBoardTickets = board.columns.flatMap((c) => c.tickets);
   const uniqueTypes = [...new Set(allBoardTickets.map((t) => t.type).filter((v): v is string => !!v))].sort();
   const uniqueProjects = [...new Set(allBoardTickets.map((t) => t.project).filter((v): v is string => !!v))].sort();
+  const uniqueEpics = [...new Set(allBoardTickets.map((t) => t.epic).filter((v): v is string => !!v))].sort();
   const priorityOrder = ['low', 'medium', 'high', 'urgent'];
   const uniquePriorities = priorityOrder.filter((p) => allBoardTickets.some((t) => t.priority === p));
-  const activeFilterCount = [filterType, filterProject, filterPriority].filter(Boolean).length;
+  const activeFilterCount = [filterType, filterProject, filterPriority, filterEpic].filter(Boolean).length;
 
   const applyTicketFilters = (tickets: Ticket[]) =>
     tickets.filter((t) =>
       (!filterType || t.type === filterType) &&
       (!filterProject || t.project === filterProject) &&
-      (!filterPriority || t.priority === filterPriority)
+      (!filterPriority || t.priority === filterPriority) &&
+      (!filterEpic || t.epic === filterEpic)
     );
 
   const sprintColumns = activeSprint
@@ -673,44 +676,7 @@ export default function BoardPage() {
           )}
 
           {/* Separator */}
-          {uniquePriorities.length > 0 && uniqueTypes.length > 0 && (
-            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
-          )}
-
-          {/* Type pills */}
-          {uniqueTypes.length > 0 && (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {uniqueTypes.map((type) => {
-                const typeBg: Record<string, string> = {
-                  mobile: '#eff6ff', design: '#fdf2f8', product: '#f5f3ff',
-                  backend: '#f3f4f6', frontend: '#f0fdf4',
-                };
-                const typeColor: Record<string, string> = {
-                  mobile: '#2563eb', design: '#db2777', product: '#7c3aed',
-                  backend: '#4b5563', frontend: '#16a34a',
-                };
-                const active = filterType === type;
-                return (
-                  <button
-                    key={type}
-                    onClick={() => setFilterType(active ? '' : type)}
-                    className="text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-150 capitalize flex-shrink-0"
-                    style={{
-                      color: typeColor[type] || '#4b5563',
-                      background: typeBg[type] || '#f3f4f6',
-                      border: `1px solid ${active ? (typeColor[type] || '#4b5563') : 'transparent'}`,
-                      boxShadow: active ? `0 0 0 2px ${typeBg[type] || '#f3f4f6'}` : 'none',
-                    }}
-                  >
-                    {type}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Separator */}
-          {uniqueProjects.length > 0 && (uniquePriorities.length > 0 || uniqueTypes.length > 0) && (
+          {uniquePriorities.length > 0 && (uniqueProjects.length > 0 || uniqueEpics.length > 0) && (
             <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
           )}
 
@@ -731,10 +697,27 @@ export default function BoardPage() {
             </select>
           )}
 
+          {/* Epic select */}
+          {uniqueEpics.length > 0 && (
+            <select
+              value={filterEpic}
+              onChange={(e) => setFilterEpic(e.target.value)}
+              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150"
+              style={{
+                border: filterEpic ? '1px solid #e8390e' : '1px solid #e5e7eb',
+                background: filterEpic ? '#fff7f5' : 'white',
+                color: filterEpic ? '#e8390e' : '#6b7280',
+              }}
+            >
+              <option value="">All Epics</option>
+              {uniqueEpics.map((e) => <option key={e} value={e}>{e}</option>)}
+            </select>
+          )}
+
           {/* Clear filters */}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); }}
+              onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); setFilterEpic(''); }}
               className="ml-auto flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
               style={{ color: '#e8390e', background: '#fff7f5', border: '1px solid #fbd5c8' }}
             >
@@ -746,7 +729,7 @@ export default function BoardPage() {
           )}
 
           {/* No filterable content placeholder */}
-          {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && (
+          {uniquePriorities.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && (
             <span className="text-xs text-gray-300">No filters available</span>
           )}
         </div>
