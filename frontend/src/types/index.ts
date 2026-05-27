@@ -39,6 +39,7 @@ export interface Ticket {
   priority?: string;
   project?: string;
   epic?: string;
+  flow?: string;
   sprintId?: string;
   assignee?: User;
   productManager?: User;

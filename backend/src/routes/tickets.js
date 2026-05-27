@@ -25,7 +25,7 @@ const ticketInclude = {
 // Create ticket
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, sprintId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, flow, sprintId } = req.body;
     if (!title || !columnId) return res.status(400).json({ error: 'Title and columnId required' });
     const column = await prisma.column.findUnique({ where: { id: columnId } });
     if (!column) return res.status(404).json({ error: 'Column not found' });
@@ -43,6 +43,7 @@ router.post('/', authenticate, async (req, res) => {
         priority: priority || null,
         project: project || null,
         epic: epic || null,
+        flow: flow || null,
         sprintId: sprintId || null,
       },
       include: ticketInclude,
@@ -95,7 +96,7 @@ router.patch('/reorder', authenticate, async (req, res) => {
 // Update ticket
 router.patch('/:id', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, sprintId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, flow, sprintId } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
@@ -106,6 +107,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (priority !== undefined) data.priority = priority || null;
     if (project !== undefined) data.project = project || null;
     if (epic !== undefined) data.epic = epic || null;
+    if (flow !== undefined) data.flow = flow || null;
     if (sprintId !== undefined) data.sprintId = sprintId || null;
     if (columnId) {
       const col = await prisma.column.findUnique({ where: { id: columnId } });

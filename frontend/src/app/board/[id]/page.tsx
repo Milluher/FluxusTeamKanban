@@ -70,6 +70,7 @@ export default function BoardPage() {
   const [filterProject, setFilterProject] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterEpic, setFilterEpic] = useState('');
+  const [filterFlow, setFilterFlow] = useState('');
 
   useInactivityTimeout();
   // Keep boardRef always pointing at latest board so drag handlers can read current state
@@ -422,16 +423,18 @@ export default function BoardPage() {
   const uniqueTypes = [...new Set(allBoardTickets.map((t) => t.type).filter((v): v is string => !!v))].sort();
   const uniqueProjects = [...new Set(allBoardTickets.map((t) => t.project).filter((v): v is string => !!v))].sort();
   const uniqueEpics = [...new Set(allBoardTickets.map((t) => t.epic).filter((v): v is string => !!v))].sort();
+  const uniqueFlows = [...new Set(allBoardTickets.map((t) => t.flow).filter((v): v is string => !!v))].sort();
   const priorityOrder = ['low', 'medium', 'high', 'urgent'];
   const uniquePriorities = priorityOrder.filter((p) => allBoardTickets.some((t) => t.priority === p));
-  const activeFilterCount = [filterType, filterProject, filterPriority, filterEpic].filter(Boolean).length;
+  const activeFilterCount = [filterType, filterProject, filterPriority, filterEpic, filterFlow].filter(Boolean).length;
 
   const applyTicketFilters = (tickets: Ticket[]) =>
     tickets.filter((t) =>
       (!filterType || t.type === filterType) &&
       (!filterProject || t.project === filterProject) &&
       (!filterPriority || t.priority === filterPriority) &&
-      (!filterEpic || t.epic === filterEpic)
+      (!filterEpic || t.epic === filterEpic) &&
+      (!filterFlow || t.flow === filterFlow)
     );
 
   const sprintColumns = activeSprint
@@ -731,10 +734,27 @@ export default function BoardPage() {
             </select>
           )}
 
+          {/* Flow select */}
+          {uniqueFlows.length > 0 && (
+            <select
+              value={filterFlow}
+              onChange={(e) => setFilterFlow(e.target.value)}
+              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150"
+              style={{
+                border: filterFlow ? '1px solid #e8390e' : '1px solid #e5e7eb',
+                background: filterFlow ? '#fff7f5' : 'white',
+                color: filterFlow ? '#e8390e' : '#6b7280',
+              }}
+            >
+              <option value="">All Flows</option>
+              {uniqueFlows.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          )}
+
           {/* Clear filters */}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); setFilterEpic(''); }}
+              onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); setFilterEpic(''); setFilterFlow(''); }}
               className="ml-auto flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
               style={{ color: '#e8390e', background: '#fff7f5', border: '1px solid #fbd5c8' }}
             >
@@ -746,7 +766,7 @@ export default function BoardPage() {
           )}
 
           {/* No filterable content placeholder */}
-          {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && (
+          {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && uniqueFlows.length === 0 && (
             <span className="text-xs text-gray-300">No filters available</span>
           )}
         </div>

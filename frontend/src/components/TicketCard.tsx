@@ -88,12 +88,17 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         </p>
       )}
 
-      {/* Epic + Project */}
-      {(ticket.epic || ticket.project) && (
+      {/* Epic + Flow + Project */}
+      {(ticket.epic || ticket.flow || ticket.project) && (
         <div className="mb-2.5 flex flex-wrap gap-1">
           {ticket.epic && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
               {ticket.epic}
+            </span>
+          )}
+          {ticket.flow && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-200">
+              {ticket.flow}
             </span>
           )}
           {ticket.project && (

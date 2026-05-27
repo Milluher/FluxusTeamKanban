@@ -46,6 +46,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     priority: ticket.priority || '',
     project: ticket.project || '',
     epic: ticket.epic || '',
+    flow: ticket.flow || '',
     sprintId: ticket.sprintId || '',
     columnId: ticket.columnId,
   });
@@ -53,6 +54,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
   const [showEpicDropdown, setShowEpicDropdown] = useState(false);
+  const [flowOptions, setFlowOptions] = useState<string[]>([]);
+  const [showFlowDropdown, setShowFlowDropdown] = useState(false);
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -79,6 +82,11 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     const epicsFromStorage: string[] = storedEpics ? JSON.parse(storedEpics) : [];
     const epicsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.epic).filter((p): p is string => !!p);
     setEpicOptions([...new Set([...epicsFromBoard, ...epicsFromStorage])]);
+
+    const storedFlows = localStorage.getItem(`board-flows-${boardId}`);
+    const flowsFromStorage: string[] = storedFlows ? JSON.parse(storedFlows) : [];
+    const flowsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.flow).filter((p): p is string => !!p);
+    setFlowOptions([...new Set([...flowsFromBoard, ...flowsFromStorage])]);
   }, [boardId]);
 
   const members = board.members.map((m) => m.user);
@@ -112,6 +120,15 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
           const updated = [...existing, form.epic];
           localStorage.setItem(`board-epics-${boardId}`, JSON.stringify(updated));
           setEpicOptions((prev) => [...new Set([...prev, form.epic])]);
+        }
+      }
+      if (form.flow) {
+        const stored = localStorage.getItem(`board-flows-${boardId}`);
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        if (!existing.includes(form.flow)) {
+          const updated = [...existing, form.flow];
+          localStorage.setItem(`board-flows-${boardId}`, JSON.stringify(updated));
+          setFlowOptions((prev) => [...new Set([...prev, form.flow])]);
         }
       }
     } finally { setSaving(false); }
@@ -573,6 +590,46 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">{ticket.epic}</span>
                     : <p className="mt-1.5 text-sm text-gray-400">—</p>,
                 }] : []),
+                {
+                  label: 'Flow',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>,
+                  editEl: (
+                    <div className="relative mt-1.5">
+                      <input
+                        type="text"
+                        value={form.flow}
+                        onChange={(e) => setForm({ ...form, flow: e.target.value })}
+                        onFocus={(e) => { setShowFlowDropdown(true); inputFocusHandlers.onFocus(e); }}
+                        onBlur={(e) => { setTimeout(() => setShowFlowDropdown(false), 150); inputFocusHandlers.onBlur(e); }}
+                        className="w-full px-2.5 py-2 text-sm"
+                        style={inputStyle}
+                        placeholder="Type or select a flow..."
+                        autoComplete="off"
+                      />
+                      {showFlowDropdown && flowOptions.filter((p) =>
+                        !form.flow || p.toLowerCase().includes(form.flow.toLowerCase())
+                      ).length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                          {flowOptions
+                            .filter((p) => !form.flow || p.toLowerCase().includes(form.flow.toLowerCase()))
+                            .map((p) => (
+                              <button
+                                key={p}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, flow: p }); setShowFlowDropdown(false); }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                              >
+                                {p}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ),
+                  viewEl: ticket.flow
+                    ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-200">{ticket.flow}</span>
+                    : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                },
                 ...(sprints.length > 0 ? [{
                   label: 'Sprint',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>,

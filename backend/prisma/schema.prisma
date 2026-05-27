@@ -75,6 +75,7 @@ model Ticket {
   priority         String?
   project          String?
   epic             String?
+  flow             String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   order            Int       @default(0)

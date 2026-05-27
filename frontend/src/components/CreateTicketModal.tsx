@@ -41,6 +41,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     priority: '',
     project: '',
     epic: '',
+    flow: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -55,6 +56,8 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
   const [showEpicDropdown, setShowEpicDropdown] = useState(false);
+  const [flowOptions, setFlowOptions] = useState<string[]>([]);
+  const [showFlowDropdown, setShowFlowDropdown] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(`board-projects-${boardId}`);
@@ -66,6 +69,11 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     const epicsFromStorage: string[] = storedEpics ? JSON.parse(storedEpics) : [];
     const epicsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.epic).filter((p): p is string => !!p);
     setEpicOptions([...new Set([...epicsFromBoard, ...epicsFromStorage])]);
+
+    const storedFlows = localStorage.getItem(`board-flows-${boardId}`);
+    const flowsFromStorage: string[] = storedFlows ? JSON.parse(storedFlows) : [];
+    const flowsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.flow).filter((p): p is string => !!p);
+    setFlowOptions([...new Set([...flowsFromBoard, ...flowsFromStorage])]);
   }, [boardId]);
 
   const members = board.members.map((m) => m.user);
@@ -110,6 +118,13 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         const existing: string[] = stored ? JSON.parse(stored) : [];
         if (!existing.includes(form.epic)) {
           localStorage.setItem(`board-epics-${boardId}`, JSON.stringify([...existing, form.epic]));
+        }
+      }
+      if (form.flow) {
+        const stored = localStorage.getItem(`board-flows-${boardId}`);
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        if (!existing.includes(form.flow)) {
+          localStorage.setItem(`board-flows-${boardId}`, JSON.stringify([...existing, form.flow]));
         }
       }
     } catch (err: any) {
@@ -349,6 +364,43 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               </div>
             </div>
           )}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Flow
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={form.flow}
+                onChange={(e) => setForm({ ...form, flow: e.target.value })}
+                onFocus={(e) => { setShowFlowDropdown(true); focusHandlers.onFocus(e); }}
+                onBlur={(e) => { setTimeout(() => setShowFlowDropdown(false), 150); focusHandlers.onBlur(e); }}
+                className="px-3 py-2.5 text-sm transition-all duration-150"
+                style={inputStyle}
+                placeholder="Type or select a flow..."
+                autoComplete="off"
+              />
+              {showFlowDropdown && flowOptions.filter((p) =>
+                !form.flow || p.toLowerCase().includes(form.flow.toLowerCase())
+              ).length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                  {flowOptions
+                    .filter((p) => !form.flow || p.toLowerCase().includes(form.flow.toLowerCase()))
+                    .map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, flow: p }); setShowFlowDropdown(false); }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Dependencies */}
           <div>
