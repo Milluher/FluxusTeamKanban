@@ -6,6 +6,8 @@ import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
 import Placeholder from '@tiptap/extension-placeholder';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { useEffect } from 'react';
 
 interface Props {
@@ -64,6 +66,8 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
       TableHeader,
       TableCell,
       Placeholder.configure({ placeholder }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
     ],
     content,
     editorProps: {
@@ -195,6 +199,21 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
             <path d="M4 6h1v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             <path d="M4 10h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </ToolbarBtn>
+
+        {/* Checklist */}
+        <ToolbarBtn
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          active={editor.isActive('taskList')}
+          title="Checklist"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="5" width="4" height="4" rx="0.5"/>
+            <polyline points="4 7 5 8.5 7 6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="10" y1="7" x2="21" y2="7"/>
+            <rect x="3" y="13" width="4" height="4" rx="0.5"/>
+            <line x1="10" y1="15" x2="21" y2="15"/>
           </svg>
         </ToolbarBtn>
 

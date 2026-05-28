@@ -107,6 +107,66 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: col-resize;
 }
 
+/* Task list / checklist */
+.rich-editor-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25em;
+  margin: 0.5em 0;
+}
+.rich-editor-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  margin: 0.2em 0;
+}
+.rich-editor-content ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+.rich-editor-content ul[data-type="taskList"] li > label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 3px;
+  cursor: pointer;
+  background: white;
+  transition: background 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+  position: relative;
+}
+.rich-editor-content ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background: #e8390e;
+  border-color: #e8390e;
+}
+.rich-editor-content ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0px;
+  width: 4px;
+  height: 7px;
+  border: 1.5px solid white;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+.rich-editor-content ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.rich-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+/* Nested task lists */
+.rich-editor-content ul[data-type="taskList"] ul[data-type="taskList"] {
+  margin: 0.2em 0 0.2em 1.2em;
+}
+
 /* Placeholder */
 .rich-editor-content .is-editor-empty:first-child::before {
   content: attr(data-placeholder);
