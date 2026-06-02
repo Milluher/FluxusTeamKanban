@@ -58,10 +58,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   const [showFlowDropdown, setShowFlowDropdown] = useState(false);
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
+  const [commentImages, setCommentImages] = useState<string[]>([]);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState(-1);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const commentImageInputRef = useRef<HTMLInputElement>(null);
   const [depSearch, setDepSearch] = useState('');
   const [depResults, setDepResults] = useState<any[]>([]);
   const [showDepSearch, setShowDepSearch] = useState(false);
@@ -142,12 +144,15 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
 
   const addComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() && commentImages.length === 0) return;
     setSubmittingComment(true);
     try {
-      const { data } = await api.post('/comments', { content: comment, ticketId: ticket.id, boardId });
+      const imageTags = commentImages.map((src) => `__IMG__${src}__IMG__`).join('');
+      const fullContent = comment.trim() + (imageTags ? '\n' + imageTags : '');
+      const { data } = await api.post('/comments', { content: fullContent, ticketId: ticket.id, boardId });
       onUpdate({ ...ticket, comments: [...(ticket.comments || []), data] });
       setComment('');
+      setCommentImages([]);
     } finally { setSubmittingComment(false); }
   };
 
@@ -202,18 +207,46 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     : [];
 
   const renderCommentContent = (content: string) => {
-    if (members.length === 0) return <>{content}</>;
-    const escaped = members.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const pattern = new RegExp(`@(${escaped.join('|')})`, 'g');
-    const parts = content.split(pattern);
+    // Split out embedded images first
+    const imgPattern = /__IMG__([\s\S]*?)__IMG__/g;
+    const segments: Array<{ type: 'text' | 'image'; value: string }> = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = imgPattern.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        segments.push({ type: 'text', value: content.slice(lastIndex, match.index) });
+      }
+      segments.push({ type: 'image', value: match[1] });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < content.length) {
+      segments.push({ type: 'text', value: content.slice(lastIndex) });
+    }
+
+    const renderText = (text: string, keyPrefix: string) => {
+      if (members.length === 0) return <span key={keyPrefix}>{text.replace(/^\n/, '')}</span>;
+      const escaped = members.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const pattern = new RegExp(`@(${escaped.join('|')})`, 'g');
+      const parts = text.replace(/^\n/, '').split(pattern);
+      return (
+        <span key={keyPrefix}>
+          {parts.map((part, i) =>
+            i % 2 === 1
+              ? <span key={i} className="font-semibold" style={{ color: '#e8390e' }}>@{part}</span>
+              : <span key={i}>{part}</span>
+          )}
+        </span>
+      );
+    };
+
     return (
-      <>
-        {parts.map((part, i) =>
-          i % 2 === 1
-            ? <span key={i} className="font-semibold" style={{ color: '#e8390e' }}>@{part}</span>
-            : <span key={i}>{part}</span>
+      <span className="flex flex-col gap-2">
+        {segments.map((seg, i) =>
+          seg.type === 'image'
+            ? <img key={i} src={seg.value} alt="attachment" className="max-w-full rounded-lg border border-gray-200" style={{ maxHeight: '300px', objectFit: 'contain' }} />
+            : renderText(seg.value, String(i))
         )}
-      </>
+      </span>
     );
   };
 
@@ -882,6 +915,23 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   alt={currentUser?.name || 'User'}
                 />
                 <div className="flex-1 flex flex-col gap-2">
+                  {/* Image previews */}
+                  {commentImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {commentImages.map((src, i) => (
+                        <div key={i} className="relative group">
+                          <img src={src} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                          <button
+                            type="button"
+                            onClick={() => setCommentImages((imgs) => imgs.filter((_, j) => j !== i))}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="relative">
                     <input
                       ref={commentInputRef}
@@ -890,7 +940,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       onChange={handleCommentChange}
                       onKeyDown={(e) => { if (e.key === 'Escape') setMentionQuery(null); }}
                       placeholder="Add a comment… type @ to mention"
-                      className="w-full px-3 py-2 text-base sm:text-sm text-gray-800 placeholder-gray-400"
+                      className="w-full px-3 py-2 pr-9 text-base sm:text-sm text-gray-800 placeholder-gray-400"
                       style={{
                         background: 'white',
                         border: '1px solid #e5e7eb',
@@ -904,6 +954,33 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       onBlur={(e) => {
                         e.currentTarget.style.borderColor = '#e5e7eb';
                         e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                    {/* Image attach button */}
+                    <button
+                      type="button"
+                      onClick={() => commentImageInputRef.current?.click()}
+                      title="Attach image"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                    </button>
+                    <input
+                      ref={commentImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setCommentImages((imgs) => [...imgs, reader.result as string]);
+                        reader.readAsDataURL(file);
+                        e.target.value = '';
                       }}
                     />
                     {mentionQuery !== null && filteredMentions.length > 0 && (
@@ -924,10 +1001,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   </div>
                   <button
                     type="submit"
-                    disabled={submittingComment || !comment.trim()}
+                    disabled={submittingComment || (!comment.trim() && commentImages.length === 0)}
                     className="self-end px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all duration-150 disabled:opacity-40"
                     style={{ background: '#e8390e' }}
-                    onMouseEnter={(e) => { if (!submittingComment && comment.trim()) e.currentTarget.style.background = '#c73009'; }}
+                    onMouseEnter={(e) => { if (!submittingComment && (comment.trim() || commentImages.length > 0)) e.currentTarget.style.background = '#c73009'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
                   >
                     {submittingComment ? 'Posting...' : 'Post'}

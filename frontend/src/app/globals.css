@@ -68,6 +68,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .rich-editor-content blockquote { border-left: 3px solid #e5e7eb; margin: 0.5em 0; padding-left: 0.75em; color: #6b7280; }
 .rich-editor-content code { background: #f3f4f6; border-radius: 4px; padding: 0.1em 0.3em; font-family: monospace; font-size: 0.9em; }
 .rich-editor-content hr { border: none; border-top: 1px solid #e5e7eb; margin: 0.75em 0; }
+.rich-editor-content img { max-width: 100%; border-radius: 6px; border: 1px solid #e5e7eb; margin: 0.5em 0; display: block; max-height: 400px; object-fit: contain; }
 
 /* Table styles */
 .rich-editor-content table {

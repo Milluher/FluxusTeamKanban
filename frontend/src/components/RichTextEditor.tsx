@@ -8,7 +8,8 @@ import TableCell from '@tiptap/extension-table-cell';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { useEffect } from 'react';
+import Image from '@tiptap/extension-image';
+import { useEffect, useRef } from 'react';
 
 interface Props {
   content: string;
@@ -54,6 +55,8 @@ const Divider = () => (
 );
 
 export default function RichTextEditor({ content, onChange, placeholder = 'Add a description...', minHeight = 120 }: Props) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -68,6 +71,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
       Placeholder.configure({ placeholder }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Image.configure({ inline: false, allowBase64: true }),
     ],
     content,
     editorProps: {
@@ -106,6 +110,18 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
     } else {
       editor.chain().focus().toggleHeading({ level: parseInt(level) as 1 | 2 | 3 }).run();
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = reader.result as string;
+      editor.chain().focus().setImage({ src }).run();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   return (
@@ -218,6 +234,25 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
         </ToolbarBtn>
 
         <Divider />
+
+        {/* Insert image */}
+        <ToolbarBtn
+          onClick={() => imageInputRef.current?.click()}
+          title="Insert image"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </ToolbarBtn>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
 
         {/* Insert table */}
         <ToolbarBtn
