@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { Board, Ticket } from '@/types';
+import { Board, Ticket, ProductFile } from '@/types';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -42,7 +42,9 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     project: '',
     epic: '',
     flow: '',
+    productDocId: '',
   });
+  const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -74,6 +76,12 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     const flowsFromStorage: string[] = storedFlows ? JSON.parse(storedFlows) : [];
     const flowsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.flow).filter((p): p is string => !!p);
     setFlowOptions([...new Set([...flowsFromBoard, ...flowsFromStorage])]);
+  }, [boardId]);
+
+  useEffect(() => {
+    api.get<ProductFile[]>(`/boards/${boardId}/product-files`)
+      .then(({ data }) => setProductFiles(data))
+      .catch(() => {});
   }, [boardId]);
 
   const members = board.members.map((m) => m.user);
@@ -401,6 +409,25 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               )}
             </div>
           </div>
+
+          {productFiles.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                Product Doc
+              </label>
+              <select
+                value={form.productDocId}
+                onChange={(e) => setForm({ ...form, productDocId: e.target.value })}
+                className="px-3 py-2.5 text-sm transition-all duration-150"
+                style={inputStyle}
+                {...focusHandlers}
+              >
+                <option value="">None</option>
+                {productFiles.map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
+              </select>
+              <p className="text-xs text-gray-400 mt-1.5">Reference the product file this ticket falls under.</p>
+            </div>
+          )}
 
           {/* Dependencies */}
           <div>

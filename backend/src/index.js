@@ -13,6 +13,7 @@ const invitationRoutes = require('./routes/invitations');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const canvasRoutes = require('./routes/canvas');
+const productFileRoutes = require('./routes/productFiles');
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +38,7 @@ app.use((req, _res, next) => { req.io = io; next(); });
 app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/boards', canvasRoutes);
+app.use('/api/boards', productFileRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);

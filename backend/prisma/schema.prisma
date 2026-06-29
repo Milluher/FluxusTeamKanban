@@ -38,6 +38,7 @@ model Board {
   invitations Invitation[]
   sprints     Sprint[]
   canvasProjects CanvasProject[]
+  productFiles   ProductFile[]
 }
 
 model BoardMember {
@@ -82,6 +83,8 @@ model Ticket {
   order            Int       @default(0)
   sprintId         String?
   sprint           Sprint?   @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  productDocId     String?
+  productDoc       ProductFile? @relation(fields: [productDocId], references: [id], onDelete: SetNull)
 
   column         Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
   assignee       User?    @relation("AssigneeRelation", fields: [assigneeId], references: [id])
@@ -213,4 +216,20 @@ model CanvasFeature {
   createdAt DateTime @default(now())
 
   block CanvasBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+}
+
+// --- Product Files ---
+// Named external links (e.g. Google Drive docs) that describe the product/features
+// for a sprint board. Admins curate; members view + reference from tickets.
+model ProductFile {
+  id        String   @id @default(uuid())
+  boardId   String
+  title     String
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board   Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
 }

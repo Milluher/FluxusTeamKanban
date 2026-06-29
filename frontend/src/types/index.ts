@@ -41,6 +41,8 @@ export interface Ticket {
   epic?: string;
   flow?: string;
   sprintId?: string;
+  productDocId?: string;
+  productDoc?: { id: string; title: string; url: string };
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };
@@ -111,4 +113,12 @@ export interface CanvasProject {
   name: string;
   order: number;
   blocks: CanvasBlock[];
+}
+
+export interface ProductFile {
+  id: string;
+  boardId: string;
+  title: string;
+  url: string;
+  order: number;
 }

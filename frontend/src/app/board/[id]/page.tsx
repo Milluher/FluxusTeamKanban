@@ -30,6 +30,7 @@ import CreateTicketModal from '@/components/CreateTicketModal';
 import InviteMemberModal from '@/components/InviteMemberModal';
 import NotificationBell from '@/components/NotificationBell';
 import BoardCanvas from '@/components/BoardCanvas';
+import ProductFiles from '@/components/ProductFiles';
 
 export default function BoardPage() {
   const params = useParams();
@@ -776,6 +777,7 @@ export default function BoardPage() {
       {/* Project Overview canvas — sits above the board on kanban + sprint overview.
           Hidden once a sprint is opened so the sprint board takes the full page. */}
       {!activeSprint && <BoardCanvas boardId={boardId} isAdmin={isAdmin} />}
+      {!activeSprint && <ProductFiles boardId={boardId} isAdmin={isAdmin} />}
 
       {/* Main content: Direct Kanban (kanban board), Sprint Overview, or Sprint Ticket View */}
       {board.type === 'kanban' ? (

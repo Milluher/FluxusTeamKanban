@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { Ticket, Board, User, Comment, Sprint } from '@/types';
+import { Ticket, Board, User, Comment, Sprint, ProductFile } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
+import ProductFileViewer from './ProductFileViewer';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -48,8 +49,11 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     epic: ticket.epic || '',
     flow: ticket.flow || '',
     sprintId: ticket.sprintId || '',
+    productDocId: ticket.productDocId || '',
     columnId: ticket.columnId,
   });
+  const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
+  const [viewingFile, setViewingFile] = useState<ProductFile | null>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
@@ -89,6 +93,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     const flowsFromStorage: string[] = storedFlows ? JSON.parse(storedFlows) : [];
     const flowsFromBoard = board.columns.flatMap((c) => c.tickets).map((t) => t.flow).filter((p): p is string => !!p);
     setFlowOptions([...new Set([...flowsFromBoard, ...flowsFromStorage])]);
+  }, [boardId]);
+
+  // Product files available for the "Product Doc" reference
+  useEffect(() => {
+    api.get<ProductFile[]>(`/boards/${boardId}/product-files`)
+      .then(({ data }) => setProductFiles(data))
+      .catch(() => {});
   }, [boardId]);
 
   const members = board.members.map((m) => m.user);
@@ -663,6 +674,39 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-200">{ticket.flow}</span>
                     : <p className="mt-1.5 text-sm text-gray-400">—</p>,
                 },
+                ...((productFiles.length > 0 || ticket.productDoc) ? [{
+                  label: 'Product Doc',
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+                  editEl: isAdmin ? (
+                    <select
+                      value={form.productDocId}
+                      onChange={(e) => setForm({ ...form, productDocId: e.target.value })}
+                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                      style={inputStyle}
+                      {...inputFocusHandlers}
+                    >
+                      <option value="">None</option>
+                      {productFiles.map((f) => (
+                        <option key={f.id} value={f.id}>{f.title}</option>
+                      ))}
+                    </select>
+                  ) : null,
+                  viewEl: (() => {
+                    const f = productFiles.find((pf) => pf.id === ticket.productDocId) || (ticket.productDoc ? { ...ticket.productDoc, boardId, order: 0 } as ProductFile : null);
+                    return f ? (
+                      <button
+                        type="button"
+                        onClick={() => setViewingFile(f)}
+                        className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 max-w-full"
+                        style={{ color: '#e8390e', background: '#fff7f5', borderColor: '#fbd5c8' }}
+                        title="Open product doc"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span className="truncate">{f.title}</span>
+                      </button>
+                    ) : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                  })(),
+                }] : []),
                 ...(sprints.length > 0 ? [{
                   label: 'Sprint',
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>,
@@ -1015,6 +1059,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
           </div>
         </div>
       </div>
+      {viewingFile && <ProductFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />}
     </div>
   );
 }
