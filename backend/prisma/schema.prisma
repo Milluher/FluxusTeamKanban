@@ -37,6 +37,7 @@ model Board {
   members     BoardMember[]
   invitations Invitation[]
   sprints     Sprint[]
+  canvasProjects CanvasProject[]
 }
 
 model BoardMember {
@@ -175,4 +176,40 @@ model SprintHistory {
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+}
+
+// --- Project Overview Canvas ---
+// A switchable "project" whose feature availability is presented as a
+// business-model-canvas style grid of blocks. Admins curate; members view.
+model CanvasProject {
+  id        String   @id @default(uuid())
+  boardId   String
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board  Board         @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  blocks CanvasBlock[]
+}
+
+model CanvasBlock {
+  id        String   @id @default(uuid())
+  projectId String
+  title     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  project  CanvasProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  features CanvasFeature[]
+}
+
+model CanvasFeature {
+  id        String   @id @default(uuid())
+  blockId   String
+  text      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  block CanvasBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
 }

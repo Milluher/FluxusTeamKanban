@@ -88,3 +88,26 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+export interface CanvasFeature {
+  id: string;
+  blockId: string;
+  text: string;
+  order: number;
+}
+
+export interface CanvasBlock {
+  id: string;
+  projectId: string;
+  title: string;
+  order: number;
+  features: CanvasFeature[];
+}
+
+export interface CanvasProject {
+  id: string;
+  boardId: string;
+  name: string;
+  order: number;
+  blocks: CanvasBlock[];
+}

@@ -29,6 +29,7 @@ import TicketModal from '@/components/TicketModal';
 import CreateTicketModal from '@/components/CreateTicketModal';
 import InviteMemberModal from '@/components/InviteMemberModal';
 import NotificationBell from '@/components/NotificationBell';
+import BoardCanvas from '@/components/BoardCanvas';
 
 export default function BoardPage() {
   const params = useParams();
@@ -771,6 +772,9 @@ export default function BoardPage() {
           )}
         </div>
       )}
+
+      {/* Project Overview canvas — sits above the board, pushing the sprint/kanban board below */}
+      <BoardCanvas boardId={boardId} isAdmin={isAdmin} />
 
       {/* Main content: Direct Kanban (kanban board), Sprint Overview, or Sprint Ticket View */}
       {board.type === 'kanban' ? (
