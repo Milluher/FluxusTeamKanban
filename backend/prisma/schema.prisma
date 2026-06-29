@@ -208,6 +208,7 @@ model CanvasFeature {
   id        String   @id @default(uuid())
   blockId   String
   text      String
+  active    Boolean  @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
 

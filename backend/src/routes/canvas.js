@@ -182,11 +182,17 @@ router.patch('/:id/canvas/features/:featureId', authenticate, async (req, res) =
     if (!boardId) return res.status(404).json({ error: 'Feature not found' });
     if (!(await canEditBoard(req, boardId)))
       return res.status(403).json({ error: 'Only admins can edit the canvas' });
-    const { text } = req.body;
-    if (!text || !text.trim()) return res.status(400).json({ error: 'Feature text is required' });
+    const { text, active } = req.body;
+    const data = {};
+    if (text !== undefined) {
+      if (!text.trim()) return res.status(400).json({ error: 'Feature text is required' });
+      data.text = text.trim();
+    }
+    if (active !== undefined) data.active = !!active;
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Nothing to update.' });
     const feature = await prisma.canvasFeature.update({
       where: { id: req.params.featureId },
-      data: { text: text.trim() },
+      data,
     });
     emitCanvasChanged(req, boardId);
     res.json(feature);

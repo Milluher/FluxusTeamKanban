@@ -93,6 +93,7 @@ export interface CanvasFeature {
   id: string;
   blockId: string;
   text: string;
+  active: boolean;
   order: number;
 }
 

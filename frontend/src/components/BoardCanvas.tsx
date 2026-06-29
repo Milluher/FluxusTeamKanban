@@ -120,6 +120,17 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
     updateBlock(block.id, (b) => ({ ...b, features: b.features.filter((f) => f.id !== featureId) }));
   };
 
+  // Toggle a feature between active and struck-out (inactive)
+  const toggleFeature = async (block: CanvasBlock, feature: CanvasFeature) => {
+    const active = !feature.active;
+    updateBlock(block.id, (b) => ({ ...b, features: b.features.map((f) => (f.id === feature.id ? { ...f, active } : f)) }));
+    try {
+      await api.patch(`/boards/${boardId}/canvas/features/${feature.id}`, { active });
+    } catch {
+      updateBlock(block.id, (b) => ({ ...b, features: b.features.map((f) => (f.id === feature.id ? { ...f, active: feature.active } : f)) }));
+    }
+  };
+
   // --- Modal helpers ---
   const openModal = (m: ModalState, initial = '') => { setModal(m); setModalInput(initial); };
   const closeModal = () => { if (!modalBusy) { setModal(null); setModalInput(''); } };
@@ -273,27 +284,44 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                       <div key={f.id} className="flex items-start gap-2 group">
                         <svg
                           className="flex-shrink-0 mt-0.5" width="12" height="12" viewBox="0 0 24 24"
-                          fill="none" stroke="#16a34a" strokeWidth="3"
+                          fill="none" stroke={f.active ? '#16a34a' : '#d1d5db'} strokeWidth="3"
                         >
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                         <span
                           onClick={() => isAdmin && openModal({ kind: 'edit-feature', block, feature: f }, f.text)}
-                          className={`text-xs text-gray-700 leading-snug flex-1 ${isAdmin ? 'cursor-pointer hover:text-gray-900' : ''}`}
+                          className={`text-xs leading-snug flex-1 ${f.active ? 'text-gray-700' : 'line-through text-gray-400'} ${isAdmin ? 'cursor-pointer hover:text-gray-900' : ''}`}
                           title={isAdmin ? 'Click to edit' : undefined}
                         >
                           {f.text}
                         </span>
                         {isAdmin && (
-                          <button
-                            onClick={() => deleteFeature(block, f.id)}
-                            className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-4 h-4 flex items-center justify-center rounded text-gray-300 hover:text-red-500 transition-all"
-                            title="Remove feature"
-                          >
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <button
+                              onClick={() => toggleFeature(block, f)}
+                              className={`${f.active ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'} w-4 h-4 flex items-center justify-center rounded transition-all ${f.active ? 'text-gray-300 hover:text-amber-600' : 'text-amber-600 hover:text-green-600'}`}
+                              title={f.active ? 'Mark as no longer active' : 'Mark as active again'}
+                            >
+                              {f.active ? (
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <circle cx="12" cy="12" r="9" /><line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
+                                </svg>
+                              ) : (
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path d="M3 12a9 9 0 1 0 3-6.7" /><polyline points="3 4 3 9 8 9" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => deleteFeature(block, f.id)}
+                              className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-300 hover:text-red-500 transition-all"
+                              title="Remove feature"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
