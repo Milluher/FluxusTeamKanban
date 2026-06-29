@@ -41,6 +41,11 @@ async function boardIdForFeature(featureId) {
   return feature?.block?.project?.boardId ?? null;
 }
 
+// Notify everyone viewing this board to refetch the canvas.
+function emitCanvasChanged(req, boardId) {
+  if (boardId) req.io.to(`board:${boardId}`).emit('canvas-changed', { boardId });
+}
+
 // List all canvas projects for a board (with nested blocks + features).
 router.get('/:id/canvas', authenticate, async (req, res) => {
   try {
@@ -72,6 +77,7 @@ router.post('/:id/canvas/projects', authenticate, async (req, res) => {
       data: { boardId: req.params.id, name: name.trim(), order: count },
       include: { blocks: { include: { features: true } } },
     });
+    emitCanvasChanged(req, req.params.id);
     res.json(project);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -87,6 +93,7 @@ router.patch('/:id/canvas/projects/:projectId', authenticate, async (req, res) =
       where: { id: req.params.projectId },
       data: { name: name.trim() },
     });
+    emitCanvasChanged(req, req.params.id);
     res.json(project);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -97,6 +104,7 @@ router.delete('/:id/canvas/projects/:projectId', authenticate, async (req, res) 
     if (!(await canEditBoard(req, req.params.id)))
       return res.status(403).json({ error: 'Only admins can edit the canvas' });
     await prisma.canvasProject.delete({ where: { id: req.params.projectId } });
+    emitCanvasChanged(req, req.params.id);
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -113,6 +121,7 @@ router.post('/:id/canvas/projects/:projectId/blocks', authenticate, async (req, 
       data: { projectId: req.params.projectId, title: title.trim(), order: count },
       include: { features: true },
     });
+    emitCanvasChanged(req, req.params.id);
     res.json(block);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -130,6 +139,7 @@ router.patch('/:id/canvas/blocks/:blockId', authenticate, async (req, res) => {
       where: { id: req.params.blockId },
       data: { title: title.trim() },
     });
+    emitCanvasChanged(req, boardId);
     res.json(block);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -142,6 +152,7 @@ router.delete('/:id/canvas/blocks/:blockId', authenticate, async (req, res) => {
     if (!(await canEditBoard(req, boardId)))
       return res.status(403).json({ error: 'Only admins can edit the canvas' });
     await prisma.canvasBlock.delete({ where: { id: req.params.blockId } });
+    emitCanvasChanged(req, boardId);
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -159,6 +170,7 @@ router.post('/:id/canvas/blocks/:blockId/features', authenticate, async (req, re
     const feature = await prisma.canvasFeature.create({
       data: { blockId: req.params.blockId, text: text.trim(), order: count },
     });
+    emitCanvasChanged(req, boardId);
     res.json(feature);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -176,6 +188,7 @@ router.patch('/:id/canvas/features/:featureId', authenticate, async (req, res) =
       where: { id: req.params.featureId },
       data: { text: text.trim() },
     });
+    emitCanvasChanged(req, boardId);
     res.json(feature);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
@@ -188,6 +201,7 @@ router.delete('/:id/canvas/features/:featureId', authenticate, async (req, res) 
     if (!(await canEditBoard(req, boardId)))
       return res.status(403).json({ error: 'Only admins can edit the canvas' });
     await prisma.canvasFeature.delete({ where: { id: req.params.featureId } });
+    emitCanvasChanged(req, boardId);
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });

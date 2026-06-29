@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
-import { CanvasProject, CanvasBlock } from '@/types';
+import socket from '@/lib/socket';
+import { CanvasProject, CanvasBlock, CanvasFeature } from '@/types';
 
 interface Props {
   boardId: string;
@@ -11,6 +12,17 @@ interface Props {
 const ACCENT = '#e8390e';
 const NAVY = '#1a1f3c';
 
+// Modal state machine — text prompts and destructive confirms
+type ModalState =
+  | { kind: 'add-project' }
+  | { kind: 'rename-project'; project: CanvasProject }
+  | { kind: 'add-block' }
+  | { kind: 'rename-block'; block: CanvasBlock }
+  | { kind: 'edit-feature'; block: CanvasBlock; feature: CanvasFeature }
+  | { kind: 'delete-project'; project: CanvasProject }
+  | { kind: 'delete-block'; block: CanvasBlock }
+  | null;
+
 export default function BoardCanvas({ boardId, isAdmin }: Props) {
   const [projects, setProjects] = useState<CanvasProject[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -18,7 +30,9 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   // Per-block "add feature" draft text, keyed by block id
   const [featureDrafts, setFeatureDrafts] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
+  const [modal, setModal] = useState<ModalState>(null);
+  const [modalInput, setModalInput] = useState('');
+  const [modalBusy, setModalBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -31,29 +45,36 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Real-time: refetch when anyone changes this board's canvas
+  useEffect(() => {
+    const onChanged = (payload: { boardId?: string }) => {
+      if (payload?.boardId === boardId) load();
+    };
+    socket.on('canvas-changed', onChanged);
+    return () => { socket.off('canvas-changed', onChanged); };
+  }, [boardId, load]);
+
   const active = projects.find((p) => p.id === activeId) ?? null;
 
-  // --- Project actions ---
-  const addProject = async () => {
-    const name = window.prompt('New project name')?.trim();
-    if (!name) return;
-    setBusy(true);
-    try {
-      const { data } = await api.post<CanvasProject>(`/boards/${boardId}/canvas/projects`, { name });
-      setProjects((prev) => [...prev, { ...data, blocks: data.blocks ?? [] }]);
-      setActiveId(data.id);
-    } finally { setBusy(false); }
+  // Helper: mutate a single block within the active project
+  const updateBlock = (blockId: string, fn: (b: CanvasBlock) => CanvasBlock) => {
+    setProjects((prev) => prev.map((p) =>
+      p.id === active?.id ? { ...p, blocks: p.blocks.map((b) => (b.id === blockId ? fn(b) : b)) } : p));
   };
 
-  const renameProject = async (project: CanvasProject) => {
-    const name = window.prompt('Rename project', project.name)?.trim();
-    if (!name || name === project.name) return;
+  // --- Mutations (optimistic; sockets reconcile other viewers) ---
+  const doAddProject = async (name: string) => {
+    const { data } = await api.post<CanvasProject>(`/boards/${boardId}/canvas/projects`, { name });
+    setProjects((prev) => [...prev, { ...data, blocks: data.blocks ?? [] }]);
+    setActiveId(data.id);
+  };
+
+  const doRenameProject = async (project: CanvasProject, name: string) => {
     await api.patch(`/boards/${boardId}/canvas/projects/${project.id}`, { name });
     setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, name } : p)));
   };
 
-  const deleteProject = async (project: CanvasProject) => {
-    if (!window.confirm(`Delete project "${project.name}" and all its blocks?`)) return;
+  const doDeleteProject = async (project: CanvasProject) => {
     await api.delete(`/boards/${boardId}/canvas/projects/${project.id}`);
     setProjects((prev) => {
       const next = prev.filter((p) => p.id !== project.id);
@@ -62,31 +83,30 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
     });
   };
 
-  // --- Block actions ---
-  const addBlock = async () => {
+  const doAddBlock = async (title: string) => {
     if (!active) return;
-    const title = window.prompt('Block title (e.g. Security, Payments, Onboarding)')?.trim();
-    if (!title) return;
     const { data } = await api.post<CanvasBlock>(`/boards/${boardId}/canvas/projects/${active.id}/blocks`, { title });
     setProjects((prev) => prev.map((p) =>
       p.id === active.id ? { ...p, blocks: [...p.blocks, { ...data, features: data.features ?? [] }] } : p));
   };
 
-  const renameBlock = async (block: CanvasBlock) => {
-    const title = window.prompt('Rename block', block.title)?.trim();
-    if (!title || title === block.title) return;
+  const doRenameBlock = async (block: CanvasBlock, title: string) => {
     await api.patch(`/boards/${boardId}/canvas/blocks/${block.id}`, { title });
     updateBlock(block.id, (b) => ({ ...b, title }));
   };
 
-  const deleteBlock = async (block: CanvasBlock) => {
-    if (!window.confirm(`Remove the "${block.title}" block?`)) return;
+  const doDeleteBlock = async (block: CanvasBlock) => {
     await api.delete(`/boards/${boardId}/canvas/blocks/${block.id}`);
     setProjects((prev) => prev.map((p) =>
       p.id === active?.id ? { ...p, blocks: p.blocks.filter((b) => b.id !== block.id) } : p));
   };
 
-  // --- Feature actions ---
+  const doEditFeature = async (block: CanvasBlock, featureId: string, text: string) => {
+    await api.patch(`/boards/${boardId}/canvas/features/${featureId}`, { text });
+    updateBlock(block.id, (b) => ({ ...b, features: b.features.map((f) => (f.id === featureId ? { ...f, text } : f)) }));
+  };
+
+  // Feature add/delete stay inline (no modal)
   const addFeature = async (block: CanvasBlock) => {
     const text = (featureDrafts[block.id] ?? '').trim();
     if (!text) return;
@@ -95,22 +115,35 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
     updateBlock(block.id, (b) => ({ ...b, features: [...b.features, data] }));
   };
 
-  const editFeature = async (block: CanvasBlock, featureId: string, current: string) => {
-    const text = window.prompt('Edit feature', current)?.trim();
-    if (!text || text === current) return;
-    await api.patch(`/boards/${boardId}/canvas/features/${featureId}`, { text });
-    updateBlock(block.id, (b) => ({ ...b, features: b.features.map((f) => (f.id === featureId ? { ...f, text } : f)) }));
-  };
-
   const deleteFeature = async (block: CanvasBlock, featureId: string) => {
     await api.delete(`/boards/${boardId}/canvas/features/${featureId}`);
     updateBlock(block.id, (b) => ({ ...b, features: b.features.filter((f) => f.id !== featureId) }));
   };
 
-  // Helper: mutate a single block within the active project
-  const updateBlock = (blockId: string, fn: (b: CanvasBlock) => CanvasBlock) => {
-    setProjects((prev) => prev.map((p) =>
-      p.id === active?.id ? { ...p, blocks: p.blocks.map((b) => (b.id === blockId ? fn(b) : b)) } : p));
+  // --- Modal helpers ---
+  const openModal = (m: ModalState, initial = '') => { setModal(m); setModalInput(initial); };
+  const closeModal = () => { if (!modalBusy) { setModal(null); setModalInput(''); } };
+
+  const isConfirmModal = modal?.kind === 'delete-project' || modal?.kind === 'delete-block';
+
+  const submitModal = async () => {
+    if (!modal) return;
+    const value = modalInput.trim();
+    if (!isConfirmModal && !value) return;
+    setModalBusy(true);
+    try {
+      switch (modal.kind) {
+        case 'add-project': await doAddProject(value); break;
+        case 'rename-project': await doRenameProject(modal.project, value); break;
+        case 'add-block': await doAddBlock(value); break;
+        case 'rename-block': await doRenameBlock(modal.block, value); break;
+        case 'edit-feature': await doEditFeature(modal.block, modal.feature.id, value); break;
+        case 'delete-project': await doDeleteProject(modal.project); break;
+        case 'delete-block': await doDeleteBlock(modal.block); break;
+      }
+      setModal(null);
+      setModalInput('');
+    } finally { setModalBusy(false); }
   };
 
   // Hide the section entirely for non-admins when there's nothing to show
@@ -145,7 +178,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                 <button
                   key={p.id}
                   onClick={() => setActiveId(p.id)}
-                  onDoubleClick={() => isAdmin && renameProject(p)}
+                  onDoubleClick={() => isAdmin && openModal({ kind: 'rename-project', project: p }, p.name)}
                   title={isAdmin ? 'Double-click to rename' : undefined}
                   className="text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap transition-all duration-150 flex-shrink-0"
                   style={{
@@ -166,7 +199,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
           <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
             {active && (
               <button
-                onClick={() => deleteProject(active)}
+                onClick={() => openModal({ kind: 'delete-project', project: active })}
                 className="text-xs font-semibold px-2 py-1 rounded-lg transition-all duration-150 text-gray-400 hover:text-red-500 hover:bg-red-50"
                 title="Delete current project"
               >
@@ -174,9 +207,8 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
               </button>
             )}
             <button
-              onClick={addProject}
-              disabled={busy}
-              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all duration-150 disabled:opacity-50"
+              onClick={() => openModal({ kind: 'add-project' })}
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all duration-150"
               style={{ color: ACCENT, borderColor: ACCENT, background: 'white' }}
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -192,7 +224,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
       {!collapsed && (
         <div className="px-4 sm:px-6 pb-4">
           {projects.length === 0 ? (
-            <EmptyState isAdmin={isAdmin} onAdd={addProject} />
+            <EmptyState isAdmin={isAdmin} onAdd={() => openModal({ kind: 'add-project' })} />
           ) : !active ? null : active.blocks.length === 0 && !isAdmin ? (
             <p className="text-xs text-gray-400 py-6 text-center">No overview blocks yet for this project.</p>
           ) : (
@@ -209,7 +241,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                   >
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
                     <h4
-                      onClick={() => isAdmin && renameBlock(block)}
+                      onClick={() => isAdmin && openModal({ kind: 'rename-block', block }, block.title)}
                       title={isAdmin ? 'Click to rename' : undefined}
                       className={`text-xs font-bold uppercase tracking-wide truncate ${isAdmin ? 'cursor-pointer' : ''}`}
                       style={{ color: NAVY }}
@@ -221,7 +253,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                     </span>
                     {isAdmin && (
                       <button
-                        onClick={() => deleteBlock(block)}
+                        onClick={() => openModal({ kind: 'delete-block', block })}
                         className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
                         title="Remove block"
                       >
@@ -246,7 +278,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                         <span
-                          onClick={() => isAdmin && editFeature(block, f.id, f.text)}
+                          onClick={() => isAdmin && openModal({ kind: 'edit-feature', block, feature: f }, f.text)}
                           className={`text-xs text-gray-700 leading-snug flex-1 ${isAdmin ? 'cursor-pointer hover:text-gray-900' : ''}`}
                           title={isAdmin ? 'Click to edit' : undefined}
                         >
@@ -285,7 +317,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
               {/* Add block card (admin) */}
               {isAdmin && (
                 <button
-                  onClick={addBlock}
+                  onClick={() => openModal({ kind: 'add-block' })}
                   className="rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 py-8 text-gray-400 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all min-h-[120px]"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -298,9 +330,94 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
           )}
         </div>
       )}
+
+      {/* Modals */}
+      {modal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-base" style={{ color: NAVY }}>{MODAL_TITLES[modal.kind]}</h3>
+              <button onClick={closeModal} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+            </div>
+
+            {isConfirmModal ? (
+              <>
+                <p className="text-sm text-gray-600 mb-5">
+                  {modal.kind === 'delete-project'
+                    ? <>Delete <span className="font-semibold">{modal.project.name}</span> and all of its blocks and features? This cannot be undone.</>
+                    : <>Remove the <span className="font-semibold">{(modal as { block: CanvasBlock }).block.title}</span> block and its features?</>}
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={closeModal} disabled={modalBusy} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200 disabled:opacity-50">Cancel</button>
+                  <button
+                    type="button"
+                    onClick={submitModal}
+                    disabled={modalBusy}
+                    className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
+                    style={{ background: '#dc2626' }}
+                  >
+                    {modalBusy ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); submitModal(); }} className="space-y-4">
+                <input
+                  autoFocus
+                  type="text"
+                  value={modalInput}
+                  onChange={(e) => setModalInput(e.target.value)}
+                  placeholder={MODAL_PLACEHOLDERS[modal.kind]}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 outline-none"
+                  style={{ color: '#111827' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
+                />
+                <div className="flex gap-2">
+                  <button type="button" onClick={closeModal} disabled={modalBusy} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200 disabled:opacity-50">Cancel</button>
+                  <button
+                    type="submit"
+                    disabled={modalBusy || !modalInput.trim()}
+                    className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
+                    style={{ background: ACCENT }}
+                  >
+                    {modalBusy ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const MODAL_TITLES: Record<NonNullable<ModalState>['kind'], string> = {
+  'add-project': 'New Project',
+  'rename-project': 'Rename Project',
+  'add-block': 'New Block',
+  'rename-block': 'Rename Block',
+  'edit-feature': 'Edit Feature',
+  'delete-project': 'Delete Project',
+  'delete-block': 'Remove Block',
+};
+
+const MODAL_PLACEHOLDERS: Record<NonNullable<ModalState>['kind'], string> = {
+  'add-project': 'e.g. Mobile App',
+  'rename-project': 'Project name',
+  'add-block': 'e.g. Security, Payments, Onboarding',
+  'rename-block': 'Block title',
+  'edit-feature': 'Feature description',
+  'delete-project': '',
+  'delete-block': '',
+};
 
 function EmptyState({ isAdmin, onAdd }: { isAdmin: boolean; onAdd: () => void }) {
   return (
