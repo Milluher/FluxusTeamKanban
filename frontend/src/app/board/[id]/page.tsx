@@ -460,9 +460,17 @@ export default function BoardPage() {
     tickets: applyTicketFilters(col.tickets),
   }));
 
+  // Kanban board defaults to the user's own work (tickets they're assigned to or created).
+  // The "Mine / All" toggle in the filter bar flips filterMyTickets to reveal every ticket.
   const filteredKanbanColumns = board.columns.map((col) => ({
     ...col,
-    tickets: applyTicketFilters(col.tickets),
+    tickets: applyTicketFilters(
+      filterMyTickets
+        ? col.tickets.filter(
+            (t) => t.assigneeId === currentUser?.id || t.createdById === currentUser?.id
+          )
+        : col.tickets
+    ),
   }));
 
   return (
@@ -641,6 +649,33 @@ export default function BoardPage() {
       {/* Filter bar — shown in kanban view and sprint ticket view */}
       {(board.type === 'kanban' || activeSprint) && (
         <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 overflow-x-auto">
+          {/* Mine / All toggle — kanban view only (sprint view has its own toggle in the banner).
+              Defaults to "Mine": tickets the user is assigned to or created. */}
+          {board.type === 'kanban' && (
+            <div className="flex rounded-lg overflow-hidden text-xs font-semibold flex-shrink-0 border border-gray-200">
+              <button
+                onClick={() => setFilterMyTickets(true)}
+                className="px-3 py-1 transition-all"
+                style={{
+                  background: filterMyTickets ? '#1a1f3c' : 'white',
+                  color: filterMyTickets ? 'white' : '#6b7280',
+                }}
+              >
+                Mine
+              </button>
+              <button
+                onClick={() => setFilterMyTickets(false)}
+                className="px-3 py-1 transition-all"
+                style={{
+                  background: !filterMyTickets ? '#1a1f3c' : 'white',
+                  color: !filterMyTickets ? 'white' : '#6b7280',
+                }}
+              >
+                All
+              </button>
+            </div>
+          )}
+
           {/* Label */}
           <div className="flex items-center gap-1.5 flex-shrink-0 text-xs font-semibold text-gray-400 uppercase tracking-wide">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
