@@ -24,6 +24,7 @@ model User {
   comments        Comment[]
   notifications        Notification[]
   passwordResetTokens  PasswordResetToken[]
+  changelogEntries     ChangelogEntry[]
 }
 
 model Board {
@@ -39,6 +40,7 @@ model Board {
   sprints     Sprint[]
   canvasProjects CanvasProject[]
   productFiles   ProductFile[]
+  changelogEntries ChangelogEntry[]
 }
 
 model BoardMember {
@@ -232,4 +234,28 @@ model ProductFile {
 
   board   Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   tickets Ticket[]
+}
+
+// --- Changelog ---
+// Curated, admin-authored release notes readable by every user, across every
+// project. An entry with boardId = null is company-wide; an entry scoped to a
+// board is listed for everyone but its items are only detailed to that board's
+// members (admins always see full detail). publishedAt = null means draft.
+model ChangelogEntry {
+  id          String    @id @default(uuid())
+  version     String?
+  title       String
+  summary     String?
+  items       Json      @default("[]") // [{ kind: "added"|"changed"|"fixed"|"removed", text: string }]
+  boardId     String?
+  authorId    String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  board  Board? @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt])
+  @@index([boardId])
 }

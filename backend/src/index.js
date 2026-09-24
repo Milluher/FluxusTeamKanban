@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const canvasRoutes = require('./routes/canvas');
 const productFileRoutes = require('./routes/productFiles');
+const changelogRoutes = require('./routes/changelog');
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,7 @@ app.use('/api/users', userRoutes);
 app.use('/api', invitationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/changelog', changelogRoutes);
 
 io.on('connection', (socket) => {
   socket.on('join-board', (boardId) => socket.join(`board:${boardId}`));

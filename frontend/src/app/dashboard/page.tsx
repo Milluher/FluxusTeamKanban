@@ -78,6 +78,24 @@ export default function DashboardPage() {
           <span className="font-bold text-base tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            onClick={() => router.push('/changelog')}
+            className="text-sm px-3 py-1.5 rounded-lg font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors hidden sm:block"
+            title="Changelog"
+          >
+            Changelog
+          </button>
+          <button
+            onClick={() => router.push('/changelog')}
+            className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors min-h-[44px] min-w-[44px]"
+            title="Changelog"
+            aria-label="Changelog"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6M16 13H8M16 17H8"/>
+            </svg>
+          </button>
           {user && <NotificationBell userId={user.id} />}
           {user?.role === 'admin' && (
             <>

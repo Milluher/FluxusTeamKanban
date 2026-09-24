@@ -35,6 +35,12 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
+interface MentionOption {
+  id: string;
+  name: string;
+  group?: boolean;
+}
+
 export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -206,15 +212,22 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     setMentionStart(lastAt);
   };
 
-  const selectMention = (member: User) => {
+  const selectMention = (option: MentionOption) => {
     const after = comment.slice(mentionStart + 1 + (mentionQuery?.length ?? 0));
-    setComment(`${comment.slice(0, mentionStart)}@${member.name} ${after}`);
+    setComment(`${comment.slice(0, mentionStart)}@${option.name} ${after}`);
     setMentionQuery(null);
     setTimeout(() => commentInputRef.current?.focus(), 0);
   };
 
+  // "@all" notifies every member of the board; the backend also accepts
+  // "@board" and "@everyone" as synonyms.
+  const mentionOptions: MentionOption[] = [
+    { id: '__all__', name: 'all', group: true },
+    ...members.map((m) => ({ id: m.id, name: m.name })),
+  ];
+
   const filteredMentions = mentionQuery !== null
-    ? members.filter((m) => m.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+    ? mentionOptions.filter((m) => m.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
     : [];
 
   const renderCommentContent = (content: string) => {
@@ -237,7 +250,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     const renderText = (text: string, keyPrefix: string) => {
       if (members.length === 0) return <span key={keyPrefix}>{text.replace(/^\n/, '')}</span>;
       const escaped = members.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      const pattern = new RegExp(`@(${escaped.join('|')})`, 'g');
+      const pattern = new RegExp(`@(${[...escaped, 'all', 'board', 'everyone'].join('|')})`, 'g');
       const parts = text.replace(/^\n/, '').split(pattern);
       return (
         <span key={keyPrefix}>
@@ -1036,8 +1049,19 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                             onMouseDown={(e) => { e.preventDefault(); selectMention(m); }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 transition-colors text-left"
                           >
-                            <img src={avatarUrl(m.name)} className="w-6 h-6 rounded-full flex-shrink-0" alt={m.name} />
+                            {m.group ? (
+                              <span className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center bg-gray-100">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                  <circle cx="9" cy="7" r="4"/>
+                                  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                              </span>
+                            ) : (
+                              <img src={avatarUrl(m.name)} className="w-6 h-6 rounded-full flex-shrink-0" alt={m.name} />
+                            )}
                             <span className="font-medium">{m.name}</span>
+                            {m.group && <span className="text-xs text-gray-400">Notify the whole board</span>}
                           </button>
                         ))}
                       </div>
