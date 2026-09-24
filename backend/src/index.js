@@ -1,4 +1,6 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const http = require('http');
@@ -15,9 +17,12 @@ const notificationRoutes = require('./routes/notifications');
 const canvasRoutes = require('./routes/canvas');
 const productFileRoutes = require('./routes/productFiles');
 const changelogRoutes = require('./routes/changelog');
+const presence = require('./lib/presence');
+const { JWT_SECRET } = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
+const prisma = new PrismaClient();
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
@@ -48,11 +53,75 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/changelog', changelogRoutes);
 
+// Display names aren't in the JWT, and presence needs one per connection —
+// cache them so repeated connects don't re-query for the same user.
+const nameCache = new Map();
+
+async function resolveUser(token) {
+  if (!token) return null;
+  let payload;
+  try {
+    payload = jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+  if (nameCache.has(payload.id)) return { id: payload.id, name: nameCache.get(payload.id) };
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id },
+    select: { id: true, name: true },
+  });
+  if (!user) return null;
+  nameCache.set(user.id, user.name);
+  return user;
+}
+
+// Identify the socket if it presents a valid token. Connections without one are
+// still allowed — they simply don't appear in presence.
+io.use(async (socket, next) => {
+  // A failure here must never block the connection: without this guard a
+  // database hiccup would reject every socket and take real-time updates
+  // down with it. The socket just connects unidentified (no presence).
+  try {
+    socket.data.user = await resolveUser(socket.handshake.auth?.token);
+  } catch (e) {
+    console.error('[presence] could not identify socket:', e?.message || e);
+    socket.data.user = null;
+  }
+  next();
+});
+
 io.on('connection', (socket) => {
-  socket.on('join-board', (boardId) => socket.join(`board:${boardId}`));
-  socket.on('leave-board', (boardId) => socket.leave(`board:${boardId}`));
+  const broadcastPresence = (boardId, users) => {
+    if (users) io.to(`board:${boardId}`).emit('presence-update', { boardId, users });
+  };
+
+  socket.on('join-board', (boardId) => {
+    socket.join(`board:${boardId}`);
+    // Join the room first so the broadcast reaches this socket too.
+    broadcastPresence(boardId, presence.join(boardId, socket.id, socket.data.user));
+  });
+
+  socket.on('leave-board', (boardId) => {
+    const users = presence.leave(boardId, socket.id);
+    socket.leave(`board:${boardId}`);
+    broadcastPresence(boardId, users);
+  });
+
+  // A tab reporting itself hidden or visible, so the tracker can separate
+  // "here right now" from "left the tab open".
+  socket.on('board-activity', ({ boardId, idle }) => {
+    broadcastPresence(boardId, presence.setIdle(boardId, socket.id, !!idle));
+  });
+
   socket.on('join-user', (userId) => socket.join(`user:${userId}`));
   socket.on('leave-user', (userId) => socket.leave(`user:${userId}`));
+
+  socket.on('disconnect', () => {
+    for (const { boardId, users } of presence.leaveAll(socket.id)) {
+      broadcastPresence(boardId, users);
+    }
+  });
 });
 
 const PORT = process.env.PORT || 4000;

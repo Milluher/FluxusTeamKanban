@@ -63,6 +63,14 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
         heading: { levels: [1, 2, 3] },
         bulletList: {},
         orderedList: {},
+        // StarterKit ships Link with autolink on, so typed and pasted URLs
+        // become anchors. Open them in a new tab so a click never navigates
+        // away from an unsaved ticket, and not while editing.
+        link: {
+          openOnClick: false,
+          linkOnPaste: true,
+          HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
+        },
       }),
       Table.configure({ resizable: true }),
       TableRow,

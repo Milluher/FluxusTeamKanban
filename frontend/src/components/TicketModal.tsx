@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { Ticket, Board, User, Comment, Sprint, ProductFile } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
 import ProductFileViewer from './ProductFileViewer';
+import RichTextView from './RichTextView';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -775,10 +776,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   minHeight={160}
                 />
               ) : ticket.description ? (
-                <div
-                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50 rich-editor-content"
+                <RichTextView
+                  html={ticket.description}
+                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
                   style={{ color: '#374151', minHeight: '120px' }}
-                  dangerouslySetInnerHTML={{ __html: ticket.description }}
                 />
               ) : (
                 <div

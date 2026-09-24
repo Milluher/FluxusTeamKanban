@@ -29,6 +29,7 @@ import TicketModal from '@/components/TicketModal';
 import CreateTicketModal from '@/components/CreateTicketModal';
 import InviteMemberModal from '@/components/InviteMemberModal';
 import NotificationBell from '@/components/NotificationBell';
+import PresenceTracker, { PresentUser } from '@/components/PresenceTracker';
 import BoardCanvas from '@/components/BoardCanvas';
 import ProductFiles from '@/components/ProductFiles';
 
@@ -36,6 +37,7 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = params.id as string;
   const router = useRouter();
+  const [presentUsers, setPresentUsers] = useState<PresentUser[]>([]);
   const searchParams = useSearchParams();
 
   const [board, setBoard] = useState<Board | null>(null);
@@ -170,12 +172,27 @@ export default function BoardPage() {
       });
     });
 
+    socket.on('presence-update', ({ boardId: id, users }: { boardId: string; users: PresentUser[] }) => {
+      if (id === boardId) setPresentUsers(users);
+    });
+
+    // Report whether this tab is in the foreground, so the tracker can tell
+    // "working right now" from "left the board open in a background tab".
+    const reportActivity = () => {
+      socket.emit('board-activity', { boardId, idle: document.visibilityState === 'hidden' });
+    };
+    document.addEventListener('visibilitychange', reportActivity);
+    reportActivity();
+
     socket.on('member-removed', ({ userId }: { userId: string }) => {
       if (userId === currentUser?.id) { router.push('/dashboard'); return; }
       setBoard((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.user.id !== userId) } : prev);
     });
 
     return () => {
+      document.removeEventListener('visibilitychange', reportActivity);
+      socket.off('presence-update');
+      setPresentUsers([]);
       socket.emit('leave-board', boardId);
       socket.off('ticket-created');
       socket.off('ticket-updated');
@@ -498,6 +515,9 @@ export default function BoardPage() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Live presence — who has this board open right now */}
+          <PresenceTracker users={presentUsers} currentUserId={currentUser?.id} />
+
           {/* Member avatars — clickable to show member list */}
           <div className="relative" ref={membersPanelRef}>
             <button
