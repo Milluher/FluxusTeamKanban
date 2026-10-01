@@ -74,7 +74,7 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
               href="/admin"
               aria-current={current === 'admin' ? 'page' : undefined}
               className="text-sm px-2.5 sm:px-3 py-1.5 rounded-lg font-medium border transition-all duration-150"
-              style={{ color: '#e8390e', borderColor: '#e8390e', background: current === 'admin' ? '#fff7f5' : 'white' }}
+              style={{ color: '#c73009', borderColor: '#e8390e', background: current === 'admin' ? '#fff7f5' : 'white' }}
             >
               Admin
             </Link>

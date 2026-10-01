@@ -440,7 +440,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                 </svg>
                 Dependencies
                 {selectedDeps.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: '#fff7f5', color: '#e8390e' }}>
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: '#fff7f5', color: '#c73009' }}>
                     {selectedDeps.length}
                   </span>
                 )}
@@ -454,9 +454,9 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                   else { setDepSearch(''); setDepResults([]); }
                 }}
                 className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all duration-150"
-                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
+                style={{ color: '#c73009', borderColor: '#e8390e', background: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#c73009'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#c73009'; }}
               >
                 + Add
               </button>
@@ -542,9 +542,9 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
               type="submit"
               disabled={saving}
               className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white transition-all duration-150 disabled:opacity-50"
-              style={{ background: '#e8390e' }}
+              style={{ background: '#c73009' }}
               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
-              onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#e8390e'; }}
+              onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
             >
               {saving ? 'Creating...' : 'Create Ticket'}
             </button>

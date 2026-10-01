@@ -91,6 +91,14 @@ const PAIRS = [
   ['Backlog column badge', '#f1f5f9', '#475569', '#475569', AA_TEXT],
   ['Priority Medium', '#fffbeb', '#b45309', '#b45309', AA_TEXT],
   ['Priority Low', '#f9fafb', '#6b7280', '#6b7280', AA_TEXT],
+
+  // Brand red as text, and behind the white text of a primary button. The
+  // identity colour #e8390e stays on borders, dots and text-free fills, where
+  // 4.18:1 still clears the 3:1 asked of non-text UI.
+  ['Brand text on white', '#ffffff', '#e8390e', '#c73009', AA_TEXT],
+  ['Primary button (white on fill)', '#c73009', '#ffffff', '#ffffff', AA_TEXT],
+  ['Brand text on brand tint', '#fff7f5', '#e8390e', '#c73009', AA_TEXT],
+  ['Brand border (non-text)', '#ffffff', '#e8390e', '#e8390e', AA_LARGE],
 ];
 
 const fmt = (n) => `${n.toFixed(2)}:1`;
@@ -111,16 +119,10 @@ for (const [what, bg, before, after, threshold] of PAIRS) {
   console.log(`${pad(what, 38)}${pad(bg, 11)}${pad(wasNote, 20)}${pad(nowNote, 20)}${threshold.toFixed(1)}`);
 }
 
-// Known exception, deliberately left alone: brand red is below AA both as text on
-// white and behind the white text of a primary button. Darkening it to #c73009
-// (already the hover shade) would clear AA at 5.45:1, but it is the brand colour
-// and changing it is not an accessibility decision to make unilaterally.
-const brandOnWhite = ratio('#e8390e', '#ffffff');
-const whiteOnBrand = ratio('#ffffff', '#e8390e');
-console.log('\nNot changed — needs a brand decision:');
-console.log(`  brand #e8390e text on white            ${fmt(brandOnWhite)}  below ${AA_TEXT}`);
-console.log(`  white text on brand #e8390e fill       ${fmt(whiteOnBrand)}  below ${AA_TEXT}`);
-console.log(`  proposed #c73009 (existing hover shade) ${fmt(ratio('#c73009', '#ffffff'))}  clears AA`);
+// Brand red keeps its identity role. #e8390e remains on borders, focus rings,
+// dots, the board-card edge and the drag outline, where the 3:1 asked of non-text
+// UI is met; text and white-on-brand fills use #c73009, which the app already
+// used as the brand hover shade.
 
 if (failed > 0) {
   console.error(`\n${failed} pair(s) below threshold.`);

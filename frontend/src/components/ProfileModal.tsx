@@ -128,7 +128,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
                 type="submit"
                 disabled={saving}
                 className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
-                style={{ background: '#e8390e' }}
+                style={{ background: '#c73009' }}
               >
                 {saving ? 'Saving...' : 'Update Password'}
               </button>

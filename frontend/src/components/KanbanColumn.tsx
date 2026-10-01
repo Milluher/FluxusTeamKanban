@@ -98,7 +98,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket, activ
             className="rounded-lg border-2 border-dashed h-14 flex items-center justify-center mt-2"
             style={{ borderColor: '#e8390e', background: '#fff7f5' }}
           >
-            <span className="text-xs font-medium" style={{ color: '#e8390e' }}>Drop here</span>
+            <span className="text-xs font-medium" style={{ color: '#c73009' }}>Drop here</span>
           </div>
         )}
 

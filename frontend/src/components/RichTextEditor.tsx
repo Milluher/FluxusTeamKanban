@@ -36,7 +36,7 @@ const ToolbarBtn = ({
     className="flex items-center justify-center w-7 h-7 rounded-md text-xs font-semibold transition-all duration-100 flex-shrink-0"
     style={{
       background: active ? '#fff7f5' : 'transparent',
-      color: active ? '#e8390e' : '#6b7280',
+      color: active ? '#c73009' : '#6b7280',
       border: active ? '1px solid #fbd5c8' : '1px solid transparent',
     }}
     onMouseEnter={(e) => {
@@ -182,7 +182,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Add a
           style={{
             border: headingLevel ? '1px solid #fbd5c8' : '1px solid #e5e7eb',
             background: headingLevel ? '#fff7f5' : 'white',
-            color: headingLevel ? '#e8390e' : '#6b7280',
+            color: headingLevel ? '#c73009' : '#6b7280',
             height: '28px',
           }}
         >
