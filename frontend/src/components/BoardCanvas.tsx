@@ -10,6 +10,8 @@ interface Props {
 }
 
 const ACCENT = '#e8390e';
+// Brand red is 4.18:1 — below AA as text or behind white text.
+const ACCENT_TEXT = '#c73009';
 const NAVY = '#1a1f3c';
 
 // Modal state machine — text prompts and destructive confirms
@@ -220,7 +222,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
             <button
               onClick={() => openModal({ kind: 'add-project' })}
               className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all duration-150"
-              style={{ color: ACCENT, borderColor: ACCENT, background: 'white' }}
+              style={{ color: ACCENT_TEXT, borderColor: ACCENT, background: 'white' }}
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -250,7 +252,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                     className="flex items-center gap-2 px-3 py-2 border-b border-gray-200"
                     style={{ background: '#f0f2f5' }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT_TEXT }} />
                     <h4
                       onClick={() => isAdmin && openModal({ kind: 'rename-block', block }, block.title)}
                       title={isAdmin ? 'Click to rename' : undefined}
@@ -425,7 +427,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                     type="submit"
                     disabled={modalBusy || !modalInput.trim()}
                     className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
-                    style={{ background: ACCENT }}
+                    style={{ background: ACCENT_TEXT }}
                   >
                     {modalBusy ? 'Saving...' : 'Save'}
                   </button>
@@ -472,7 +474,7 @@ function EmptyState({ isAdmin, onAdd }: { isAdmin: boolean; onAdd: () => void })
         <button
           onClick={onAdd}
           className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg border transition-all duration-150"
-          style={{ color: ACCENT, borderColor: ACCENT, background: 'white' }}
+          style={{ color: ACCENT_TEXT, borderColor: ACCENT, background: 'white' }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />

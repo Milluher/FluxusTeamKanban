@@ -99,9 +99,9 @@ export default function ChangelogPage() {
             <button
               onClick={openNew}
               className="text-sm px-4 py-2 rounded-lg font-semibold text-white transition-all duration-150 flex-shrink-0"
-              style={{ background: '#e8390e' }}
+              style={{ background: '#c73009' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#c73009'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#c73009'; }}
             >
               + New entry
             </button>
@@ -114,7 +114,7 @@ export default function ChangelogPage() {
           <div className="bg-white border border-gray-200 rounded-xl py-16 text-center">
             <p className="text-sm text-gray-500">No changelog entries yet</p>
             {isAdmin && (
-              <button onClick={openNew} className="text-sm mt-3 font-medium" style={{ color: '#e8390e' }}>
+              <button onClick={openNew} className="text-sm mt-3 font-medium" style={{ color: '#c73009' }}>
                 Write the first one
               </button>
             )}
@@ -246,7 +246,7 @@ export default function ChangelogPage() {
                 onClick={confirmDelete}
                 disabled={deleting}
                 className="text-sm px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50 transition-colors"
-                style={{ background: '#e8390e' }}
+                style={{ background: '#c73009' }}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>

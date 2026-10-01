@@ -562,7 +562,7 @@ export default function BoardPage() {
         <button
           onClick={showEverything}
           className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
-          style={{ color: '#e8390e', background: '#fff7f5', border: '1px solid #fbd5c8' }}
+          style={{ color: '#c73009', background: '#fff7f5', border: '1px solid #fbd5c8' }}
         >
           Show all
         </button>
@@ -646,17 +646,17 @@ export default function BoardPage() {
                 onClick={() => setShowInviteModal(true)}
                 className="flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
                 style={{
-                  color: '#e8390e',
+                  color: '#c73009',
                   borderColor: '#e8390e',
                   background: 'white',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#e8390e';
+                  e.currentTarget.style.background = '#c73009';
                   e.currentTarget.style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'white';
-                  e.currentTarget.style.color = '#e8390e';
+                  e.currentTarget.style.color = '#c73009';
                 }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -718,7 +718,7 @@ export default function BoardPage() {
             );
           })()}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(232,57,14,0.2)', color: '#e8390e' }}>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(232,57,14,0.2)', color: '#c73009' }}>
               {activeSprint._count.tickets} tickets
             </span>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
@@ -838,7 +838,7 @@ export default function BoardPage() {
               style={{
                 border: filterType ? '1px solid #e8390e' : '1px solid #e5e7eb',
                 background: filterType ? '#fff7f5' : 'white',
-                color: filterType ? '#e8390e' : '#6b7280',
+                color: filterType ? '#c73009' : '#6b7280',
               }}
             >
               <option value="">All Types</option>
@@ -855,7 +855,7 @@ export default function BoardPage() {
               style={{
                 border: filterProject ? '1px solid #e8390e' : '1px solid #e5e7eb',
                 background: filterProject ? '#fff7f5' : 'white',
-                color: filterProject ? '#e8390e' : '#6b7280',
+                color: filterProject ? '#c73009' : '#6b7280',
               }}
             >
               <option value="">All Projects</option>
@@ -872,7 +872,7 @@ export default function BoardPage() {
               style={{
                 border: filterEpic ? '1px solid #e8390e' : '1px solid #e5e7eb',
                 background: filterEpic ? '#fff7f5' : 'white',
-                color: filterEpic ? '#e8390e' : '#6b7280',
+                color: filterEpic ? '#c73009' : '#6b7280',
               }}
             >
               <option value="">All Epics</option>
@@ -889,7 +889,7 @@ export default function BoardPage() {
               style={{
                 border: filterFlow ? '1px solid #e8390e' : '1px solid #e5e7eb',
                 background: filterFlow ? '#fff7f5' : 'white',
-                color: filterFlow ? '#e8390e' : '#6b7280',
+                color: filterFlow ? '#c73009' : '#6b7280',
               }}
             >
               <option value="">All Flows</option>
@@ -902,7 +902,7 @@ export default function BoardPage() {
             <button
               onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); setFilterEpic(''); setFilterFlow(''); }}
               className="ml-auto flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
-              style={{ color: '#e8390e', background: '#fff7f5', border: '1px solid #fbd5c8' }}
+              style={{ color: '#c73009', background: '#fff7f5', border: '1px solid #fbd5c8' }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -962,9 +962,9 @@ export default function BoardPage() {
               <button
                 onClick={() => setShowCreateSprint((p) => !p)}
                 className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg border transition-all duration-150"
-                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
+                style={{ color: '#c73009', borderColor: '#e8390e', background: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#c73009'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#c73009'; }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -1102,7 +1102,7 @@ export default function BoardPage() {
                             <div className="flex items-center gap-2 mb-3">
                               <span
                                 className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                                style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}
+                                style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}
                               >
                                 {sprint._count.tickets} {sprint._count.tickets === 1 ? 'ticket' : 'tickets'}
                               </span>
@@ -1296,7 +1296,7 @@ export default function BoardPage() {
                   type="submit"
                   disabled={updatingDates}
                   className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
-                  style={{ background: '#e8390e' }}
+                  style={{ background: '#c73009' }}
                 >
                   {updatingDates ? 'Saving...' : 'Save Dates'}
                 </button>
@@ -1361,7 +1361,7 @@ export default function BoardPage() {
                   type="submit"
                   disabled={creatingSprintLoading || !sprintForm.title}
                   className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
-                  style={{ background: '#e8390e' }}
+                  style={{ background: '#c73009' }}
                 >
                   {creatingSprintLoading ? 'Creating...' : 'Create Sprint'}
                 </button>

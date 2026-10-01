@@ -161,7 +161,7 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
                 </div>
               ))}
             </div>
-            <button onClick={addItem} className="text-xs font-medium mt-2 transition-colors" style={{ color: '#e8390e' }}>
+            <button onClick={addItem} className="text-xs font-medium mt-2 transition-colors" style={{ color: '#c73009' }}>
               + Add change
             </button>
           </div>
@@ -189,7 +189,7 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
             onClick={() => save(false)}
             disabled={saving}
             className="text-sm px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50 transition-colors"
-            style={{ background: '#e8390e' }}
+            style={{ background: '#c73009' }}
           >
             {saving ? 'Saving…' : entry && !isDraft ? 'Save changes' : 'Publish'}
           </button>

@@ -77,17 +77,17 @@ export default function DashboardPage() {
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold border transition-all duration-150"
             style={{
-              color: '#e8390e',
+              color: '#c73009',
               borderColor: '#e8390e',
               background: 'white',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#e8390e';
+              e.currentTarget.style.background = '#c73009';
               e.currentTarget.style.color = 'white';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'white';
-              e.currentTarget.style.color = '#e8390e';
+              e.currentTarget.style.color = '#c73009';
             }}
           >
             <span className="text-base leading-none font-bold">+</span>
@@ -160,8 +160,8 @@ export default function DashboardPage() {
                             boxShadow: active ? '0 0 0 2px rgba(232,57,14,0.15)' : 'none',
                           }}
                         >
-                          <span style={{ color: active ? '#e8390e' : '#6b7280' }}>{opt.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: active ? '#e8390e' : '#1a1f3c' }}>{opt.label}</span>
+                          <span style={{ color: active ? '#c73009' : '#6b7280' }}>{opt.icon}</span>
+                          <span className="text-xs font-bold" style={{ color: active ? '#c73009' : '#1a1f3c' }}>{opt.label}</span>
                           <span className="text-xs leading-snug" style={{ color: '#6b7280' }}>{opt.desc}</span>
                         </button>
                       );
@@ -181,9 +181,9 @@ export default function DashboardPage() {
                   type="submit"
                   disabled={creating || !newBoardName.trim()}
                   className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50"
-                  style={{ background: '#e8390e' }}
+                  style={{ background: '#c73009' }}
                   onMouseEnter={(e) => { if (!creating) e.currentTarget.style.background = '#c73009'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#c73009'; }}
                 >
                   {creating ? 'Creating...' : 'Create Board'}
                 </button>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
               </div>
               <p className="text-base font-semibold text-gray-700 mb-1">No boards yet</p>
               <p className="text-sm text-gray-500 mb-5">Create your first board to start collaborating</p>
-              <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: '#e8390e' }}>
+              <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: '#c73009' }}>
                 Create your first board
               </button>
             </div>

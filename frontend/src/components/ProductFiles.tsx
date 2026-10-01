@@ -11,6 +11,8 @@ interface Props {
 }
 
 const ACCENT = '#e8390e';
+// Brand red is 4.18:1 — below AA as text or behind white text.
+const ACCENT_TEXT = '#c73009';
 const NAVY = '#1a1f3c';
 
 type ModalState =
@@ -112,7 +114,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
           <button
             onClick={() => openModal({ kind: 'add' })}
             className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all duration-150 ml-auto flex-shrink-0"
-            style={{ color: ACCENT, borderColor: ACCENT, background: 'white' }}
+            style={{ color: ACCENT_TEXT, borderColor: ACCENT, background: 'white' }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -252,7 +254,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <div className="flex gap-2">
                   <button type="button" onClick={closeModal} disabled={busy} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200 disabled:opacity-50">Cancel</button>
-                  <button type="submit" disabled={busy || !form.title.trim() || !form.url.trim()} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50" style={{ background: ACCENT }}>
+                  <button type="submit" disabled={busy || !form.title.trim() || !form.url.trim()} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50" style={{ background: ACCENT_TEXT }}>
                     {busy ? 'Saving...' : 'Save'}
                   </button>
                 </div>

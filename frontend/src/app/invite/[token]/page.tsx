@@ -132,7 +132,7 @@ export default function InvitePage() {
             type="submit"
             disabled={accepting}
             className="w-full py-3 sm:py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: '#e8390e' }}
+            style={{ background: '#c73009' }}
           >
             {accepting ? 'Joining...' : `Join ${invite?.boardName}`}
           </button>

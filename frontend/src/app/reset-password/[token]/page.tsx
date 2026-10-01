@@ -104,9 +104,9 @@ export default function ResetPasswordPage() {
                   type="submit"
                   disabled={loading}
                   className="w-full py-3 sm:py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white transition-all duration-150"
-                  style={{ background: loading ? '#f0a08a' : '#e8390e', opacity: loading ? 0.8 : 1 }}
+                  style={{ background: loading ? '#f0a08a' : '#c73009', opacity: loading ? 0.8 : 1 }}
                   onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#c73009'; }}
-                  onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#e8390e'; }}
+                  onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#c73009'; }}
                 >
                   {loading ? 'Saving...' : 'Set new password'}
                 </button>

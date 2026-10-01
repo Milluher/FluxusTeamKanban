@@ -109,7 +109,7 @@ export default function AdminPage() {
                 </div>
               </div>
               {u.email === 'femi@fluxx.ng' ? (
-                <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}>Owner</span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>
               ) : u.id !== currentUser?.id && (
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <button onClick={() => generateLink(u)} className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]">Reset pw</button>
@@ -155,7 +155,7 @@ export default function AdminPage() {
                   <td className="px-5 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="px-5 py-3 text-right">
                     {u.email === 'femi@fluxx.ng' ? (
-                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}>Owner</span>
+                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>
                     ) : u.id !== currentUser?.id && (
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => generateLink(u)} className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors">
@@ -198,7 +198,7 @@ export default function AdminPage() {
                 <button
                   onClick={copyLink}
                   className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white transition-colors"
-                  style={{ background: copied ? '#34d399' : '#e8390e' }}
+                  style={{ background: copied ? '#34d399' : '#c73009' }}
                 >
                   {copied ? 'Copied!' : 'Copy Link'}
                 </button>

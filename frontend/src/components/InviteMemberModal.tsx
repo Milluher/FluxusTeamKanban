@@ -102,7 +102,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
               key={key}
               onClick={() => setTab(key as 'add' | 'link')}
               className="flex-1 py-3 text-sm font-medium transition-colors relative"
-              style={{ color: tab === key ? '#e8390e' : '#6b7280' }}
+              style={{ color: tab === key ? '#c73009' : '#6b7280' }}
             >
               {label}
               {tab === key && (
@@ -153,7 +153,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                       onClick={() => addUser(user)}
                       disabled={adding === user.id}
                       className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 min-h-[36px] rounded-lg text-white transition-colors disabled:opacity-50"
-                      style={{ background: '#e8390e' }}
+                      style={{ background: '#c73009' }}
                     >
                       {adding === user.id ? '...' : 'Add'}
                     </button>
@@ -192,7 +192,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                   onClick={generateLink}
                   disabled={generating}
                   className="w-full py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                  style={{ background: '#e8390e' }}
+                  style={{ background: '#c73009' }}
                 >
                   {generating ? 'Generating...' : 'Generate Invite Link'}
                 </button>
@@ -207,7 +207,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                     <button
                       onClick={copy}
                       className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold text-white flex-shrink-0"
-                      style={{ background: copied ? '#15803d' : '#e8390e' }}
+                      style={{ background: copied ? '#15803d' : '#c73009' }}
                     >
                       {copied ? 'Copied!' : 'Copy'}
                     </button>

@@ -140,7 +140,7 @@ export default function NotificationBell({ userId }: Props) {
         {unread > 0 && (
           <span
             className="absolute top-0.5 right-0.5 sm:top-0 sm:right-0 min-w-[16px] h-4 px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
-            style={{ background: '#e8390e' }}
+            style={{ background: '#c73009' }}
           >
             {unread > 9 ? '9+' : unread}
           </span>

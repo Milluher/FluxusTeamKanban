@@ -257,7 +257,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
         <span key={keyPrefix}>
           {parts.map((part, i) =>
             i % 2 === 1
-              ? <span key={i} className="font-semibold" style={{ color: '#e8390e' }}>@{part}</span>
+              ? <span key={i} className="font-semibold" style={{ color: '#c73009' }}>@{part}</span>
               : <span key={i}>{part}</span>
           )}
         </span>
@@ -330,9 +330,9 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   onClick={save}
                   disabled={saving}
                   className="px-3 sm:px-4 py-1.5 min-h-[36px] rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
-                  style={{ background: '#e8390e' }}
+                  style={{ background: '#c73009' }}
                   onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
-                  onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#e8390e'; }}
+                  onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -510,7 +510,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     <div className="mt-1.5">
                       <span
                         className="inline-flex text-xs font-semibold px-2.5 py-1 rounded-full"
-                        style={{ background: '#fff7f5', color: '#e8390e', border: '1px solid #fbd5c8' }}
+                        style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}
                       >
                         {ticket.status}
                       </span>
@@ -715,7 +715,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                         type="button"
                         onClick={() => setViewingFile(f)}
                         className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 max-w-full"
-                        style={{ color: '#e8390e', background: '#fff7f5', borderColor: '#fbd5c8' }}
+                        style={{ color: '#c73009', background: '#fff7f5', borderColor: '#fbd5c8' }}
                         title="Open product doc"
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -839,9 +839,9 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     else { setDepSearch(''); setDepResults([]); }
                   }}
                   className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all duration-150"
-                  style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
+                  style={{ color: '#c73009', borderColor: '#e8390e', background: 'white' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#c73009'; e.currentTarget.style.color = 'white'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#c73009'; }}
                 >
                   + Add
                 </button>
@@ -922,7 +922,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
               Comments
               <span
                 className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold"
-                style={{ background: '#fff7f5', color: '#e8390e' }}
+                style={{ background: '#fff7f5', color: '#c73009' }}
               >
                 {(ticket.comments || []).length}
               </span>
@@ -1077,9 +1077,9 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     type="submit"
                     disabled={submittingComment || (!comment.trim() && commentImages.length === 0)}
                     className="self-end px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all duration-150 disabled:opacity-40"
-                    style={{ background: '#e8390e' }}
+                    style={{ background: '#c73009' }}
                     onMouseEnter={(e) => { if (!submittingComment && (comment.trim() || commentImages.length > 0)) e.currentTarget.style.background = '#c73009'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '#e8390e'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#c73009'; }}
                   >
                     {submittingComment ? 'Posting...' : 'Post'}
                   </button>
