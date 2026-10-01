@@ -21,7 +21,6 @@ import { arrayMove } from '@dnd-kit/sortable';
 import api from '@/lib/api';
 import socket from '@/lib/socket';
 import { Board, Ticket, User, Sprint } from '@/types';
-import { avatarUrl } from '@/lib/avatar';
 import { formatSprintDates } from '@/lib/formatDate';
 import { descriptionText } from '@/lib/richText';
 import KanbanColumn from '@/components/KanbanColumn';
@@ -33,6 +32,7 @@ import PresenceTracker, { PresentUser } from '@/components/PresenceTracker';
 import BoardInfo from '@/components/BoardInfo';
 import AppHeader from '@/components/AppHeader';
 import BoardToolbar from '@/components/BoardToolbar';
+import Avatar from '@/components/Avatar';
 
 export default function BoardPage() {
   const params = useParams();
@@ -629,19 +629,17 @@ export default function BoardPage() {
                   title="View members"
                 >
                   {board.members.slice(0, 3).map((m) => (
-                    <img
+                    <Avatar
                       key={m.id}
-                      src={avatarUrl(m.user.name)}
-                      className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 sm:hidden"
-                      alt={m.user.name}
+                      name={m.user.name}
+                      className="w-7 h-7 text-[10px] ring-2 ring-white sm:hidden"
                     />
                   ))}
                   {board.members.slice(0, 5).map((m) => (
-                    <img
+                    <Avatar
                       key={`d-${m.id}`}
-                      src={avatarUrl(m.user.name)}
-                      className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 hidden sm:block"
-                      alt={m.user.name}
+                      name={m.user.name}
+                      className="w-7 h-7 text-[10px] ring-2 ring-white hidden sm:inline-flex"
                     />
                   ))}
                 </button>
@@ -655,7 +653,7 @@ export default function BoardPage() {
                       const isCurrentUserBoardAdmin = board.members.find(bm => bm.user.id === currentUser?.id)?.role === 'admin';
                       return (
                         <div key={m.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors group">
-                          <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
+                          <Avatar name={m.user.name} className="w-8 h-8 text-xs" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
                             <p className="text-xs text-gray-500 capitalize">{m.role}</p>

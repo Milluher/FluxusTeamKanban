@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import api from '@/lib/api';
-import { avatarUrl } from '@/lib/avatar';
 import { User } from '@/types';
+import Avatar from './Avatar';
 
 interface Props {
   user: User;
@@ -55,11 +55,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
         <div className="px-5 py-5 space-y-6">
           {/* Avatar + Info */}
           <div className="flex items-center gap-4">
-            <img
-              src={avatarUrl(user.name)}
-              alt={user.name}
-              className="w-16 h-16 rounded-full flex-shrink-0"
-            />
+            <Avatar name={user.name} className="w-16 h-16 text-xl" />
             <div>
               <p className="font-semibold text-base" style={{ color: '#1a1f3c' }}>{user.name}</p>
               <p className="text-sm text-gray-500">{user.email}</p>

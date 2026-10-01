@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { User } from '@/types';
-import { avatarUrl } from '@/lib/avatar';
 import NotificationBell from './NotificationBell';
 import ProfileModal from './ProfileModal';
+import Avatar from './Avatar';
 
 type Section = 'boards' | 'changelog' | 'admin';
 
@@ -86,7 +86,7 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
               className="flex items-center gap-2 min-h-[44px] px-1 rounded-lg hover:bg-gray-50 transition-colors"
               aria-label={`Account menu for ${user.name}`}
             >
-              <img src={avatarUrl(user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt="" />
+              <Avatar name={user.name} className="w-8 h-8 text-xs" decorative />
               <span className="hidden md:block text-sm font-medium text-gray-700">{user.name}</span>
             </button>
           )}

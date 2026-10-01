@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { avatarUrl } from '@/lib/avatar';
 import { User } from '@/types';
+import Avatar from './Avatar';
 
 interface Props {
   boardId: string;
@@ -143,7 +143,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                     className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <img src={avatarUrl(user.name)} className="w-9 h-9 rounded-full flex-shrink-0" alt={user.name} />
+                      <Avatar name={user.name} className="w-9 h-9 text-xs" />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -167,7 +167,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                   return (
                     <div key={id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg opacity-60">
                       <div className="flex items-center gap-3 min-w-0">
-                        <img src={avatarUrl(u.name)} className="w-9 h-9 rounded-full flex-shrink-0" alt={u.name} />
+                        <Avatar name={u.name} className="w-9 h-9 text-xs" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{u.name}</p>
                           <p className="text-xs text-gray-500 truncate">{u.email}</p>
