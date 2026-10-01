@@ -23,6 +23,7 @@ import socket from '@/lib/socket';
 import { Board, Ticket, User, Sprint } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
 import { formatSprintDates } from '@/lib/formatDate';
+import { descriptionText } from '@/lib/richText';
 import KanbanColumn from '@/components/KanbanColumn';
 import TicketCard from '@/components/TicketCard';
 import TicketModal from '@/components/TicketModal';
@@ -32,6 +33,7 @@ import PresenceTracker, { PresentUser } from '@/components/PresenceTracker';
 import BoardCanvas from '@/components/BoardCanvas';
 import ProductFiles from '@/components/ProductFiles';
 import AppHeader from '@/components/AppHeader';
+import BoardToolbar from '@/components/BoardToolbar';
 
 export default function BoardPage() {
   const params = useParams();
@@ -77,6 +79,7 @@ export default function BoardPage() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterEpic, setFilterEpic] = useState('');
   const [filterFlow, setFilterFlow] = useState('');
+  const [search, setSearch] = useState('');
 
   useInactivityTimeout();
   // Keep boardRef always pointing at latest board so drag handlers can read current state
@@ -476,7 +479,15 @@ export default function BoardPage() {
   const uniqueFlows = [...new Set(allBoardTickets.map((t) => t.flow).filter((v): v is string => !!v))].sort();
   const priorityOrder = ['low', 'medium', 'high', 'urgent'];
   const uniquePriorities = priorityOrder.filter((p) => allBoardTickets.some((t) => t.priority === p));
-  const activeFilterCount = [filterType, filterProject, filterPriority, filterEpic, filterFlow].filter(Boolean).length;
+  const activeFilterCount = [filterType, filterProject, filterPriority, filterEpic, filterFlow, search.trim()].filter(Boolean).length;
+
+  // Search looks at the title and the text behind the description's HTML, so
+  // checklist items are findable even though cards only show a tally.
+  const searchQuery = search.trim().toLowerCase();
+  const matchesSearch = (t: Ticket) =>
+    !searchQuery ||
+    t.title.toLowerCase().includes(searchQuery) ||
+    descriptionText(t.description).toLowerCase().includes(searchQuery);
 
   const applyTicketFilters = (tickets: Ticket[]) =>
     tickets.filter((t) =>
@@ -484,7 +495,8 @@ export default function BoardPage() {
       (!filterProject || t.project === filterProject) &&
       (!filterPriority || t.priority === filterPriority) &&
       (!filterEpic || t.epic === filterEpic) &&
-      (!filterFlow || t.flow === filterFlow)
+      (!filterFlow || t.flow === filterFlow) &&
+      matchesSearch(t)
     );
 
   const sprintColumns = activeSprint
@@ -540,14 +552,41 @@ export default function BoardPage() {
   const visibleCount = countTickets(activeSprint ? visibleColumns : filteredKanbanColumns);
 
   // One click back to everything: drop the Mine filter and any attribute filters.
-  const showEverything = () => {
-    chooseFilter(false);
+  const clearFilters = () => {
     setFilterType('');
     setFilterProject('');
     setFilterPriority('');
     setFilterEpic('');
     setFilterFlow('');
+    setSearch('');
   };
+
+  // One click back to everything: drop the Mine filter and every other filter.
+  const showEverything = () => {
+    chooseFilter(false);
+    clearFilters();
+  };
+
+  const toolbar = (
+    <BoardToolbar
+      mine={filterMyTickets}
+      onMineChange={chooseFilter}
+      counts={{ mine: mineCount, all: allCount }}
+      filters={{ search, type: filterType, project: filterProject, epic: filterEpic, flow: filterFlow, priority: filterPriority }}
+      onFilterChange={(patch) => {
+        if (patch.search !== undefined) setSearch(patch.search);
+        if (patch.type !== undefined) setFilterType(patch.type);
+        if (patch.project !== undefined) setFilterProject(patch.project);
+        if (patch.epic !== undefined) setFilterEpic(patch.epic);
+        if (patch.flow !== undefined) setFilterFlow(patch.flow);
+        if (patch.priority !== undefined) setFilterPriority(patch.priority);
+      }}
+      options={{ types: uniqueTypes, projects: uniqueProjects, epics: uniqueEpics, flows: uniqueFlows, priorities: uniquePriorities }}
+      activeFilterCount={activeFilterCount}
+      onClearFilters={clearFilters}
+      onNewTicket={() => { setCreateColumnId(board.columns[0]?.id ?? ''); setShowCreateModal(true); }}
+    />
+  );
 
   // Empty columns are ambiguous — a filter hiding every ticket looks identical to
   // a board with no tickets. Say which it is.
@@ -718,205 +757,18 @@ export default function BoardPage() {
             );
           })()}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(232,57,14,0.2)', color: '#c73009' }}>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(232,57,14,0.2)', color: '#fdba74' }}>
               {activeSprint._count.tickets} tickets
             </span>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
               {activeSprint._count.members} members
             </span>
-            {/* Filter toggle */}
-            <div className="flex rounded-lg overflow-hidden text-xs font-semibold" style={{ border: '1px solid rgba(255,255,255,0.25)' }}>
-              <button
-                onClick={() => chooseFilter(true)}
-                aria-pressed={filterMyTickets}
-                className="px-3 py-1.5 transition-all"
-                style={{
-                  background: filterMyTickets ? 'white' : 'transparent',
-                  color: filterMyTickets ? '#1a1f3c' : 'rgba(255,255,255,0.65)',
-                }}
-              >
-                Mine &middot; {mineCount}
-              </button>
-              <button
-                onClick={() => chooseFilter(false)}
-                aria-pressed={!filterMyTickets}
-                className="px-3 py-1.5 transition-all"
-                style={{
-                  background: !filterMyTickets ? 'white' : 'transparent',
-                  color: !filterMyTickets ? '#1a1f3c' : 'rgba(255,255,255,0.65)',
-                }}
-              >
-                All &middot; {allCount}
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Filter bar — shown in kanban view and sprint ticket view */}
-      {(board.type === 'kanban' || activeSprint) && (
-        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 overflow-x-auto">
-          {/* Mine / All toggle — kanban view only (sprint view has its own toggle in the banner).
-              Defaults to "Mine": tickets the user is assigned to or created. */}
-          {board.type === 'kanban' && (
-            <div className="flex rounded-lg overflow-hidden text-xs font-semibold flex-shrink-0 border border-gray-200">
-              <button
-                onClick={() => chooseFilter(true)}
-                aria-pressed={filterMyTickets}
-                className="px-3 py-1 transition-all"
-                style={{
-                  background: filterMyTickets ? '#1a1f3c' : 'white',
-                  color: filterMyTickets ? 'white' : '#6b7280',
-                }}
-              >
-                Mine &middot; {mineCount}
-              </button>
-              <button
-                onClick={() => chooseFilter(false)}
-                aria-pressed={!filterMyTickets}
-                className="px-3 py-1 transition-all"
-                style={{
-                  background: !filterMyTickets ? '#1a1f3c' : 'white',
-                  color: !filterMyTickets ? 'white' : '#6b7280',
-                }}
-              >
-                All &middot; {allCount}
-              </button>
-            </div>
-          )}
-
-          {/* Label */}
-          <div className="flex items-center gap-1.5 flex-shrink-0 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-            </svg>
-            <span className="hidden sm:inline">Filter</span>
-          </div>
-
-          {/* Priority pills */}
-          {uniquePriorities.length > 0 && (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {uniquePriorities.map((p) => {
-                const cfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
-                  low:    { label: 'Low',       color: '#6b7280', bg: '#f9fafb', border: '#d1d5db' },
-                  medium: { label: 'Medium',    color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
-                  high:   { label: 'High',      color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
-                  urgent: { label: 'Urgent 🔥', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
-                };
-                const c = cfg[p];
-                const active = filterPriority === p;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setFilterPriority(active ? '' : p)}
-                    className="text-xs font-semibold px-2 py-0.5 rounded-full transition-all duration-150 flex-shrink-0"
-                    style={{
-                      color: c.color,
-                      background: active ? c.border : c.bg,
-                      border: `1px solid ${c.border}`,
-                      boxShadow: active ? `0 0 0 2px ${c.border}` : 'none',
-                    }}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Separator */}
-          {uniquePriorities.length > 0 && (uniqueTypes.length > 0 || uniqueProjects.length > 0 || uniqueEpics.length > 0) && (
-            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
-          )}
-
-          {/* Type select */}
-          {uniqueTypes.length > 0 && (
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150 capitalize"
-              style={{
-                border: filterType ? '1px solid #e8390e' : '1px solid #e5e7eb',
-                background: filterType ? '#fff7f5' : 'white',
-                color: filterType ? '#c73009' : '#6b7280',
-              }}
-            >
-              <option value="">All Types</option>
-              {uniqueTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          )}
-
-          {/* Project select */}
-          {uniqueProjects.length > 0 && (
-            <select
-              value={filterProject}
-              onChange={(e) => setFilterProject(e.target.value)}
-              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150"
-              style={{
-                border: filterProject ? '1px solid #e8390e' : '1px solid #e5e7eb',
-                background: filterProject ? '#fff7f5' : 'white',
-                color: filterProject ? '#c73009' : '#6b7280',
-              }}
-            >
-              <option value="">All Projects</option>
-              {uniqueProjects.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          )}
-
-          {/* Epic select */}
-          {uniqueEpics.length > 0 && (
-            <select
-              value={filterEpic}
-              onChange={(e) => setFilterEpic(e.target.value)}
-              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150"
-              style={{
-                border: filterEpic ? '1px solid #e8390e' : '1px solid #e5e7eb',
-                background: filterEpic ? '#fff7f5' : 'white',
-                color: filterEpic ? '#c73009' : '#6b7280',
-              }}
-            >
-              <option value="">All Epics</option>
-              {uniqueEpics.map((e) => <option key={e} value={e}>{e}</option>)}
-            </select>
-          )}
-
-          {/* Flow select */}
-          {uniqueFlows.length > 0 && (
-            <select
-              value={filterFlow}
-              onChange={(e) => setFilterFlow(e.target.value)}
-              className="text-xs font-medium rounded-lg px-2 py-1 flex-shrink-0 outline-none transition-all duration-150"
-              style={{
-                border: filterFlow ? '1px solid #e8390e' : '1px solid #e5e7eb',
-                background: filterFlow ? '#fff7f5' : 'white',
-                color: filterFlow ? '#c73009' : '#6b7280',
-              }}
-            >
-              <option value="">All Flows</option>
-              {uniqueFlows.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          )}
-
-          {/* Clear filters */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={() => { setFilterType(''); setFilterProject(''); setFilterPriority(''); setFilterEpic(''); setFilterFlow(''); }}
-              className="ml-auto flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
-              style={{ color: '#c73009', background: '#fff7f5', border: '1px solid #fbd5c8' }}
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              Clear {activeFilterCount > 1 ? `(${activeFilterCount})` : ''}
-            </button>
-          )}
-
-          {/* No filterable content placeholder */}
-          {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && uniqueFlows.length === 0 && (
-            <span className="text-xs text-gray-500">No filters available</span>
-          )}
-        </div>
-      )}
+      {/* One toolbar for both board types, in the same place with the same styling. */}
+      {(board.type === 'kanban' || activeSprint) && toolbar}
 
       {/* Project Overview canvas — sits above the board on kanban + sprint overview.
           Hidden once a sprint is opened so the sprint board takes the full page. */}
