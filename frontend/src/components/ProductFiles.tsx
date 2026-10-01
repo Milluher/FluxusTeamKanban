@@ -6,6 +6,8 @@ import { ProductFile } from '@/types';
 import ProductFileViewer from './ProductFileViewer';
 
 interface Props {
+  /** Reports how many items this section has, once loaded. */
+  onCountChange?: (count: number) => void;
   boardId: string;
   isAdmin: boolean;
 }
@@ -21,10 +23,37 @@ type ModalState =
   | { kind: 'delete'; file: ProductFile }
   | null;
 
-export default function ProductFiles({ boardId, isAdmin }: Props) {
+export default function ProductFiles({ boardId, isAdmin, onCountChange }: Props) {
   const [files, setFiles] = useState<ProductFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Collapsed state is remembered per board.
+  const collapseKey = `fluxus:filesCollapsed:${boardId}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(collapseKey);
+      if (saved === '1' || saved === '0') setCollapsed(saved === '1');
+    } catch {
+      // Storage can be blocked; the expanded default stands.
+    }
+  }, [collapseKey]);
+
+  const toggleCollapsed = () => {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem(collapseKey, next ? '1' : '0');
+      } catch {
+        // Not persisting is acceptable.
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!loading) onCountChange?.(files.length);
+  }, [loading, files.length, onCountChange]);
   const [viewing, setViewing] = useState<ProductFile | null>(null);
 
   const [modal, setModal] = useState<ModalState>(null);
@@ -91,7 +120,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
       {/* Header */}
       <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5">
         <button
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={toggleCollapsed}
           className="flex items-center gap-1.5 text-sm font-bold transition-colors"
           style={{ color: NAVY }}
           aria-label={collapsed ? 'Expand product files' : 'Collapse product files'}
