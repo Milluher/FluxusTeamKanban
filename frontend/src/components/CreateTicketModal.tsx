@@ -175,6 +175,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
           <h2 className="text-base font-bold" style={{ color: '#1a1f3c' }}>New Ticket</h2>
           <button
             onClick={onClose}
+            aria-label="Close new ticket dialog"
             className="w-7 h-7 flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700"
           >
             ×

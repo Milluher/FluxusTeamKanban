@@ -76,6 +76,7 @@ export default function ProductFileViewer({ file, onClose }: Props) {
           </a>
           <button
             onClick={onClose}
+            aria-label="Close file preview"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700"
           >
             ×

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import api from '@/lib/api';
 import { Board, User } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
@@ -105,6 +106,7 @@ export default function DashboardPage() {
                 className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg border transition-all duration-150 min-h-[44px] min-w-[44px]"
                 style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
                 title="Admin"
+                aria-label="Admin settings"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
@@ -141,7 +143,7 @@ export default function DashboardPage() {
         {/* Page header */}
         <div className="flex items-center justify-between mb-5 sm:mb-7">
           <div>
-            <h2 className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>Your Boards</h2>
+            <h1 className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>Your Boards</h1>
             <p className="text-sm mt-0.5 text-gray-500">
               {boards.length} {boards.length === 1 ? 'board' : 'boards'} in your workspace
             </p>
@@ -178,7 +180,7 @@ export default function DashboardPage() {
             >
               <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="font-bold text-base" style={{ color: '#1a1f3c' }}>New Board</h3>
-                <button type="button" onClick={() => setShowCreate(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 bg-gray-100 hover:bg-gray-200 text-lg">×</button>
+                <button type="button" onClick={() => setShowCreate(false)} aria-label="Close new board dialog" className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 bg-gray-100 hover:bg-gray-200 text-lg">×</button>
               </div>
               <div className="px-5 py-5 space-y-4">
                 <div>
@@ -282,7 +284,15 @@ export default function DashboardPage() {
                 onClick={() => router.push(`/board/${board.id}`)}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-semibold text-base truncate" style={{ color: '#1a1f3c' }}>{board.name}</h3>
+                  <h3 className="font-semibold text-base truncate min-w-0" style={{ color: '#1a1f3c' }}>
+                    <Link
+                      href={`/board/${board.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="block truncate rounded outline-none hover:underline focus-visible:underline"
+                    >
+                      {board.name}
+                    </Link>
+                  </h3>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${board.type === 'kanban' ? 'bg-purple-50 text-purple-500' : 'bg-orange-50 text-orange-500'}`}>
                       {board.type === 'kanban' ? 'Kanban' : 'Sprint'}
@@ -294,6 +304,7 @@ export default function DashboardPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeleteBoard(board); }}
                         title="Delete board"
+                        aria-label={`Delete board ${board.name}`}
                         className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -374,7 +385,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-red-600">Delete Board</h3>
-              <button onClick={() => setDeleteBoard(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setDeleteBoard(null)} aria-label="Close delete board dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <p className="text-sm text-gray-600 mb-1">Are you sure you want to delete <strong>{deleteBoard.name}</strong>?</p>
             <p className="text-xs text-gray-400 mb-5">This will permanently delete the board and all its tickets. This cannot be undone.</p>

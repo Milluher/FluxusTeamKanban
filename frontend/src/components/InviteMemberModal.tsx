@@ -89,7 +89,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>Add to Board</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+          <button onClick={onClose} aria-label="Close add to board dialog" className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
         </div>
 
         {/* Tabs */}

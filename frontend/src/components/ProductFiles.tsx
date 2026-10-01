@@ -165,6 +165,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                         onClick={() => openModal({ kind: 'edit', file })}
                         className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
                         title="Edit"
+                        aria-label={`Edit ${file.title}`}
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -175,6 +176,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                         onClick={() => openModal({ kind: 'delete', file })}
                         className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
                         title="Remove"
+                        aria-label={`Remove ${file.title}`}
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -200,7 +202,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
               <h3 className="font-semibold text-base" style={{ color: NAVY }}>
                 {modal.kind === 'add' ? 'Add Product File' : modal.kind === 'edit' ? 'Edit Product File' : 'Remove Product File'}
               </h3>
-              <button onClick={closeModal} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={closeModal} aria-label="Close product file dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
 
             {isDelete ? (

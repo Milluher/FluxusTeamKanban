@@ -67,6 +67,12 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
       {...attributes}
       {...listeners}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       onMouseEnter={(e) => {
         if (!isSortableDragging) {
           const el = e.currentTarget as HTMLDivElement;

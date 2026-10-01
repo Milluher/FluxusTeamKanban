@@ -348,6 +348,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 {/* Mobile: icon buttons */}
                 <button
                   onClick={() => setEditing(true)}
+                  aria-label="Edit ticket"
                   className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300"
                   title="Edit"
                 >
@@ -361,6 +362,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-all duration-150"
                   style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}
                   title="Delete"
+                  aria-label="Delete ticket"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="3 6 5 6 21 6"/>
@@ -389,6 +391,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             )}
             <button
               onClick={onClose}
+              aria-label="Close ticket"
               className="w-8 h-8 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700 ml-1"
             >
               ×
@@ -982,6 +985,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                           <button
                             type="button"
                             onClick={() => setCommentImages((imgs) => imgs.filter((_, j) => j !== i))}
+                            aria-label={`Remove attached image ${i + 1}`}
                             className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             ×
@@ -1018,6 +1022,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     <button
                       type="button"
                       onClick={() => commentImageInputRef.current?.click()}
+                      aria-label="Attach image to comment"
                       title="Attach image"
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                     >

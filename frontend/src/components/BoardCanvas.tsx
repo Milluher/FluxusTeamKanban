@@ -265,6 +265,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                     {isAdmin && (
                       <button
                         onClick={() => openModal({ kind: 'delete-block', block })}
+                        aria-label={`Remove section ${block.title}`}
                         className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
                         title="Remove block"
                       >
@@ -288,13 +289,23 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                         >
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        <span
-                          onClick={() => isAdmin && openModal({ kind: 'edit-feature', block, feature: f }, f.text)}
-                          className={`text-xs leading-snug flex-1 ${f.active ? 'text-gray-700' : 'line-through text-gray-400'} ${isAdmin ? 'cursor-pointer hover:text-gray-900' : ''}`}
-                          title={isAdmin ? 'Click to edit' : undefined}
-                        >
-                          {f.text}
-                        </span>
+                        {(() => {
+                          const featureText = `text-xs leading-snug flex-1 ${f.active ? 'text-gray-700' : 'line-through text-gray-500'}`;
+                          // Only admins can edit, so only they get a control.
+                          return isAdmin ? (
+                            <button
+                              type="button"
+                              onClick={() => openModal({ kind: 'edit-feature', block, feature: f }, f.text)}
+                              className={`${featureText} text-left cursor-pointer hover:text-gray-900 rounded outline-none focus-visible:underline`}
+                              title="Click to edit"
+                              aria-label={`Edit feature: ${f.text}`}
+                            >
+                              {f.text}
+                            </button>
+                          ) : (
+                            <span className={featureText}>{f.text}</span>
+                          );
+                        })()}
                         {isAdmin && (
                           <div className="flex items-center gap-0.5 flex-shrink-0">
                             <button
@@ -314,6 +325,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                             </button>
                             <button
                               onClick={() => deleteFeature(block, f.id)}
+                              aria-label={`Remove feature ${f.text}`}
                               className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-300 hover:text-red-500 transition-all"
                               title="Remove feature"
                             >
@@ -371,7 +383,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
           >
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-base" style={{ color: NAVY }}>{MODAL_TITLES[modal.kind]}</h3>
-              <button onClick={closeModal} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={closeModal} aria-label={`Close ${MODAL_TITLES[modal.kind]}`} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
 
             {isConfirmModal ? (
