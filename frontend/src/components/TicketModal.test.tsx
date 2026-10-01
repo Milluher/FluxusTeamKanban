@@ -159,6 +159,26 @@ describe('TicketModal', () => {
     unmount();
   });
 
+  it('Escape in a field cancels only the edit, leaving the modal open', async () => {
+    const { container, onClose, unmount } = await open();
+    const editTitle = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Edit title'
+    ) as HTMLButtonElement;
+    act(() => editTitle.click());
+
+    const input = container.querySelector('input') as HTMLInputElement;
+    typeInto(input, 'Changed title');
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+
+    expect(patch).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    // Back to the read view, with the original title.
+    expect(container.textContent).toContain('KYB onboarding');
+    unmount();
+  });
+
   it('saves the title on Enter', async () => {
     const { container, unmount } = await open();
     const editTitle = Array.from(container.querySelectorAll('button')).find(
