@@ -27,6 +27,22 @@ export function renderToDom(element: ReactElement): { container: HTMLElement; un
   };
 }
 
+/**
+ * Types into a controlled input the way a person would.
+ *
+ * React stores the last value it wrote on the DOM node and compares against it,
+ * so a plain `el.value = x` is ignored. Writing through the prototype's setter
+ * updates the node past React's bookkeeping, and the input event then reaches the
+ * onChange handler.
+ */
+export function typeInto(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  act(() => {
+    setter?.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
 /** Lets pending promises resolve and React commit the result. */
 export async function flush(): Promise<void> {
   await act(async () => {

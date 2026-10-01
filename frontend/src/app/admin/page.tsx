@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { avatarUrl } from '@/lib/avatar';
 import { User } from '@/types';
 import AppHeader from '@/components/AppHeader';
+import ConfirmByName from '@/components/ConfirmByName';
 
 interface AdminUser extends User {
   createdAt: string;
@@ -210,30 +211,28 @@ export default function AdminPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-red-600">Delete User</h3>
-              <button onClick={() => setDeleteConfirm(null)} aria-label="Close delete user dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
-            </div>
-            <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
-              <img src={avatarUrl(deleteConfirm.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={deleteConfirm.name} />
-              <div>
-                <p className="font-medium text-sm text-gray-900">{deleteConfirm.name}</p>
-                <p className="text-xs text-gray-500">{deleteConfirm.email}</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-1">This will permanently remove <strong>{deleteConfirm.name}</strong> from the workspace.</p>
-            <p className="text-xs text-gray-500 mb-5">Their ticket history will be preserved. Board memberships and comments will be removed.</p>
-            {deleteMsg && <p className="text-sm text-red-700 mb-3">{deleteMsg}</p>}
-            <div className="flex gap-2">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
-              <button onClick={deleteUser} disabled={deleting} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">
-                {deleting ? 'Deleting...' : 'Delete User'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmByName
+          title="Delete user"
+          name={deleteConfirm.name}
+          description={
+            <>
+              <span className="flex items-center gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                <img src={avatarUrl(deleteConfirm.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt="" />
+                <span className="block min-w-0">
+                  <span className="block font-medium text-sm text-gray-900 truncate">{deleteConfirm.name}</span>
+                  <span className="block text-xs text-gray-600 truncate">{deleteConfirm.email}</span>
+                </span>
+              </span>
+              This permanently removes <strong>{deleteConfirm.name}</strong> from the workspace, along
+              with their board memberships and comments. Their ticket history is kept. It cannot be undone.
+            </>
+          }
+          confirmLabel="Delete user"
+          busy={deleting}
+          error={deleteMsg || null}
+          onCancel={() => { setDeleteConfirm(null); setDeleteMsg(''); }}
+          onConfirm={deleteUser}
+        />
       )}
     </div>
   );
