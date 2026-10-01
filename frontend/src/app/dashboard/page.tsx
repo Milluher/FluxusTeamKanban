@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
+import RowMenu from '@/components/RowMenu';
+import ConfirmByName from '@/components/ConfirmByName';
 import api from '@/lib/api';
 import { Board, User } from '@/types';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
@@ -17,6 +19,7 @@ export default function DashboardPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [deleteBoard, setDeleteBoard] = useState<Board | null>(null);
   const [deletingBoard, setDeletingBoard] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -51,12 +54,13 @@ export default function DashboardPage() {
   const confirmDeleteBoard = async () => {
     if (!deleteBoard) return;
     setDeletingBoard(true);
+    setDeleteMsg('');
     try {
       await api.delete(`/boards/${deleteBoard.id}`);
       setBoards((prev) => prev.filter((b) => b.id !== deleteBoard.id));
       setDeleteBoard(null);
     } catch (e: any) {
-      alert(e.response?.data?.error || 'Failed to delete board');
+      setDeleteMsg(e.response?.data?.error || 'Failed to delete board');
     } finally { setDeletingBoard(false); }
   };
 
@@ -226,16 +230,14 @@ export default function DashboardPage() {
                       <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">Shared</span>
                     )}
                     {user?.role === 'admin' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeleteBoard(board); }}
-                        title="Delete board"
-                        aria-label={`Delete board ${board.name}`}
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                        </svg>
-                      </button>
+                      <RowMenu
+                        label={`Actions for ${board.name}`}
+                        items={[{
+                          label: 'Delete board',
+                          destructive: true,
+                          onSelect: () => { setDeleteBoard(board); setDeleteMsg(''); },
+                        }]}
+                      />
                     )}
                   </div>
                 </div>
@@ -298,22 +300,21 @@ export default function DashboardPage() {
         })()}
       </main>
       {deleteBoard && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setDeleteBoard(null)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-red-600">Delete Board</h3>
-              <button onClick={() => setDeleteBoard(null)} aria-label="Close delete board dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
-            </div>
-            <p className="text-sm text-gray-600 mb-1">Are you sure you want to delete <strong>{deleteBoard.name}</strong>?</p>
-            <p className="text-xs text-gray-500 mb-5">This will permanently delete the board and all its tickets. This cannot be undone.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setDeleteBoard(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
-              <button onClick={confirmDeleteBoard} disabled={deletingBoard} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">
-                {deletingBoard ? 'Deleting...' : 'Delete Board'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmByName
+          title="Delete board"
+          name={deleteBoard.name}
+          description={
+            <>
+              This permanently deletes <strong>{deleteBoard.name}</strong> and every ticket on it.
+              It cannot be undone.
+            </>
+          }
+          confirmLabel="Delete board"
+          busy={deletingBoard}
+          error={deleteMsg || null}
+          onCancel={() => { setDeleteBoard(null); setDeleteMsg(''); }}
+          onConfirm={confirmDeleteBoard}
+        />
       )}
     </div>
   );
