@@ -39,7 +39,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const board = await prisma.board.findUnique({
       where: { id: req.params.id },
       include: {
-        members: { include: { user: { select: { id: true, name: true, email: true } } } },
+        members: { include: { user: { select: { id: true, name: true, email: true, lastLoginAt: true } } } },
         columns: {
           orderBy: { order: 'asc' },
           include: {
@@ -135,7 +135,7 @@ router.post('/:id/members', authenticate, async (req, res) => {
     if (existing) return res.status(409).json({ error: 'User is already a member of this board' });
     const member = await prisma.boardMember.create({
       data: { userId: user.id, boardId: req.params.id },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, email: true, lastLoginAt: true } } },
     });
     req.io.to(`board:${req.params.id}`).emit('member-added', member);
     res.json(member);

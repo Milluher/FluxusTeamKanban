@@ -3,6 +3,8 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  /** Last successful sign-in. Null for anyone who has not signed in since this was added. */
+  lastLoginAt?: string | null;
 }
 
 export interface Comment {
