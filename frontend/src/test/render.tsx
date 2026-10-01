@@ -9,7 +9,11 @@ import { createRoot } from 'react-dom/client';
 // React 18 requires this flag before it will allow act().
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-export function renderToDom(element: ReactElement): { container: HTMLElement; unmount: () => void } {
+export function renderToDom(element: ReactElement): {
+  container: HTMLElement;
+  rerender: (next: ReactElement) => void;
+  unmount: () => void;
+} {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -20,6 +24,11 @@ export function renderToDom(element: ReactElement): { container: HTMLElement; un
 
   return {
     container,
+    rerender: (next: ReactElement) => {
+      act(() => {
+        root.render(next);
+      });
+    },
     unmount: () => {
       act(() => root.unmount());
       container.remove();

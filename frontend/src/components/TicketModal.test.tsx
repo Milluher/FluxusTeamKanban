@@ -177,6 +177,47 @@ describe('TicketModal', () => {
     unmount();
   });
 
+  it('picks up a ticket replaced underneath it, but not over an edit in progress', async () => {
+    const onUpdate = vi.fn();
+    const handle = renderToDom(
+      <TicketModal
+        ticket={ticket({ project: 'Lending' })}
+        boardId="b1"
+        board={board}
+        currentUser={user}
+        onClose={vi.fn()}
+        onUpdate={onUpdate}
+        onDelete={vi.fn()}
+      />
+    );
+    await flush();
+
+    // The board replaces the ticket — e.g. the mount refetch or a socket update.
+    act(() => {
+      handle.rerender(
+        <TicketModal
+          ticket={ticket({ project: 'Payments' })}
+          boardId="b1"
+          board={board}
+          currentUser={user}
+          onClose={vi.fn()}
+          onUpdate={onUpdate}
+          onDelete={vi.fn()}
+        />
+      );
+    });
+
+    const editProject = Array.from(handle.container.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Edit Project'
+    ) as HTMLButtonElement;
+    act(() => editProject.click());
+
+    // The edit starts from the newer value, not the one the modal opened with.
+    const input = handle.container.querySelector('input') as HTMLInputElement;
+    expect(input.value).toBe('Payments');
+    handle.unmount();
+  });
+
   it('returns focus to whatever opened it', async () => {
     // Stand in for the card that was clicked.
     const opener = document.createElement('button');

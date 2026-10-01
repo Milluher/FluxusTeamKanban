@@ -36,6 +36,25 @@ const OPTIONAL_FIELDS = [
   { name: 'assignedDate', label: 'Assigned Date' },
 ] as const;
 
+/** The editable shape of a ticket. */
+function formFromTicket(t: Ticket) {
+  return {
+    title: t.title,
+    description: t.description || '',
+    assigneeId: t.assigneeId || '',
+    productManagerId: t.productManagerId || '',
+    assignedDate: t.assignedDate ? t.assignedDate.split('T')[0] : '',
+    type: t.type || '',
+    priority: t.priority || '',
+    project: t.project || '',
+    epic: t.epic || '',
+    flow: t.flow || '',
+    sprintId: t.sprintId || '',
+    productDocId: t.productDocId || '',
+    columnId: t.columnId,
+  };
+}
+
 interface Props {
   ticket: Ticket;
   boardId: string;
@@ -56,21 +75,7 @@ interface MentionOption {
 }
 
 export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete }: Props) {
-  const [form, setForm] = useState({
-    title: ticket.title,
-    description: ticket.description || '',
-    assigneeId: ticket.assigneeId || '',
-    productManagerId: ticket.productManagerId || '',
-    assignedDate: ticket.assignedDate ? ticket.assignedDate.split('T')[0] : '',
-    type: ticket.type || '',
-    priority: ticket.priority || '',
-    project: ticket.project || '',
-    epic: ticket.epic || '',
-    flow: ticket.flow || '',
-    sprintId: ticket.sprintId || '',
-    productDocId: ticket.productDocId || '',
-    columnId: ticket.columnId,
-  });
+  const [form, setForm] = useState(() => formFromTicket(ticket));
   // Inline editing: one field at a time, saved on blur or Enter, abandoned on
   // Escape. Replaces an Edit mode that made changing one value a three-click job.
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -88,6 +93,15 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     const value = (ticket as unknown as Record<string, unknown>)[name];
     return value === null || value === undefined || value === '';
   };
+
+  // The ticket prop is replaced by the mount-time refetch and by board updates.
+  // Without this the working copy would keep the values it was first given, and
+  // editing a field later could save stale data back. An edit in progress is left
+  // alone so nothing is typed over.
+  useEffect(() => {
+    if (editingField) return;
+    setForm(formFromTicket(ticket));
+  }, [ticket, editingField]);
 
   // The modal keeps focus inside it, closes on Escape, and hands focus back to
   // the element that opened it — normally the card that was clicked.
