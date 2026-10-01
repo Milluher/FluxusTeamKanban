@@ -5,6 +5,7 @@ import { Ticket, Board, User, Comment, Sprint, ProductFile } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
 import ProductFileViewer from './ProductFileViewer';
 import RichTextView from './RichTextView';
+import { formatDay, formatTimestamp } from '@/lib/formatDate';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -320,7 +321,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
               <h2 className="text-lg font-bold leading-snug" style={{ color: '#1a1f3c' }}>{ticket.title}</h2>
             )}
             <p className="text-xs mt-1 text-gray-500">
-              Created by {ticket.createdBy?.name} &middot; {new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              Created by {ticket.createdBy?.name} &middot; {formatDay(ticket.createdAt)}
             </p>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
@@ -488,7 +489,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       {...inputFocusHandlers}
                     />
                   ),
-                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.assignedDate ? new Date(ticket.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-500">—</span>}</p>,
+                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{formatDay(ticket.assignedDate) ?? <span className="text-gray-500">—</span>}</p>,
                 },
                 {
                   label: 'Status',
@@ -813,7 +814,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       <div key={h.id} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 border border-gray-100">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 flex-shrink-0" />
                         <span className="text-xs font-medium text-gray-700">{h.sprint.title}</span>
-                        <span className="text-xs text-gray-500 ml-auto">{new Date(h.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span className="text-xs text-gray-500 ml-auto">{formatDay(h.addedAt)}</span>
                       </div>
                     ))}
                   </div>
@@ -955,7 +956,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                           {c.author.name}{inactive ? ' (inactive)' : ''}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          {formatTimestamp(c.createdAt)}
                         </span>
                       </div>
                       <div className={`rounded-lg px-3 py-2 text-sm leading-relaxed border ${inactive ? 'bg-gray-50 border-gray-100 text-gray-500' : 'bg-gray-50 border-gray-100 text-gray-700'}`}>

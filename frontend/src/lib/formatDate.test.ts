@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatDateRange, formatDay, formatSprintDates, formatSprintTiming } from './formatDate';
+import {
+  formatDateRange,
+  formatDay,
+  formatSprintDates,
+  formatSprintTiming,
+  formatTimeAgo,
+  formatTimestamp,
+} from './formatDate';
 
 const NOW = new Date(2026, 9, 16); // 16 Oct 2026, local
 
@@ -76,5 +83,30 @@ describe('formatSprintDates', () => {
 
   it('is null when no dates are set, so callers can offer Set dates instead', () => {
     expect(formatSprintDates(null, null, NOW)).toBeNull();
+  });
+});
+
+describe('formatTimeAgo', () => {
+  const now = new Date(2026, 9, 16, 12, 0, 0);
+
+  it('counts up through minutes, hours and days', () => {
+    expect(formatTimeAgo(new Date(2026, 9, 16, 11, 59, 30), now)).toBe('just now');
+    expect(formatTimeAgo(new Date(2026, 9, 16, 11, 55), now)).toBe('5m ago');
+    expect(formatTimeAgo(new Date(2026, 9, 16, 9, 0), now)).toBe('3h ago');
+    expect(formatTimeAgo(new Date(2026, 9, 14, 12, 0), now)).toBe('2d ago');
+  });
+
+  it('gives up after a week, so callers fall back to a date', () => {
+    expect(formatTimeAgo(new Date(2026, 9, 9, 12, 0), now)).toBeNull();
+    expect(formatTimeAgo(null, now)).toBeNull();
+  });
+});
+
+describe('formatTimestamp', () => {
+  const now = new Date(2026, 9, 16, 12, 0, 0);
+
+  it('is relative while recent and a date once it is not', () => {
+    expect(formatTimestamp(new Date(2026, 9, 16, 9, 0), now)).toBe('3h ago');
+    expect(formatTimestamp(new Date(2026, 4, 15, 9, 0), now)).toBe('15 May 2026');
   });
 });

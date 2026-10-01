@@ -6,10 +6,15 @@ import { avatarUrl } from '@/lib/avatar';
 import { User } from '@/types';
 import AppHeader from '@/components/AppHeader';
 import ConfirmByName from '@/components/ConfirmByName';
+import RowMenu from '@/components/RowMenu';
+import { formatDay } from '@/lib/formatDate';
 
 interface AdminUser extends User {
   createdAt: string;
 }
+
+const OWNER_EMAIL = 'femi@fluxx.ng';
+const ROLES = ['standard', 'admin'] as const;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -24,8 +29,13 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState('');
+  const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
+  const [roleMsg, setRoleMsg] = useState('');
 
-  const isSuperAdmin = currentUser?.email === 'femi@fluxx.ng';
+  // The workspace owner. Checked in one place rather than by repeating the email
+  // comparison at every call site.
+  const isOwner = (u: Pick<User, 'email'>) => u.email === OWNER_EMAIL;
+  const isSuperAdmin = Boolean(currentUser && isOwner(currentUser));
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -59,13 +69,17 @@ export default function AdminPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const toggleRole = async (u: AdminUser) => {
-    const newRole = u.role === 'admin' ? 'standard' : 'admin';
+  const setRole = async (u: AdminUser, role: string) => {
+    if (role === u.role) return;
+    setRoleMsg('');
+    setSavingRoleId(u.id);
     try {
-      const { data } = await api.patch(`/admin/users/${u.id}/role`, { role: newRole });
+      const { data } = await api.patch(`/admin/users/${u.id}/role`, { role });
       setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: data.role } : x));
     } catch (e: any) {
-      alert(e.response?.data?.error || 'Failed to update role');
+      setRoleMsg(e.response?.data?.error || `Failed to update ${u.name}'s role`);
+    } finally {
+      setSavingRoleId(null);
     }
   };
 
@@ -95,6 +109,10 @@ export default function AdminPage() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <h1 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6" style={{ color: '#1a1f3c' }}>User Management</h1>
 
+        {roleMsg && (
+          <p role="alert" className="text-sm text-red-700 mb-4">{roleMsg}</p>
+        )}
+
         {/* Mobile card list */}
         <div className="sm:hidden bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
           {users.map((u) => (
@@ -104,22 +122,34 @@ export default function AdminPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">{u.name}</p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {u.email === 'femi@fluxx.ng' ? 'super-admin' : u.role}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${u.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {isOwner(u) ? 'super-admin' : u.role}
                   </span>
+                  <p className="text-xs text-gray-600 mt-1">Joined {formatDay(u.createdAt)}</p>
                 </div>
               </div>
-              {u.email === 'femi@fluxx.ng' ? (
-                <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>
+              {isOwner(u) ? (
+                <span className="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>
               ) : u.id !== currentUser?.id && (
-                <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <button onClick={() => generateLink(u)} className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]">Reset pw</button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   {isSuperAdmin && (
-                    <button onClick={() => toggleRole(u)} className={`text-xs border rounded-lg px-3 py-1.5 min-h-[32px] ${u.role === 'admin' ? 'border-orange-200 text-orange-700' : 'border-blue-200 text-blue-600'}`}>
-                      {u.role === 'admin' ? 'Revoke admin' : 'Make admin'}
-                    </button>
+                    <select
+                      value={u.role}
+                      onChange={(e) => setRole(u, e.target.value)}
+                      disabled={savingRoleId === u.id}
+                      aria-label={`Role for ${u.name}`}
+                      className="text-xs font-medium rounded-lg border border-gray-200 px-2 py-1.5 min-h-[32px] bg-white text-gray-700 outline-none disabled:opacity-50"
+                    >
+                      {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
                   )}
-                  <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-700 min-h-[32px]">Delete</button>
+                  <RowMenu
+                    label={`Actions for ${u.name}`}
+                    items={[
+                      { label: 'Reset password', onSelect: () => generateLink(u) },
+                      { label: 'Delete user', destructive: true, onSelect: () => { setDeleteConfirm(u); setDeleteMsg(''); } },
+                    ]}
+                  />
                 </div>
               )}
             </div>
@@ -149,27 +179,36 @@ export default function AdminPage() {
                   </td>
                   <td className="px-5 py-3 text-gray-500">{u.email}</td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.email === 'femi@fluxx.ng' ? 'bg-orange-50 text-orange-700' : u.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {u.email === 'femi@fluxx.ng' ? 'super-admin' : u.role}
-                    </span>
+                    {/* The owner's role is fixed, and nobody edits their own. */}
+                    {isOwner(u) || u.id === currentUser?.id || !isSuperAdmin ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${isOwner(u) || u.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {isOwner(u) ? 'super-admin' : u.role}
+                      </span>
+                    ) : (
+                      <select
+                        value={u.role}
+                        onChange={(e) => setRole(u, e.target.value)}
+                        disabled={savingRoleId === u.id}
+                        aria-label={`Role for ${u.name}`}
+                        className="text-xs font-medium rounded-lg border border-gray-200 px-2 py-1 bg-white text-gray-700 outline-none disabled:opacity-50"
+                      >
+                        {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    )}
                   </td>
-                  <td className="px-5 py-3 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{formatDay(u.createdAt)}</td>
                   <td className="px-5 py-3 text-right">
-                    {u.email === 'femi@fluxx.ng' ? (
-                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>
+                    {isOwner(u) ? (
+                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>
                     ) : u.id !== currentUser?.id && (
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => generateLink(u)} className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2 py-1 hover:border-gray-400 transition-colors">
-                          Reset Password
-                        </button>
-                        {isSuperAdmin && (
-                          <button onClick={() => toggleRole(u)} className={`text-xs border rounded px-2 py-1 transition-colors ${u.role === 'admin' ? 'border-orange-200 text-orange-700 hover:border-orange-400' : 'border-blue-200 text-blue-700 hover:border-blue-400'}`}>
-                            {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
-                          </button>
-                        )}
-                        <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs text-red-700 hover:text-red-700 border border-red-200 rounded px-2 py-1 hover:border-red-400 transition-colors">
-                          Delete
-                        </button>
+                      <div className="flex items-center justify-end">
+                        <RowMenu
+                          label={`Actions for ${u.name}`}
+                          items={[
+                            { label: 'Reset password', onSelect: () => generateLink(u) },
+                            { label: 'Delete user', destructive: true, onSelect: () => { setDeleteConfirm(u); setDeleteMsg(''); } },
+                          ]}
+                        />
                       </div>
                     )}
                   </td>
