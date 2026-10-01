@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import api from '@/lib/api';
 import { avatarUrl } from '@/lib/avatar';
 import { User } from '@/types';
+import AppHeader from '@/components/AppHeader';
 
 interface AdminUser extends User {
   createdAt: string;
@@ -34,12 +34,6 @@ export default function AdminPage() {
     setCurrentUser(u);
     api.get('/admin/users').then(({ data }) => setUsers(data)).finally(() => setLoading(false));
   }, []);
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/');
-  };
 
   const generateLink = async (user: AdminUser) => {
     setLinkModal(user);
@@ -95,18 +89,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 h-14 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Image src="/logo.png" width={26} height={26} alt="Fluxus" />
-          <span className="font-bold text-sm" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
-          <span className="text-gray-300 text-sm hidden sm:inline">/</span>
-          <span className="text-sm font-medium text-gray-600 hidden sm:inline">Admin</span>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">← <span className="hidden sm:inline ml-1">Dashboard</span></button>
-          <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-700 min-h-[44px] flex items-center">Logout</button>
-        </div>
-      </nav>
+      <AppHeader user={currentUser} current="admin" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <h1 className="text-xl sm:text-2xl font-bold mb-5 sm:mb-6" style={{ color: '#1a1f3c' }}>User Management</h1>

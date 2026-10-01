@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 import {
   DndContext,
@@ -29,10 +28,10 @@ import TicketCard from '@/components/TicketCard';
 import TicketModal from '@/components/TicketModal';
 import CreateTicketModal from '@/components/CreateTicketModal';
 import InviteMemberModal from '@/components/InviteMemberModal';
-import NotificationBell from '@/components/NotificationBell';
 import PresenceTracker, { PresentUser } from '@/components/PresenceTracker';
 import BoardCanvas from '@/components/BoardCanvas';
 import ProductFiles from '@/components/ProductFiles';
+import AppHeader from '@/components/AppHeader';
 
 export default function BoardPage() {
   const params = useParams();
@@ -572,135 +571,106 @@ export default function BoardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-10 h-14">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          {/* Logo */}
-          <Image src="/logo.png" width={26} height={26} alt="Fluxus" className="rounded-md flex-shrink-0" />
+      {/* Shared global header; the board name and board-only controls are passed in. */}
+      <AppHeader
+        user={currentUser}
+        breadcrumb={
+          <h1 className="font-semibold text-sm truncate max-w-[120px] sm:max-w-none" style={{ color: '#1a1f3c' }}>
+            {board.name}
+          </h1>
+        }
+        actions={
+          <>
+            <PresenceTracker users={presentUsers} currentUserId={currentUser?.id} />
+              {/* Member avatars — clickable to show member list */}
+              <div className="relative" ref={membersPanelRef}>
+                <button
+                  onClick={() => setShowMembersPanel((p) => !p)}
+                  className="flex -space-x-1.5 cursor-pointer"
+                  aria-label="View board members"
+                  title="View members"
+                >
+                  {board.members.slice(0, 3).map((m) => (
+                    <img
+                      key={m.id}
+                      src={avatarUrl(m.user.name)}
+                      className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 sm:hidden"
+                      alt={m.user.name}
+                    />
+                  ))}
+                  {board.members.slice(0, 5).map((m) => (
+                    <img
+                      key={`d-${m.id}`}
+                      src={avatarUrl(m.user.name)}
+                      className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 hidden sm:block"
+                      alt={m.user.name}
+                    />
+                  ))}
+                </button>
 
-          {/* Back link — arrow only on mobile, arrow + text on desktop */}
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1 text-sm font-medium text-gray-500 transition-all duration-150 hover:text-gray-800 min-h-[44px] flex-shrink-0"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M19 12H5M12 5l-7 7 7 7"/>
-            </svg>
-            <span className="hidden sm:inline">Back</span>
-          </button>
-
-          <span className="text-gray-300 hidden sm:inline">/</span>
-
-          <h1 className="font-semibold text-sm truncate max-w-[120px] sm:max-w-none" style={{ color: '#1a1f3c' }}>{board.name}</h1>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {/* Live presence — who has this board open right now */}
-          <PresenceTracker users={presentUsers} currentUserId={currentUser?.id} />
-
-          {/* Member avatars — clickable to show member list */}
-          <div className="relative" ref={membersPanelRef}>
-            <button
-              onClick={() => setShowMembersPanel((p) => !p)}
-              className="flex -space-x-1.5 cursor-pointer"
-              aria-label="View board members"
-              title="View members"
-            >
-              {board.members.slice(0, 3).map((m) => (
-                <img
-                  key={m.id}
-                  src={avatarUrl(m.user.name)}
-                  className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 sm:hidden"
-                  alt={m.user.name}
-                />
-              ))}
-              {board.members.slice(0, 5).map((m) => (
-                <img
-                  key={`d-${m.id}`}
-                  src={avatarUrl(m.user.name)}
-                  className="w-7 h-7 rounded-full ring-2 ring-white flex-shrink-0 hidden sm:block"
-                  alt={m.user.name}
-                />
-              ))}
-            </button>
-
-            {showMembersPanel && (
-              <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[220px] py-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 pt-1 pb-2">
-                  {board.members.length} {board.members.length === 1 ? 'Member' : 'Members'}
-                </p>
-                {board.members.map((m) => {
-                  const isCurrentUserBoardAdmin = board.members.find(bm => bm.user.id === currentUser?.id)?.role === 'admin';
-                  return (
-                    <div key={m.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors group">
-                      <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
-                        <p className="text-xs text-gray-500 capitalize">{m.role}</p>
-                      </div>
-                      {isCurrentUserBoardAdmin && m.user.id !== currentUser?.id && (
-                        <button
-                          onClick={() => removeMember(m.user.id)}
-                          title="Remove from board"
-                          aria-label={`Remove ${m.user.name} from board`}
-                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                {showMembersPanel && (
+                  <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[220px] py-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 pt-1 pb-2">
+                      {board.members.length} {board.members.length === 1 ? 'Member' : 'Members'}
+                    </p>
+                    {board.members.map((m) => {
+                      const isCurrentUserBoardAdmin = board.members.find(bm => bm.user.id === currentUser?.id)?.role === 'admin';
+                      return (
+                        <div key={m.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors group">
+                          <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
+                            <p className="text-xs text-gray-500 capitalize">{m.role}</p>
+                          </div>
+                          {isCurrentUserBoardAdmin && m.user.id !== currentUser?.id && (
+                            <button
+                              onClick={() => removeMember(m.user.id)}
+                              title="Remove from board"
+                              aria-label={`Remove ${m.user.name} from board`}
+                              className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => router.push('/changelog')}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
-            title="Changelog"
-            aria-label="Changelog"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <path d="M14 2v6h6M16 13H8M16 17H8"/>
-            </svg>
-          </button>
-
-          {currentUser && <NotificationBell userId={currentUser.id} />}
-
-          {/* Invite button — only for system admins or board admins */}
-          {isAdmin && (
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
-            style={{
-              color: '#e8390e',
-              borderColor: '#e8390e',
-              background: 'white',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#e8390e';
-              e.currentTarget.style.color = 'white';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'white';
-              e.currentTarget.style.color = '#e8390e';
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="8.5" cy="7" r="4"/>
-              <line x1="20" y1="8" x2="20" y2="14"/>
-              <line x1="23" y1="11" x2="17" y2="11"/>
-            </svg>
-            <span className="hidden sm:inline">Invite</span>
-          </button>
-          )}
-        </div>
-      </nav>
+              {/* Invite button — only for system admins or board admins */}
+              {isAdmin && (
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
+                style={{
+                  color: '#e8390e',
+                  borderColor: '#e8390e',
+                  background: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e8390e';
+                  e.currentTarget.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.color = '#e8390e';
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="8.5" cy="7" r="4"/>
+                  <line x1="20" y1="8" x2="20" y2="14"/>
+                  <line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+                <span className="hidden sm:inline">Invite</span>
+              </button>
+              )}
+          </>
+        }
+      />
 
       {/* Sprint ticket view banner */}
       {activeSprint && board.type !== 'kanban' && (

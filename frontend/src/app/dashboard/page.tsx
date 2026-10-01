@@ -1,13 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import AppHeader from '@/components/AppHeader';
 import api from '@/lib/api';
 import { Board, User } from '@/types';
-import { avatarUrl } from '@/lib/avatar';
-import ProfileModal from '@/components/ProfileModal';
-import NotificationBell from '@/components/NotificationBell';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 
 export default function DashboardPage() {
@@ -18,7 +15,6 @@ export default function DashboardPage() {
   const [newBoardType, setNewBoardType] = useState<'sprint' | 'kanban'>('sprint');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [deleteBoard, setDeleteBoard] = useState<Board | null>(null);
   const [deletingBoard, setDeletingBoard] = useState(false);
   const router = useRouter();
@@ -64,80 +60,9 @@ export default function DashboardPage() {
     } finally { setDeletingBoard(false); }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/');
-  };
-
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
-      {/* Top navigation */}
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 py-0 flex items-center justify-between sticky top-0 z-10 h-14">
-        <div className="flex items-center gap-2.5">
-          <Image src="/logo.png" width={28} height={28} alt="Fluxus" className="rounded-md" />
-          <span className="font-bold text-base tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <button
-            onClick={() => router.push('/changelog')}
-            className="text-sm px-3 py-1.5 rounded-lg font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors hidden sm:block"
-            title="Changelog"
-          >
-            Changelog
-          </button>
-          <button
-            onClick={() => router.push('/changelog')}
-            className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors min-h-[44px] min-w-[44px]"
-            title="Changelog"
-            aria-label="Changelog"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <path d="M14 2v6h6M16 13H8M16 17H8"/>
-            </svg>
-          </button>
-          {user && <NotificationBell userId={user.id} />}
-          {user?.role === 'admin' && (
-            <>
-              {/* Mobile: gear icon only */}
-              <button
-                onClick={() => router.push('/admin')}
-                className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg border transition-all duration-150 min-h-[44px] min-w-[44px]"
-                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
-                title="Admin"
-                aria-label="Admin settings"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                </svg>
-              </button>
-              {/* Desktop: text button */}
-              <button
-                onClick={() => router.push('/admin')}
-                className="hidden sm:block text-sm px-3 py-1.5 rounded-lg font-medium border transition-all duration-150"
-                style={{ color: '#e8390e', borderColor: '#e8390e', background: 'white' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8390e'; e.currentTarget.style.color = 'white'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#e8390e'; }}
-              >
-                Admin
-              </button>
-            </>
-          )}
-          <button
-            onClick={() => setShowProfile(true)}
-            className="flex items-center gap-2 min-h-[44px] px-1 rounded-lg hover:bg-gray-50 transition-colors"
-            title="Profile"
-          >
-            <img
-              src={avatarUrl(user?.name || 'User')}
-              className="w-8 h-8 rounded-full flex-shrink-0"
-              alt={user?.name || 'User'}
-            />
-            <span className="hidden sm:block text-sm font-medium text-gray-700">{user?.name}</span>
-          </button>
-        </div>
-      </nav>
+      <AppHeader user={user} current="boards" />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Page header */}
@@ -372,14 +297,6 @@ export default function DashboardPage() {
           );
         })()}
       </main>
-      {showProfile && user && (
-        <ProfileModal
-          user={user}
-          onClose={() => setShowProfile(false)}
-          onLogout={logout}
-        />
-      )}
-
       {deleteBoard && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={() => setDeleteBoard(null)}>
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
