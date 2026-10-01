@@ -35,11 +35,36 @@ export default function AuthPage() {
   const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-500 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden" style={{ background: '#111736' }}>
+      {/* Atmosphere: soft overlapping blooms on deep navy, like light through
+          cloud. Pure CSS gradients — no image to download, nothing to animate,
+          and it degrades to the flat navy if gradients are unsupported. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: [
+            'radial-gradient(42rem 30rem at 12% 8%, rgba(15,118,110,0.40), transparent 70%)',
+            'radial-gradient(34rem 26rem at 88% 18%, rgba(67,56,202,0.38), transparent 72%)',
+            'radial-gradient(40rem 28rem at 78% 92%, rgba(199,48,9,0.26), transparent 70%)',
+            'radial-gradient(30rem 22rem at 20% 88%, rgba(63,98,18,0.26), transparent 72%)',
+          ].join(','),
+        }}
+      />
+      {/* A faint horizon line lifts the card off the background. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-1/2 h-px"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)' }}
+      />
+
+      <div className="relative w-full max-w-sm">
 
         {/* Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+        <div
+          className="bg-white rounded-2xl p-8"
+          style={{ boxShadow: '0 24px 60px -12px rgba(8,12,32,0.55), 0 0 0 1px rgba(255,255,255,0.08)' }}
+        >
 
           {/* Logo + Brand */}
           <div className="flex items-center justify-center gap-2.5 mb-8">
