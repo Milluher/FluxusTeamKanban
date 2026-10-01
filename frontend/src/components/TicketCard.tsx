@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Ticket } from '@/types';
-import { avatarUrl } from '@/lib/avatar';
 import { descriptionPreview } from '@/lib/richText';
+import Avatar from './Avatar';
 
 const TYPE_STYLES: Record<string, string> = {
   mobile: 'bg-blue-50 text-blue-600',
@@ -152,11 +152,7 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
           const inactive = activeMemberIds ? !activeMemberIds.has(ticket.assignee!.id) : false;
           return (
             <div className={`flex items-center gap-1.5 min-w-0 ${inactive ? 'opacity-40' : ''}`}>
-              <img
-                src={avatarUrl(ticket.assignee.name)}
-                className={`w-5 h-5 rounded-full flex-shrink-0 ${inactive ? 'grayscale' : ''}`}
-                alt={ticket.assignee.name}
-              />
+              <Avatar name={ticket.assignee.name} className="w-5 h-5 text-[8px]" inactive={inactive} />
               <span className="text-xs text-gray-500 truncate max-w-[90px]">{ticket.assignee.name}</span>
             </div>
           );

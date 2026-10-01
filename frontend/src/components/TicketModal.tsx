@@ -2,13 +2,13 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Ticket, Board, User, Comment, Sprint, ProductFile } from '@/types';
-import { avatarUrl } from '@/lib/avatar';
 import ProductFileViewer from './ProductFileViewer';
 import RichTextView from './RichTextView';
 import { formatDay, formatTimestamp } from '@/lib/formatDate';
 import RowMenu from './RowMenu';
 import ConfirmByName from './ConfirmByName';
 import dynamic from 'next/dynamic';
+import Avatar from './Avatar';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
 const TICKET_TYPES = [
@@ -586,7 +586,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     const inactive = !activeMemberIds.has(ticket.assignee!.id);
                     return (
                       <div className={`mt-1.5 flex items-center gap-2 ${inactive ? 'opacity-50' : ''}`}>
-                        <img src={avatarUrl(ticket.assignee.name)} className={`w-7 h-7 rounded-full ${inactive ? 'grayscale' : ''}`} alt={ticket.assignee.name} />
+                        <Avatar name={ticket.assignee.name} className="w-7 h-7 text-[10px]" inactive={inactive} />
                         <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}{inactive ? <span className="text-xs text-gray-500 ml-1">(inactive)</span> : ''}</span>
                       </div>
                     );
@@ -600,7 +600,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   editEl: null,
                   viewEl: (
                     <div className="mt-1.5 flex items-center gap-2">
-                      <img src={avatarUrl(ticket.createdBy.name)} className="w-7 h-7 rounded-full" alt={ticket.createdBy.name} />
+                      <Avatar name={ticket.createdBy.name} className="w-7 h-7 text-[10px]" />
                       <span className="text-sm font-medium text-gray-800">{ticket.createdBy.name}</span>
                     </div>
                   ),
@@ -629,7 +629,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     const inactive = !activeMemberIds.has(ticket.productManager!.id);
                     return (
                       <div className={`mt-1.5 flex items-center gap-2 ${inactive ? 'opacity-50' : ''}`}>
-                        <img src={avatarUrl(ticket.productManager.name)} className={`w-7 h-7 rounded-full ${inactive ? 'grayscale' : ''}`} alt={ticket.productManager.name} />
+                        <Avatar name={ticket.productManager.name} className="w-7 h-7 text-[10px]" inactive={inactive} />
                         <span className="text-sm font-medium text-gray-800">{ticket.productManager.name}{inactive ? <span className="text-xs text-gray-500 ml-1">(inactive)</span> : ''}</span>
                       </div>
                     );
@@ -1170,10 +1170,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 const inactive = !activeMemberIds.has(c.authorId);
                 return (
                   <div key={c.id} className="flex gap-2.5">
-                    <img
-                      src={avatarUrl(c.author.name)}
-                      className={`w-7 h-7 rounded-full flex-shrink-0 mt-0.5 ${inactive ? 'grayscale opacity-40' : ''}`}
-                      alt={c.author.name}
+                    <Avatar
+                      name={c.author.name}
+                      className="w-7 h-7 text-[10px] mt-0.5"
+                      inactive={inactive}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 mb-1">
@@ -1196,11 +1196,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             {/* Comment input */}
             <form onSubmit={addComment} className="mt-4 flex-shrink-0">
               <div className="flex gap-2 items-end">
-                <img
-                  src={avatarUrl(currentUser?.name || 'User')}
-                  className="w-7 h-7 rounded-full flex-shrink-0"
-                  alt={currentUser?.name || 'User'}
-                />
+                <Avatar name={currentUser?.name || 'User'} className="w-7 h-7 text-[10px]" decorative />
                 <div className="flex-1 flex flex-col gap-2">
                   {/* Image previews */}
                   {commentImages.length > 0 && (
@@ -1290,7 +1286,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                                 </svg>
                               </span>
                             ) : (
-                              <img src={avatarUrl(m.name)} className="w-6 h-6 rounded-full flex-shrink-0" alt={m.name} />
+                              <Avatar name={m.name} className="w-6 h-6 text-[9px]" />
                             )}
                             <span className="font-medium">{m.name}</span>
                             {m.group && <span className="text-xs text-gray-500">Notify the whole board</span>}

@@ -102,6 +102,17 @@ const PAIRS = [
   ['Primary button (white on fill)', '#c73009', '#ffffff', '#ffffff', AA_TEXT],
   ['Brand text on brand tint', '#fff7f5', '#e8390e', '#c73009', AA_TEXT],
   ['Brand border (non-text)', '#ffffff', '#e8390e', '#e8390e', AA_LARGE],
+
+  // Avatar initials. The DiceBear cartoons they replaced sat on five pastels
+  // that were hard to tell apart; these carry white text.
+  ['Avatar initials (slate)', '#475569', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (teal)', '#0f766e', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (dusk)', '#4338ca', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (clay)', '#9a3412', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (moss)', '#3f6212', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (plum)', '#86198f', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (ocean)', '#1d4ed8', '#ffffff', '#ffffff', AA_TEXT],
+  ['Avatar initials (bark)', '#78350f', '#ffffff', '#ffffff', AA_TEXT],
 ];
 
 const fmt = (n) => `${n.toFixed(2)}:1`;

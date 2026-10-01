@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { avatarUrl } from '@/lib/avatar';
+import Avatar from './Avatar';
 
 export interface PresentUser {
   id: string;
@@ -63,12 +63,10 @@ export default function PresenceTracker({ users, currentUserId }: Props) {
 
         <div className="flex -space-x-1.5">
           {shown.map((u) => (
-            <img
+            <Avatar
               key={u.id}
-              src={avatarUrl(u.name)}
-              className="w-6 h-6 rounded-full ring-2 ring-white flex-shrink-0"
-              style={{ opacity: u.idle ? 0.45 : 1 }}
-              alt={u.name}
+              name={u.name}
+              className={`w-6 h-6 text-[9px] ring-2 ring-white ${u.idle ? 'opacity-45' : ''}`}
             />
           ))}
         </div>
@@ -84,11 +82,9 @@ export default function PresenceTracker({ users, currentUserId }: Props) {
           {ordered.map((u) => (
             <div key={u.id} className="flex items-center gap-2.5 px-4 py-1.5">
               <div className="relative flex-shrink-0">
-                <img
-                  src={avatarUrl(u.name)}
-                  className="w-7 h-7 rounded-full"
-                  style={{ opacity: u.idle ? 0.45 : 1 }}
-                  alt={u.name}
+                <Avatar
+                  name={u.name}
+                  className={`w-7 h-7 text-[10px] ${u.idle ? 'opacity-45' : ''}`}
                 />
                 <span
                   className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"

@@ -2,12 +2,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { avatarUrl } from '@/lib/avatar';
 import { User } from '@/types';
 import AppHeader from '@/components/AppHeader';
 import ConfirmByName from '@/components/ConfirmByName';
 import RowMenu from '@/components/RowMenu';
 import { formatDay } from '@/lib/formatDate';
+import Avatar from '@/components/Avatar';
 
 interface AdminUser extends User {
   createdAt: string;
@@ -118,7 +118,7 @@ export default function AdminPage() {
           {users.map((u) => (
             <div key={u.id} className="px-4 py-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <img src={avatarUrl(u.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={u.name} />
+                <Avatar name={u.name} className="w-10 h-10 text-sm" />
                 <div className="min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">{u.name}</p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
@@ -173,7 +173,7 @@ export default function AdminPage() {
                 <tr key={u.id} className="hover:bg-gray-50">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <img src={avatarUrl(u.name)} className="w-8 h-8 rounded-full" alt={u.name} />
+                      <Avatar name={u.name} className="w-8 h-8 text-xs" />
                       <span className="font-medium text-gray-900">{u.name}</span>
                     </div>
                   </td>
@@ -256,7 +256,7 @@ export default function AdminPage() {
           description={
             <>
               <span className="flex items-center gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
-                <img src={avatarUrl(deleteConfirm.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt="" />
+                <Avatar name={deleteConfirm.name} className="w-10 h-10 text-sm" decorative />
                 <span className="block min-w-0">
                   <span className="block font-medium text-sm text-gray-900 truncate">{deleteConfirm.name}</span>
                   <span className="block text-xs text-gray-600 truncate">{deleteConfirm.email}</span>
