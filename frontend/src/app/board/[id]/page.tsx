@@ -23,6 +23,7 @@ import api from '@/lib/api';
 import socket from '@/lib/socket';
 import { Board, Ticket, User, Sprint } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
+import { formatSprintDates } from '@/lib/formatDate';
 import KanbanColumn from '@/components/KanbanColumn';
 import TicketCard from '@/components/TicketCard';
 import TicketModal from '@/components/TicketModal';
@@ -442,9 +443,14 @@ export default function BoardPage() {
     }
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // Opens the existing edit-dates dialog, prefilled. Shared by the pencil icon
+  // on a sprint card and the "Set dates" links that replaced the "— → —" placeholder.
+  const openDateEditor = (sprint: Sprint) => {
+    setEditDatesSprintId(sprint.id);
+    setEditDatesForm({
+      startDate: sprint.startDate ? sprint.startDate.slice(0, 10) : '',
+      endDate: sprint.endDate ? sprint.endDate.slice(0, 10) : '',
+    });
   };
 
   if (loading) return (
@@ -715,9 +721,31 @@ export default function BoardPage() {
           </button>
           <span style={{ color: 'rgba(255,255,255,0.3)' }}>/</span>
           <span className="font-semibold text-sm text-white truncate">{activeSprint.title}</span>
-          <span className="text-xs hidden sm:inline" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            {formatDate(activeSprint.startDate)} &rarr; {formatDate(activeSprint.endDate)}
-          </span>
+          {(() => {
+            const dates = formatSprintDates(activeSprint.startDate, activeSprint.endDate);
+            if (dates) {
+              return (
+                <span className="text-xs hidden sm:inline" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  {dates}
+                </span>
+              );
+            }
+            // No dates is a gap to fill, not a display bug — offer the fix to
+            // whoever can act on it. Editing dates is admin-only.
+            return isAdmin ? (
+              <button
+                onClick={() => openDateEditor(activeSprint)}
+                className="text-xs font-medium hidden sm:inline underline decoration-dotted underline-offset-2"
+                style={{ color: 'rgba(255,255,255,0.75)' }}
+              >
+                Set dates
+              </button>
+            ) : (
+              <span className="text-xs hidden sm:inline" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                No dates set
+              </span>
+            );
+          })()}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <span className="text-xs font-medium px-2 py-0.5 rounded-full hidden sm:inline" style={{ background: 'rgba(232,57,14,0.2)', color: '#e8390e' }}>
               {activeSprint._count.tickets} tickets
@@ -1037,7 +1065,7 @@ export default function BoardPage() {
                             {isAdmin && (
                               <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setEditDatesSprintId(sprint.id); setEditDatesForm({ startDate: sprint.startDate ? sprint.startDate.slice(0, 10) : '', endDate: sprint.endDate ? sprint.endDate.slice(0, 10) : '' }); }}
+                                  onClick={(e) => { e.stopPropagation(); openDateEditor(sprint); }}
                                   className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
                                   title="Edit dates"
                                 >
@@ -1070,9 +1098,25 @@ export default function BoardPage() {
                             <h3 className="text-sm font-bold pr-7 mb-1" style={{ color: '#1a1f3c' }}>{sprint.title}</h3>
 
                             {/* Date range */}
-                            <p className="text-xs text-gray-400 mb-3">
-                              {formatDate(sprint.startDate)} &rarr; {formatDate(sprint.endDate)}
-                            </p>
+                            {(() => {
+                              const dates = formatSprintDates(sprint.startDate, sprint.endDate);
+                              if (dates) return <p className="text-xs text-gray-500 mb-3">{dates}</p>;
+                              return (
+                                <p className="text-xs mb-3">
+                                  {isAdmin ? (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); openDateEditor(sprint); }}
+                                      className="font-medium underline decoration-dotted underline-offset-2"
+                                      style={{ color: '#0284c7' }}
+                                    >
+                                      Set dates
+                                    </button>
+                                  ) : (
+                                    <span className="text-gray-500">No dates set</span>
+                                  )}
+                                </p>
+                              );
+                            })()}
 
                             {/* Stats */}
                             <div className="flex items-center gap-2 mb-3">
