@@ -66,7 +66,9 @@ export default function BoardPage() {
   const [updatingDates, setUpdatingDates] = useState(false);
 
   // Ticket filter state
-  const [filterMyTickets, setFilterMyTickets] = useState(true);
+  // Defaults to All: opening on Mine made a full sprint look empty to anyone
+  // with nothing assigned. The last choice is restored per user per board below.
+  const [filterMyTickets, setFilterMyTickets] = useState(false);
   const [mentionedTicketIds, setMentionedTicketIds] = useState<Set<string>>(new Set());
 
   // Board filter state (type, project, priority)
@@ -416,6 +418,30 @@ export default function BoardPage() {
     } finally { setUpdatingDates(false); }
   };
 
+  // Mine/All is remembered per user per board. localStorage keeps it out of the
+  // schema; a missing or unreadable value just leaves the All default in place.
+  const filterStorageKey = currentUser ? `fluxus:boardFilter:${currentUser.id}:${boardId}` : null;
+
+  useEffect(() => {
+    if (!filterStorageKey) return;
+    try {
+      const saved = localStorage.getItem(filterStorageKey);
+      if (saved === 'mine' || saved === 'all') setFilterMyTickets(saved === 'mine');
+    } catch {
+      // Storage can be blocked (private browsing); the default stands.
+    }
+  }, [filterStorageKey]);
+
+  const chooseFilter = (mine: boolean) => {
+    setFilterMyTickets(mine);
+    if (!filterStorageKey) return;
+    try {
+      localStorage.setItem(filterStorageKey, mine ? 'mine' : 'all');
+    } catch {
+      // Not persisting is acceptable; the session still reflects the choice.
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -489,6 +515,54 @@ export default function BoardPage() {
         : col.tickets
     ),
   }));
+
+  // Counts behind the Mine/All toggle, and the "everything is hidden" case.
+  // Sprint view counts mentions as yours; kanban counts what you created.
+  const countTickets = (cols: { tickets: Ticket[] }[]) =>
+    cols.reduce((n, col) => n + col.tickets.length, 0);
+
+  const isMyTicket = (t: Ticket) =>
+    activeSprint
+      ? t.assigneeId === currentUser?.id || mentionedTicketIds.has(t.id)
+      : t.assigneeId === currentUser?.id || t.createdById === currentUser?.id;
+
+  const scopeColumns = activeSprint ? sprintColumns : board.columns;
+  const scopeTotal = countTickets(scopeColumns);
+  const allCount = countTickets(scopeColumns.map((c) => ({ tickets: applyTicketFilters(c.tickets) })));
+  const mineCount = countTickets(
+    scopeColumns.map((c) => ({ tickets: applyTicketFilters(c.tickets.filter(isMyTicket)) }))
+  );
+  const visibleCount = countTickets(activeSprint ? visibleColumns : filteredKanbanColumns);
+
+  // One click back to everything: drop the Mine filter and any attribute filters.
+  const showEverything = () => {
+    chooseFilter(false);
+    setFilterType('');
+    setFilterProject('');
+    setFilterPriority('');
+    setFilterEpic('');
+    setFilterFlow('');
+  };
+
+  // Empty columns are ambiguous — a filter hiding every ticket looks identical to
+  // a board with no tickets. Say which it is.
+  const filterNotice =
+    visibleCount === 0 && scopeTotal > 0 ? (
+      <div className="mx-4 sm:mx-6 mt-4 sm:mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <span className="text-sm text-gray-600">
+          {filterMyTickets && mineCount === 0
+            ? `0 of ${allCount} ${allCount === 1 ? 'ticket is' : 'tickets are'} yours`
+            : 'No tickets match the current filters'}
+        </span>
+        <button
+          onClick={showEverything}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150"
+          style={{ color: '#e8390e', background: '#fff7f5', border: '1px solid #fbd5c8' }}
+        >
+          Show all
+        </button>
+      </div>
+    ) : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f2f5]">
@@ -654,24 +728,26 @@ export default function BoardPage() {
             {/* Filter toggle */}
             <div className="flex rounded-lg overflow-hidden text-xs font-semibold" style={{ border: '1px solid rgba(255,255,255,0.25)' }}>
               <button
-                onClick={() => setFilterMyTickets(true)}
+                onClick={() => chooseFilter(true)}
+                aria-pressed={filterMyTickets}
                 className="px-3 py-1.5 transition-all"
                 style={{
                   background: filterMyTickets ? 'white' : 'transparent',
                   color: filterMyTickets ? '#1a1f3c' : 'rgba(255,255,255,0.65)',
                 }}
               >
-                Mine
+                Mine &middot; {mineCount}
               </button>
               <button
-                onClick={() => setFilterMyTickets(false)}
+                onClick={() => chooseFilter(false)}
+                aria-pressed={!filterMyTickets}
                 className="px-3 py-1.5 transition-all"
                 style={{
                   background: !filterMyTickets ? 'white' : 'transparent',
                   color: !filterMyTickets ? '#1a1f3c' : 'rgba(255,255,255,0.65)',
                 }}
               >
-                All
+                All &middot; {allCount}
               </button>
             </div>
           </div>
@@ -686,24 +762,26 @@ export default function BoardPage() {
           {board.type === 'kanban' && (
             <div className="flex rounded-lg overflow-hidden text-xs font-semibold flex-shrink-0 border border-gray-200">
               <button
-                onClick={() => setFilterMyTickets(true)}
+                onClick={() => chooseFilter(true)}
+                aria-pressed={filterMyTickets}
                 className="px-3 py-1 transition-all"
                 style={{
                   background: filterMyTickets ? '#1a1f3c' : 'white',
                   color: filterMyTickets ? 'white' : '#6b7280',
                 }}
               >
-                Mine
+                Mine &middot; {mineCount}
               </button>
               <button
-                onClick={() => setFilterMyTickets(false)}
+                onClick={() => chooseFilter(false)}
+                aria-pressed={!filterMyTickets}
                 className="px-3 py-1 transition-all"
                 style={{
                   background: !filterMyTickets ? '#1a1f3c' : 'white',
                   color: !filterMyTickets ? 'white' : '#6b7280',
                 }}
               >
-                All
+                All &middot; {allCount}
               </button>
             </div>
           )}
@@ -850,6 +928,7 @@ export default function BoardPage() {
       {board.type === 'kanban' ? (
         /* Direct Kanban Board */
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
+          {filterNotice}
           <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
               {(() => {
@@ -951,7 +1030,7 @@ export default function BoardPage() {
                         {colSprints.map((sprint) => (
                           <div
                             key={sprint.id}
-                            onClick={() => { setActiveSprint(sprint); setFilterMyTickets(true); }}
+                            onClick={() => { setActiveSprint(sprint); }}
                             className="relative bg-white rounded-xl border border-gray-200 p-4 cursor-pointer transition-all duration-150 hover:shadow-md hover:border-gray-300 group"
                           >
                             {/* Admin actions — edit dates + delete */}
@@ -1082,6 +1161,7 @@ export default function BoardPage() {
       ) : (
         /* Sprint Ticket View (filtered kanban — sprint boards only) */
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
+          {filterNotice}
           <DndContext
             sensors={sensors}
             collisionDetection={collisionDetection}
