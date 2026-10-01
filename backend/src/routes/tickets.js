@@ -1,7 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
-const { sendTicketAssignedEmail } = require('../lib/mailer');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -67,18 +66,6 @@ router.post('/', authenticate, async (req, res) => {
         },
       });
       req.io.to(`user:${assigneeId}`).emit('notification', notification);
-
-      // Email notification (fire-and-forget; failures are logged inside the mailer)
-      if (ticket.assignee?.email) {
-        sendTicketAssignedEmail({
-          to: ticket.assignee.email,
-          assigneeName: ticket.assignee.name,
-          assignerName: req.user.name,
-          ticketTitle: ticket.title,
-          boardId: targetBoardId,
-          ticketId: ticket.id,
-        });
-      }
     }
 
     res.json(ticket);
