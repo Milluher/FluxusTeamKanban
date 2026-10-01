@@ -27,6 +27,13 @@ export function renderToDom(element: ReactElement): { container: HTMLElement; un
   };
 }
 
+/** Lets pending promises resolve and React commit the result. */
+export async function flush(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 /** Rendered HTML of `element`, with the tree torn down again. */
 export function renderToHtml(element: ReactElement): string {
   const { container, unmount } = renderToDom(element);
