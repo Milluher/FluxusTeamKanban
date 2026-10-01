@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { Board, User, ChangelogEntry, ChangelogItem, ChangelogItemKind } from '@/types';
 import ChangelogEntryModal from '@/components/ChangelogEntryModal';
 import AppHeader from '@/components/AppHeader';
+import { formatDay } from '@/lib/formatDate';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 
 const KIND_STYLE: Record<ChangelogItemKind, { label: string; color: string; bg: string }> = {
@@ -18,7 +19,7 @@ const KIND_ORDER: ChangelogItemKind[] = ['added', 'changed', 'fixed', 'removed']
 
 function formatDate(iso?: string | null) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return formatDay(iso) ?? '';
 }
 
 export default function ChangelogPage() {
