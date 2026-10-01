@@ -1,7 +1,8 @@
 import axios from 'axios';
+import API_BASE_URL from './apiBase';
 
 const api = axios.create({
-  baseURL: 'https://fluxusteamkanban-staging.up.railway.app/api',
+  baseURL: `${API_BASE_URL}/api`,
 });
 
 // Attach JWT from localStorage to every request
