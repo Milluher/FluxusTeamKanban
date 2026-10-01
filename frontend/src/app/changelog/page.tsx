@@ -1,12 +1,10 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import api from '@/lib/api';
 import { Board, User, ChangelogEntry, ChangelogItem, ChangelogItemKind } from '@/types';
-import { avatarUrl } from '@/lib/avatar';
-import NotificationBell from '@/components/NotificationBell';
 import ChangelogEntryModal from '@/components/ChangelogEntryModal';
+import AppHeader from '@/components/AppHeader';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 
 const KIND_STYLE: Record<ChangelogItemKind, { label: string; color: string; bg: string }> = {
@@ -89,24 +87,7 @@ export default function ChangelogPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 py-0 flex items-center justify-between sticky top-0 z-10 h-14">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2.5" title="Back to boards">
-          <Image src="/logo.png" width={28} height={28} alt="Fluxus" className="rounded-md" />
-          <span className="font-bold text-base tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
-        </button>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-sm px-3 py-1.5 rounded-lg font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors"
-          >
-            Boards
-          </button>
-          {user && <NotificationBell userId={user.id} />}
-          {user && (
-            <img src={avatarUrl(user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={user.name} />
-          )}
-        </div>
-      </nav>
+      <AppHeader user={user} current="changelog" />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-start justify-between gap-4 mb-6">
