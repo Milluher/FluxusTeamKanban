@@ -1,8 +1,10 @@
 'use client';
+import { useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Ticket } from '@/types';
 import { avatarUrl } from '@/lib/avatar';
+import { descriptionPreview } from '@/lib/richText';
 
 const TYPE_STYLES: Record<string, string> = {
   mobile: 'bg-blue-50 text-blue-600',
@@ -54,6 +56,10 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
 
   const commentCount = ticket._count?.comments ?? ticket.comments?.length ?? 0;
 
+  // Descriptions are stored as rich-text HTML; cards show the text behind it,
+  // or a tally when the description is a checklist.
+  const preview = useMemo(() => descriptionPreview(ticket.description), [ticket.description]);
+
   return (
     <div
       ref={setNodeRef}
@@ -81,12 +87,37 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         {ticket.title}
       </p>
 
-      {/* Description — up to 3 lines */}
-      {ticket.description && (
-        <p className="text-xs text-gray-400 leading-relaxed mb-2.5 line-clamp-3">
-          {ticket.description}
+      {/* Description — plain text, or checklist progress when there are task items */}
+      {preview.kind === 'text' && (
+        <p className="text-xs text-gray-500 leading-relaxed mb-2.5 line-clamp-2">
+          {preview.text}
         </p>
       )}
+      {preview.kind === 'checklist' && (() => {
+        const complete = preview.done === preview.total;
+        const fill = complete ? '#16a34a' : '#0ea5e9';
+        return (
+          <div className="mb-2.5">
+            <span className="text-xs font-medium" style={{ color: complete ? '#15803d' : '#6b7280' }}>
+              {preview.done} of {preview.total} done
+            </span>
+            <div
+              className="mt-1 h-[3px] w-full rounded-full overflow-hidden"
+              style={{ background: '#e5e7eb' }}
+              role="progressbar"
+              aria-label={`Checklist: ${preview.done} of ${preview.total} done`}
+              aria-valuenow={preview.done}
+              aria-valuemin={0}
+              aria-valuemax={preview.total}
+            >
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${(preview.done / preview.total) * 100}%`, background: fill }}
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Epic + Flow + Project */}
       {(ticket.epic || ticket.flow || ticket.project) && (
