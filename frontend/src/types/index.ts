@@ -22,6 +22,16 @@ export interface Dependency {
   dependsOn: { id: string; title: string; status: string };
 }
 
+/** A ticket from /tickets/assigned, which carries the board it lives on. */
+export interface AssignedTicket extends Ticket {
+  column: {
+    id: string;
+    name: string;
+    board: { id: string; name: string; type: string };
+  };
+  sprint?: { id: string; title: string; endDate: string | null } | null;
+}
+
 export interface Ticket {
   id: string;
   title: string;

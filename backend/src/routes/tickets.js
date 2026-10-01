@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { sendTicketAssignedEmail } = require('../lib/mailer');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -66,6 +67,18 @@ router.post('/', authenticate, async (req, res) => {
         },
       });
       req.io.to(`user:${assigneeId}`).emit('notification', notification);
+
+      // Email notification (fire-and-forget; failures are logged inside the mailer)
+      if (ticket.assignee?.email) {
+        sendTicketAssignedEmail({
+          to: ticket.assignee.email,
+          assigneeName: ticket.assignee.name,
+          assignerName: req.user.name,
+          ticketTitle: ticket.title,
+          boardId: targetBoardId,
+          ticketId: ticket.id,
+        });
+      }
     }
 
     res.json(ticket);
@@ -73,6 +86,34 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // Get single ticket
+// Everything assigned to the signed-in user, across every board they belong to.
+//
+// Registered before '/:id' on purpose: Express matches in order, so with this
+// below it the literal path "assigned" would be read as a ticket id.
+router.get('/assigned', authenticate, async (req, res) => {
+  try {
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        assigneeId: req.user.id,
+        // Only boards they are still a member of, so losing access hides the work.
+        column: { board: { members: { some: { userId: req.user.id } } } },
+      },
+      include: {
+        column: {
+          select: { id: true, name: true, board: { select: { id: true, name: true, type: true } } },
+        },
+        sprint: { select: { id: true, title: true, endDate: true } },
+        _count: { select: { comments: true } },
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+    });
+    res.json(tickets);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: ticketInclude });
