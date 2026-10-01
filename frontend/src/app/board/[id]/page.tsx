@@ -33,6 +33,7 @@ import BoardInfo from '@/components/BoardInfo';
 import AppHeader from '@/components/AppHeader';
 import BoardToolbar from '@/components/BoardToolbar';
 import Avatar from '@/components/Avatar';
+import LastLogin from '@/components/LastLogin';
 
 export default function BoardPage() {
   const params = useParams();
@@ -656,7 +657,11 @@ export default function BoardPage() {
                           <Avatar name={m.user.name} className="w-8 h-8 text-xs" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
-                            <p className="text-xs text-gray-500 capitalize">{m.role}</p>
+                            <p className="text-xs text-gray-600">
+                              <span className="capitalize">{m.role}</span>
+                              <span className="text-gray-300" aria-hidden="true"> · </span>
+                              <LastLogin value={m.user.lastLoginAt} />
+                            </p>
                           </div>
                           {isCurrentUserBoardAdmin && m.user.id !== currentUser?.id && (
                             <button

@@ -8,6 +8,7 @@ import ConfirmByName from '@/components/ConfirmByName';
 import RowMenu from '@/components/RowMenu';
 import { formatDay } from '@/lib/formatDate';
 import Avatar from '@/components/Avatar';
+import LastLogin from '@/components/LastLogin';
 
 interface AdminUser extends User {
   createdAt: string;
@@ -126,6 +127,7 @@ export default function AdminPage() {
                     {isOwner(u) ? 'super-admin' : u.role}
                   </span>
                   <p className="text-xs text-gray-600 mt-1">Joined {formatDay(u.createdAt)}</p>
+                  <LastLogin value={u.lastLoginAt} labelled className="text-xs text-gray-600" />
                 </div>
               </div>
               {isOwner(u) ? (
@@ -165,6 +167,7 @@ export default function AdminPage() {
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">Email</th>
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">Role</th>
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">Joined</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">Last login</th>
                 <th className="text-right px-5 py-3 font-semibold text-gray-600">Actions</th>
               </tr>
             </thead>
@@ -197,6 +200,7 @@ export default function AdminPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{formatDay(u.createdAt)}</td>
+                  <td className="px-5 py-3 whitespace-nowrap"><LastLogin value={u.lastLoginAt} className="text-sm text-gray-600" /></td>
                   <td className="px-5 py-3 text-right">
                     {isOwner(u) ? (
                       <span className="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap" style={{ background: '#fff7f5', color: '#c73009', border: '1px solid #fbd5c8' }}>Owner</span>

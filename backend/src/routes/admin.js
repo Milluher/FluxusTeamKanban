@@ -15,7 +15,7 @@ function requireAdmin(req, res, next) {
 router.get('/users', authenticate, requireAdmin, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, createdAt: true, lastLoginAt: true },
       orderBy: { createdAt: 'asc' },
     });
     res.json(users);
@@ -100,7 +100,7 @@ router.patch('/users/:id/role', authenticate, async (req, res) => {
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data: { role },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, createdAt: true, lastLoginAt: true },
     });
     res.json(updated);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }

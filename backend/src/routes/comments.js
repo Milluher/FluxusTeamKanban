@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { sendMentionEmail } = require('../lib/mailer');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -60,7 +61,7 @@ router.post('/', authenticate, async (req, res) => {
     if (boardId) {
       const boardMembers = await prisma.boardMember.findMany({
         where: { boardId },
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { select: { id: true, name: true, email: true } } },
       });
 
       const ticket = await prisma.ticket.findUnique({
@@ -89,6 +90,19 @@ router.post('/', authenticate, async (req, res) => {
           },
         });
         req.io.to(`user:${user.id}`).emit('notification', notification);
+
+        // Email (fire-and-forget; failures are logged inside the mailer)
+        if (user.email) {
+          sendMentionEmail({
+            to: user.email,
+            recipientName: user.name,
+            commenterName,
+            ticketTitle: ticket?.title,
+            commentContent: content,
+            boardId,
+            ticketId,
+          });
+        }
       }
     }
 

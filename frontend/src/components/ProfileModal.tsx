@@ -3,6 +3,7 @@ import { useState } from 'react';
 import api from '@/lib/api';
 import { User } from '@/types';
 import Avatar from './Avatar';
+import LastLogin from './LastLogin';
 
 interface Props {
   user: User;
@@ -58,6 +59,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
             <Avatar name={user.name} className="w-16 h-16 text-xl" />
             <div>
               <p className="font-semibold text-base" style={{ color: '#1a1f3c' }}>{user.name}</p>
+              <LastLogin value={user.lastLoginAt} labelled />
               <p className="text-sm text-gray-500">{user.email}</p>
               <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${user.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
                 {user.role}
