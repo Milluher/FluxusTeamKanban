@@ -63,14 +63,14 @@ export default function InvitePage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa]">
-      <p className="text-gray-400 text-sm">Loading invitation...</p>
+      <p className="text-gray-500 text-sm">Loading invitation...</p>
     </div>
   );
 
   if (error) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa]">
       <div className="text-center">
-        <p className="text-red-500 font-medium">{error}</p>
+        <p className="text-red-700 font-medium">{error}</p>
         <button onClick={() => router.push('/')} className="mt-4 text-sm text-gray-500 hover:text-gray-700">Go to login</button>
       </div>
     </div>
@@ -127,7 +127,7 @@ export default function InvitePage() {
             className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             required
           />
-          {authError && <p className="text-red-500 text-sm">{authError}</p>}
+          {authError && <p className="text-red-700 text-sm">{authError}</p>}
           <button
             type="submit"
             disabled={accepting}

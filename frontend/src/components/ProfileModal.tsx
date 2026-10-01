@@ -49,7 +49,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>My Profile</h2>
-          <button onClick={onClose} aria-label="Close profile" className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+          <button onClick={onClose} aria-label="Close profile" className="text-gray-500 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
         </div>
 
         <div className="px-5 py-5 space-y-6">
@@ -63,7 +63,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
             <div>
               <p className="font-semibold text-base" style={{ color: '#1a1f3c' }}>{user.name}</p>
               <p className="text-sm text-gray-500">{user.email}</p>
-              <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${user.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
+              <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${user.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
                 {user.role}
               </span>
             </div>
@@ -119,7 +119,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
               </div>
 
               {message && (
-                <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                <p className={`text-sm ${message.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
                   {message.text}
                 </p>
               )}

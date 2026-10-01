@@ -128,10 +128,10 @@ export default function ChangelogPage() {
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-sm text-gray-400">Loading…</div>
+          <div className="py-16 text-center text-sm text-gray-500">Loading…</div>
         ) : entries.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-xl py-16 text-center">
-            <p className="text-sm text-gray-400">No changelog entries yet</p>
+            <p className="text-sm text-gray-500">No changelog entries yet</p>
             {isAdmin && (
               <button onClick={openNew} className="text-sm mt-3 font-medium" style={{ color: '#e8390e' }}>
                 Write the first one
@@ -165,7 +165,7 @@ export default function ChangelogPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400 flex-wrap">
+                      <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 flex-wrap">
                         <span
                           className="px-2 py-0.5 rounded-md font-medium"
                           style={{ background: '#f0f2f5', color: '#4b5563' }}
@@ -181,13 +181,13 @@ export default function ChangelogPage() {
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           onClick={() => openEdit(entry)}
-                          className="text-xs px-2 py-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="text-xs px-2 py-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => setDeleteTarget(entry)}
-                          className="text-xs px-2 py-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          className="text-xs px-2 py-1 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
                           Delete
                         </button>

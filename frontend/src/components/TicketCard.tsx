@@ -8,17 +8,17 @@ import { descriptionPreview } from '@/lib/richText';
 
 const TYPE_STYLES: Record<string, string> = {
   mobile: 'bg-blue-50 text-blue-600',
-  design: 'bg-pink-50 text-pink-600',
+  design: 'bg-pink-50 text-pink-700',
   product: 'bg-purple-50 text-purple-600',
   backend: 'bg-gray-100 text-gray-600',
-  frontend: 'bg-green-50 text-green-600',
+  frontend: 'bg-green-50 text-green-700',
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   low:    { label: 'Low',       color: '#6b7280', bg: '#f9fafb', border: '#d1d5db' },
   medium: { label: 'Medium',    color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
-  high:   { label: 'High',      color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-  urgent: { label: 'Urgent 🔥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  high:   { label: 'High',      color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+  urgent: { label: 'Urgent 🔥', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
 };
 
 interface Props {
@@ -129,17 +129,17 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
       {(ticket.epic || ticket.flow || ticket.project) && (
         <div className="mb-2.5 flex flex-wrap gap-1">
           {ticket.epic && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
               {ticket.epic}
             </span>
           )}
           {ticket.flow && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-200">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
               {ticket.flow}
             </span>
           )}
           {ticket.project && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
               {ticket.project}
             </span>
           )}
@@ -161,7 +161,7 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
             </div>
           );
         })() : (
-          <span className="text-xs text-gray-300">Unassigned</span>
+          <span className="text-xs text-gray-500">Unassigned</span>
         )}
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -175,7 +175,7 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
           )}
           {commentCount > 0 && (
             <span
-              className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-400"
+              className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full text-gray-600"
               style={{ background: '#f3f4f6' }}
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

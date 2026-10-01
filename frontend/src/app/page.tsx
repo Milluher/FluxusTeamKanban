@@ -32,7 +32,7 @@ export default function AuthPage() {
     }
   };
 
-  const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
+  const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-500 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
@@ -119,7 +119,7 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setShowForgotMsg((p) => !p)}
-                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-xs text-gray-500 hover:text-gray-600 transition-colors"
                   >
                     Forgot password?
                   </button>

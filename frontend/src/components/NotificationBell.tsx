@@ -152,7 +152,7 @@ export default function NotificationBell({ userId }: Props) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <span className="text-sm font-semibold" style={{ color: '#1a1f3c' }}>Notifications</span>
             {unread > 0 && (
-              <button onClick={markAllRead} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={markAllRead} className="text-xs text-gray-500 hover:text-gray-600 transition-colors">
                 Mark all read
               </button>
             )}
@@ -174,7 +174,7 @@ export default function NotificationBell({ userId }: Props) {
           <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
             {notifications.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-gray-400">No notifications yet</p>
+                <p className="text-sm text-gray-500">No notifications yet</p>
               </div>
             ) : (
               notifications.map((n) => (
@@ -190,7 +190,7 @@ export default function NotificationBell({ userId }: Props) {
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-gray-700">{n.title}</p>
                     <p className="text-xs text-gray-500 mt-0.5 truncate">{n.body}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">{timeAgo(n.createdAt)}</p>
                   </div>
                 </button>
               ))

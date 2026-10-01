@@ -89,7 +89,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>Add to Board</h2>
-          <button onClick={onClose} aria-label="Close add to board dialog" className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+          <button onClick={onClose} aria-label="Close add to board dialog" className="text-gray-500 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
         </div>
 
         {/* Tabs */}
@@ -128,12 +128,12 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                 onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
               />
 
-              {addError && <p className="text-red-500 text-sm">{addError}</p>}
+              {addError && <p className="text-red-700 text-sm">{addError}</p>}
 
               {/* User list */}
               <div className="space-y-1">
                 {filtered.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-6">
+                  <p className="text-sm text-gray-500 text-center py-6">
                     {query ? 'No users found' : 'All users are already members'}
                   </p>
                 )}
@@ -146,7 +146,7 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                       <img src={avatarUrl(user.name)} className="w-9 h-9 rounded-full flex-shrink-0" alt={user.name} />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       </div>
                     </div>
                     <button
@@ -170,10 +170,10 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                         <img src={avatarUrl(u.name)} className="w-9 h-9 rounded-full flex-shrink-0" alt={u.name} />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{u.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                          <p className="text-xs text-gray-500 truncate">{u.email}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-green-600 font-medium flex items-center gap-1 flex-shrink-0">
+                      <span className="text-xs text-green-700 font-medium flex items-center gap-1 flex-shrink-0">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                           <path d="M20 6L9 17l-5-5"/>
                         </svg>
@@ -207,17 +207,17 @@ export default function InviteMemberModal({ boardId, boardMemberIds, onClose, on
                     <button
                       onClick={copy}
                       className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold text-white flex-shrink-0"
-                      style={{ background: copied ? '#16a34a' : '#e8390e' }}
+                      style={{ background: copied ? '#15803d' : '#e8390e' }}
                     >
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <button onClick={generateLink} className="text-sm text-gray-400 hover:text-gray-600">
+                  <button onClick={generateLink} className="text-sm text-gray-500 hover:text-gray-600">
                     Generate new link
                   </button>
                 </div>
               )}
-              {linkError && <p className="text-red-500 text-sm">{linkError}</p>}
+              {linkError && <p className="text-red-700 text-sm">{linkError}</p>}
             </div>
           )}
         </div>

@@ -78,7 +78,7 @@ export default function PresenceTracker({ users, currentUserId }: Props) {
 
       {open && (
         <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-30 min-w-[230px] py-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-1 pb-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 pt-1 pb-2">
             {active.length} working now
           </p>
           {ordered.map((u) => (
@@ -97,9 +97,9 @@ export default function PresenceTracker({ users, currentUserId }: Props) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: '#1a1f3c' }}>
-                  {u.name}{u.id === currentUserId && <span className="text-gray-400 font-normal"> (you)</span>}
+                  {u.name}{u.id === currentUserId && <span className="text-gray-500 font-normal"> (you)</span>}
                 </p>
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] text-gray-500">
                   {u.idle ? 'Tab in background' : duration(u.since)}
                 </p>
               </div>

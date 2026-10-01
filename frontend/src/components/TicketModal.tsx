@@ -10,17 +10,17 @@ const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false })
 
 const TICKET_TYPES = [
   { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
-  { value: 'design', label: 'Design', color: 'bg-pink-50 text-pink-600 border-pink-200' },
+  { value: 'design', label: 'Design', color: 'bg-pink-50 text-pink-700 border-pink-200' },
   { value: 'product', label: 'Product', color: 'bg-purple-50 text-purple-600 border-purple-200' },
   { value: 'backend', label: 'Backend', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-600 border-green-200' },
+  { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-700 border-green-200' },
 ];
 
 const PRIORITIES = [
   { value: 'low',    label: 'Low',       style: { color: '#6b7280', background: '#f9fafb', border: '1px solid #d1d5db' } },
   { value: 'medium', label: 'Medium',    style: { color: '#b45309', background: '#fffbeb', border: '1px solid #fcd34d' } },
-  { value: 'high',   label: 'High',      style: { color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa' } },
-  { value: 'urgent', label: 'Urgent 🔥', style: { color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' } },
+  { value: 'high',   label: 'High',      style: { color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa' } },
+  { value: 'urgent', label: 'Urgent 🔥', style: { color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' } },
 ];
 
 interface Props {
@@ -319,7 +319,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             ) : (
               <h2 className="text-lg font-bold leading-snug" style={{ color: '#1a1f3c' }}>{ticket.title}</h2>
             )}
-            <p className="text-xs mt-1 text-gray-400">
+            <p className="text-xs mt-1 text-gray-500">
               Created by {ticket.createdBy?.name} &middot; {new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
@@ -360,7 +360,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 <button
                   onClick={deleteTicket}
                   className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-all duration-150"
-                  style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}
+                  style={{ color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' }}
                   title="Delete"
                   aria-label="Delete ticket"
                 >
@@ -381,7 +381,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 <button
                   onClick={deleteTicket}
                   className="hidden sm:block px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150"
-                  style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}
+                  style={{ color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
                 >
@@ -392,7 +392,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             <button
               onClick={onClose}
               aria-label="Close ticket"
-              className="w-8 h-8 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700 ml-1"
+              className="w-8 h-8 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-lg text-gray-500 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700 ml-1"
             >
               ×
             </button>
@@ -431,10 +431,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     return (
                       <div className={`mt-1.5 flex items-center gap-2 ${inactive ? 'opacity-50' : ''}`}>
                         <img src={avatarUrl(ticket.assignee.name)} className={`w-7 h-7 rounded-full ${inactive ? 'grayscale' : ''}`} alt={ticket.assignee.name} />
-                        <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}{inactive ? <span className="text-xs text-gray-400 ml-1">(inactive)</span> : ''}</span>
+                        <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}{inactive ? <span className="text-xs text-gray-500 ml-1">(inactive)</span> : ''}</span>
                       </div>
                     );
-                  })() : <p className="mt-1.5 text-sm text-gray-400">Unassigned</p>,
+                  })() : <p className="mt-1.5 text-sm text-gray-500">Unassigned</p>,
                 },
                 boardType === 'kanban' ? {
                   label: 'Creator',
@@ -470,10 +470,10 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     return (
                       <div className={`mt-1.5 flex items-center gap-2 ${inactive ? 'opacity-50' : ''}`}>
                         <img src={avatarUrl(ticket.productManager.name)} className={`w-7 h-7 rounded-full ${inactive ? 'grayscale' : ''}`} alt={ticket.productManager.name} />
-                        <span className="text-sm font-medium text-gray-800">{ticket.productManager.name}{inactive ? <span className="text-xs text-gray-400 ml-1">(inactive)</span> : ''}</span>
+                        <span className="text-sm font-medium text-gray-800">{ticket.productManager.name}{inactive ? <span className="text-xs text-gray-500 ml-1">(inactive)</span> : ''}</span>
                       </div>
                     );
-                  })() : <p className="mt-1.5 text-sm text-gray-400">None</p>,
+                  })() : <p className="mt-1.5 text-sm text-gray-500">None</p>,
                 },
                 {
                   label: 'Assigned Date',
@@ -488,7 +488,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       {...inputFocusHandlers}
                     />
                   ),
-                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.assignedDate ? new Date(ticket.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-400">—</span>}</p>,
+                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.assignedDate ? new Date(ticket.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-500">—</span>}</p>,
                 },
                 {
                   label: 'Status',
@@ -538,13 +538,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     <div className="mt-1.5">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                         ticket.type === 'mobile' ? 'bg-blue-50 text-blue-600' :
-                        ticket.type === 'design' ? 'bg-pink-50 text-pink-600' :
+                        ticket.type === 'design' ? 'bg-pink-50 text-pink-700' :
                         ticket.type === 'product' ? 'bg-purple-50 text-purple-600' :
                         ticket.type === 'backend' ? 'bg-gray-100 text-gray-600' :
-                        ticket.type === 'frontend' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-600'
+                        ticket.type === 'frontend' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
                       }`}>{ticket.type}</span>
                     </div>
-                  ) : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                  ) : <p className="mt-1.5 text-sm text-gray-500">—</p>,
                 },
                 {
                   label: 'Priority',
@@ -570,7 +570,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       <div className="mt-1.5">
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={pcfg.style}>{pcfg.label}</span>
                       </div>
-                    ) : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                    ) : <p className="mt-1.5 text-sm text-gray-500">—</p>;
                   })(),
                 },
                 {
@@ -609,7 +609,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       )}
                     </div>
                   ),
-                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-400">—</span>}</p>,
+                  viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-500">—</span>}</p>,
                 },
                 ...(boardType !== 'kanban' ? [{
                   label: 'Epic',
@@ -648,8 +648,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     </div>
                   ),
                   viewEl: ticket.epic
-                    ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">{ticket.epic}</span>
-                    : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                    ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{ticket.epic}</span>
+                    : <p className="mt-1.5 text-sm text-gray-500">—</p>,
                 }] : []),
                 {
                   label: 'Flow',
@@ -688,8 +688,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     </div>
                   ),
                   viewEl: ticket.flow
-                    ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-200">{ticket.flow}</span>
-                    : <p className="mt-1.5 text-sm text-gray-400">—</p>,
+                    ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">{ticket.flow}</span>
+                    : <p className="mt-1.5 text-sm text-gray-500">—</p>,
                 },
                 ...((productFiles.length > 0 || ticket.productDoc) ? [{
                   label: 'Product Doc',
@@ -721,7 +721,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         <span className="truncate">{f.title}</span>
                       </button>
-                    ) : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                    ) : <p className="mt-1.5 text-sm text-gray-500">—</p>;
                   })(),
                 }] : []),
                 ...(sprints.length > 0 ? [{
@@ -749,13 +749,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                         <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{s.title}</span>
                         {isOriginal && <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Original Sprint</span>}
                       </div>
-                    ) : <p className="mt-1.5 text-sm text-gray-400">—</p>;
+                    ) : <p className="mt-1.5 text-sm text-gray-500">—</p>;
                   })(),
                 }] : []),
               ].map(({ label, icon, editEl, viewEl }) => (
                 <div key={label} className="rounded-lg p-3 bg-gray-50 border border-gray-100">
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">
-                    <span className="text-gray-300">{icon}</span>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5">
+                    <span className="text-gray-500">{icon}</span>
                     {label}
                   </label>
                   {editing && editEl ? editEl : viewEl}
@@ -765,8 +765,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
 
             {/* Description */}
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-gray-300">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
                   <path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/>
                 </svg>
                 Description
@@ -787,7 +787,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
               ) : (
                 <div
                   className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
-                  style={{ color: '#9ca3af', minHeight: '120px' }}
+                  style={{ color: '#6b7280', minHeight: '120px' }}
                 >
                   No description provided.
                 </div>
@@ -797,7 +797,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             {/* Sprint History (sprint boards only) */}
             {boardType !== 'kanban' && ticket.sprintId && (
               <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
                     <polyline points="12 8 12 12 14 14"/>
                     <path d="M3.05 11a9 9 0 1 0 .5-2.67"/>
@@ -806,14 +806,14 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   Sprint History
                 </label>
                 {(ticket.sprintHistories?.length ?? 0) === 0 ? (
-                  <p className="text-xs text-gray-400 py-1">Original Sprint — this ticket has not been moved between sprints.</p>
+                  <p className="text-xs text-gray-500 py-1">Original Sprint — this ticket has not been moved between sprints.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {ticket.sprintHistories!.map((h) => (
                       <div key={h.id} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 border border-gray-100">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 flex-shrink-0" />
                         <span className="text-xs font-medium text-gray-700">{h.sprint.title}</span>
-                        <span className="text-xs text-gray-400 ml-auto">{new Date(h.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span className="text-xs text-gray-500 ml-auto">{new Date(h.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       </div>
                     ))}
                   </div>
@@ -824,7 +824,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             {/* Dependencies */}
             <div>
               <div className="flex items-center justify-between mb-2.5">
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
@@ -855,7 +855,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     value={depSearch}
                     onChange={(e) => searchDeps(e.target.value)}
                     placeholder="Search tickets..."
-                    className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400"
+                    className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-500"
                     style={inputStyle}
                     {...inputFocusHandlers}
                   />
@@ -891,7 +891,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       <span
                         className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
                         style={dep.dependsOn.status === 'Done'
-                          ? { background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }
+                          ? { background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }
                           : { background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }
                         }
                       >
@@ -900,14 +900,14 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     </div>
                     <button
                       onClick={() => removeDep(dep.dependsOnId)}
-                      className="text-xs font-medium ml-3 flex-shrink-0 px-2 py-1 rounded-md text-gray-400 transition-all duration-150 hover:text-red-500 hover:bg-red-50"
+                      className="text-xs font-medium ml-3 flex-shrink-0 px-2 py-1 rounded-md text-gray-500 transition-all duration-150 hover:text-red-700 hover:bg-red-50"
                     >
                       Remove
                     </button>
                   </div>
                 ))}
                 {(ticket.dependsOn || []).length === 0 && (
-                  <p className="text-sm text-gray-400 py-1">No dependencies</p>
+                  <p className="text-sm text-gray-500 py-1">No dependencies</p>
                 )}
               </div>
             </div>
@@ -915,7 +915,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
 
           {/* Right: comments */}
           <div className="lg:w-72 lg:flex-shrink-0 flex flex-col px-4 sm:px-5 py-5 border-t lg:border-t-0 border-gray-100">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
@@ -937,7 +937,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
                   </div>
-                  <p className="text-xs text-gray-400">No comments yet</p>
+                  <p className="text-xs text-gray-500">No comments yet</p>
                 </div>
               )}
               {(ticket.comments || []).map((c) => {
@@ -951,14 +951,14 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 mb-1">
-                        <span className={`text-xs font-semibold ${inactive ? 'text-gray-400' : 'text-gray-800'}`}>
+                        <span className={`text-xs font-semibold ${inactive ? 'text-gray-500' : 'text-gray-800'}`}>
                           {c.author.name}{inactive ? ' (inactive)' : ''}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500">
                           {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                         </span>
                       </div>
-                      <div className={`rounded-lg px-3 py-2 text-sm leading-relaxed border ${inactive ? 'bg-gray-50 border-gray-100 text-gray-400' : 'bg-gray-50 border-gray-100 text-gray-700'}`}>
+                      <div className={`rounded-lg px-3 py-2 text-sm leading-relaxed border ${inactive ? 'bg-gray-50 border-gray-100 text-gray-500' : 'bg-gray-50 border-gray-100 text-gray-700'}`}>
                         {renderCommentContent(c.content)}
                       </div>
                     </div>
@@ -1002,7 +1002,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       onChange={handleCommentChange}
                       onKeyDown={(e) => { if (e.key === 'Escape') setMentionQuery(null); }}
                       placeholder="Add a comment… type @ to mention"
-                      className="w-full px-3 py-2 pr-9 text-base sm:text-sm text-gray-800 placeholder-gray-400"
+                      className="w-full px-3 py-2 pr-9 text-base sm:text-sm text-gray-800 placeholder-gray-500"
                       style={{
                         background: 'white',
                         border: '1px solid #e5e7eb',
@@ -1024,7 +1024,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       onClick={() => commentImageInputRef.current?.click()}
                       aria-label="Attach image to comment"
                       title="Attach image"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600 transition-colors"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -1067,7 +1067,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                               <img src={avatarUrl(m.name)} className="w-6 h-6 rounded-full flex-shrink-0" alt={m.name} />
                             )}
                             <span className="font-medium">{m.name}</span>
-                            {m.group && <span className="text-xs text-gray-400">Notify the whole board</span>}
+                            {m.group && <span className="text-xs text-gray-500">Notify the whole board</span>}
                           </button>
                         ))}
                       </div>

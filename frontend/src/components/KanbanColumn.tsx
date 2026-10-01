@@ -17,7 +17,7 @@ const columnConfig: Record<string, { dot: string; badgeBg: string; badgeText: st
   'To Do':       { dot: '#60a5fa', badgeBg: '#eff6ff', badgeText: '#2563eb' },
   'In Progress': { dot: '#e8390e', badgeBg: '#fff7f5', badgeText: '#c73009' },
   'Review':      { dot: '#a78bfa', badgeBg: '#f5f3ff', badgeText: '#7c3aed' },
-  'Done':        { dot: '#34d399', badgeBg: '#ecfdf5', badgeText: '#059669' },
+  'Done':        { dot: '#34d399', badgeBg: '#ecfdf5', badgeText: '#047857' },
 };
 
 const defaultConfig = { dot: '#94a3b8', badgeBg: '#f1f5f9', badgeText: '#475569' };
@@ -53,7 +53,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket, activ
         </div>
         <button
           onClick={() => onAddTicket(column.id)}
-          className="w-7 h-7 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:w-6 sm:h-6 rounded-md flex items-center justify-center text-base leading-none font-medium text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
+          className="w-7 h-7 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:w-6 sm:h-6 rounded-md flex items-center justify-center text-base leading-none font-medium text-gray-500 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
           title="Add ticket"
           aria-label={`Add ticket to ${column.name}`}
         >
@@ -89,7 +89,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket, activ
 
         {column.tickets.length === 0 && !isOver && (
           <div className="text-center py-8 flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400">No tickets</p>
+            <p className="text-xs text-gray-500">No tickets</p>
           </div>
         )}
 
@@ -105,7 +105,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket, activ
         {/* Full-width add ticket button (visible on mobile) */}
         <button
           onClick={() => onAddTicket(column.id)}
-          className="w-full mt-2 py-2 text-sm text-gray-400 hover:text-gray-600 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors min-h-[44px]"
+          className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-600 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors min-h-[44px]"
         >
           + Add ticket
         </button>

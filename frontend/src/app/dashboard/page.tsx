@@ -180,7 +180,7 @@ export default function DashboardPage() {
             >
               <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="font-bold text-base" style={{ color: '#1a1f3c' }}>New Board</h3>
-                <button type="button" onClick={() => setShowCreate(false)} aria-label="Close new board dialog" className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 bg-gray-100 hover:bg-gray-200 text-lg">×</button>
+                <button type="button" onClick={() => setShowCreate(false)} aria-label="Close new board dialog" className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 bg-gray-100 hover:bg-gray-200 text-lg">×</button>
               </div>
               <div className="px-5 py-5 space-y-4">
                 <div>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                     value={newBoardName}
                     onChange={(e) => setNewBoardName(e.target.value)}
                     placeholder="e.g. Product Roadmap"
-                    className="w-full px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none rounded-lg border border-gray-200 transition-all"
+                    className="w-full px-3 py-2.5 text-sm text-gray-900 placeholder-gray-500 outline-none rounded-lg border border-gray-200 transition-all"
                     onFocus={(e) => { e.currentTarget.style.borderColor = '#e8390e'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)'; }}
                     onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
@@ -235,9 +235,9 @@ export default function DashboardPage() {
                             boxShadow: active ? '0 0 0 2px rgba(232,57,14,0.15)' : 'none',
                           }}
                         >
-                          <span style={{ color: active ? '#e8390e' : '#9ca3af' }}>{opt.icon}</span>
+                          <span style={{ color: active ? '#e8390e' : '#6b7280' }}>{opt.icon}</span>
                           <span className="text-xs font-bold" style={{ color: active ? '#e8390e' : '#1a1f3c' }}>{opt.label}</span>
-                          <span className="text-xs leading-snug" style={{ color: '#9ca3af' }}>{opt.desc}</span>
+                          <span className="text-xs leading-snug" style={{ color: '#6b7280' }}>{opt.desc}</span>
                         </button>
                       );
                     })}
@@ -294,18 +294,18 @@ export default function DashboardPage() {
                     </Link>
                   </h3>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${board.type === 'kanban' ? 'bg-purple-50 text-purple-500' : 'bg-orange-50 text-orange-500'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${board.type === 'kanban' ? 'bg-purple-50 text-purple-700' : 'bg-orange-50 text-orange-700'}`}>
                       {board.type === 'kanban' ? 'Kanban' : 'Sprint'}
                     </span>
                     {(board as any).userRole !== 'admin' && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 font-medium">Shared</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">Shared</span>
                     )}
                     {user?.role === 'admin' && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeleteBoard(board); }}
                         title="Delete board"
                         aria-label={`Delete board ${board.name}`}
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -314,7 +314,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-gray-400">
+                <div className="flex items-center gap-4 text-xs text-gray-500">
                   <span className="flex items-center gap-1.5">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
@@ -343,7 +343,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <p className="text-base font-semibold text-gray-700 mb-1">No boards yet</p>
-              <p className="text-sm text-gray-400 mb-5">Create your first board to start collaborating</p>
+              <p className="text-sm text-gray-500 mb-5">Create your first board to start collaborating</p>
               <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: '#e8390e' }}>
                 Create your first board
               </button>
@@ -354,7 +354,7 @@ export default function DashboardPage() {
             <div className="space-y-8">
               {myBoards.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">My Boards</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">My Boards</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {myBoards.map((board) => <BoardCard key={board.id} board={board} />)}
                   </div>
@@ -362,7 +362,7 @@ export default function DashboardPage() {
               )}
               {sharedBoards.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Shared with me</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Shared with me</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {sharedBoards.map((board) => <BoardCard key={board.id} board={board} />)}
                   </div>
@@ -385,10 +385,10 @@ export default function DashboardPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-red-600">Delete Board</h3>
-              <button onClick={() => setDeleteBoard(null)} aria-label="Close delete board dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setDeleteBoard(null)} aria-label="Close delete board dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <p className="text-sm text-gray-600 mb-1">Are you sure you want to delete <strong>{deleteBoard.name}</strong>?</p>
-            <p className="text-xs text-gray-400 mb-5">This will permanently delete the board and all its tickets. This cannot be undone.</p>
+            <p className="text-xs text-gray-500 mb-5">This will permanently delete the board and all its tickets. This cannot be undone.</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteBoard(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
               <button onClick={confirmDeleteBoard} disabled={deletingBoard} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">
