@@ -6,6 +6,8 @@ import { avatarUrl } from '@/lib/avatar';
 import ProductFileViewer from './ProductFileViewer';
 import RichTextView from './RichTextView';
 import { formatDay, formatTimestamp } from '@/lib/formatDate';
+import RowMenu from './RowMenu';
+import ConfirmByName from './ConfirmByName';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -23,6 +25,16 @@ const PRIORITIES = [
   { value: 'high',   label: 'High',      style: { color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa' } },
   { value: 'urgent', label: 'Urgent 🔥', style: { color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' } },
 ];
+
+// The fields the review names as optional. When empty they are a row of boxes
+// reading "—", so they hide behind "+ Add field" until someone wants them.
+const OPTIONAL_FIELDS = [
+  { name: 'type', label: 'Type' },
+  { name: 'priority', label: 'Priority' },
+  { name: 'epic', label: 'Epic' },
+  { name: 'flow', label: 'Flow' },
+  { name: 'assignedDate', label: 'Assigned Date' },
+] as const;
 
 interface Props {
   ticket: Ticket;
@@ -44,7 +56,6 @@ interface MentionOption {
 }
 
 export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete }: Props) {
-  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: ticket.title,
     description: ticket.description || '',
@@ -60,6 +71,71 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     productDocId: ticket.productDocId || '',
     columnId: ticket.columnId,
   });
+  // Inline editing: one field at a time, saved on blur or Enter, abandoned on
+  // Escape. Replaces an Edit mode that made changing one value a three-click job.
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [savingField, setSavingField] = useState<string | null>(null);
+  const [fieldMsg, setFieldMsg] = useState('');
+  // Optional fields the viewer asked to see even though they are empty.
+  const [revealed, setRevealed] = useState<string[]>([]);
+  const [showAddField, setShowAddField] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const isFieldEmpty = (name: string) => {
+    const value = (ticket as unknown as Record<string, unknown>)[name];
+    return value === null || value === undefined || value === '';
+  };
+
+  // The modal keeps focus inside it, closes on Escape, and hands focus back to
+  // the element that opened it — normally the card that was clicked.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.focus();
+
+    const focusable = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      ).filter((el) => el.offsetParent !== null);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // A field being edited swallows Escape first; this closes the modal.
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const items = focusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      opener?.focus?.();
+    };
+  }, [onClose]);
+
+  const hiddenFields = OPTIONAL_FIELDS.filter(
+    (f) => isFieldEmpty(f.name) && !revealed.includes(f.name)
+  );
+
   const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
   const [viewingFile, setViewingFile] = useState<ProductFile | null>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
@@ -68,7 +144,6 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   const [showEpicDropdown, setShowEpicDropdown] = useState(false);
   const [flowOptions, setFlowOptions] = useState<string[]>([]);
   const [showFlowDropdown, setShowFlowDropdown] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState('');
   const [commentImages, setCommentImages] = useState<string[]>([]);
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -119,46 +194,84 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   const pmOptions = ticket.productManager && !activeMemberIds.has(ticket.productManager.id)
     ? [...members, ticket.productManager] : members;
 
-  const save = async () => {
-    setSaving(true);
+  const saveField = async (name: string, value: unknown) => {
+    setFieldMsg('');
+    setSavingField(name);
     try {
-      const { data } = await api.patch(`/tickets/${ticket.id}`, { ...form, boardId });
+      const { data } = await api.patch(`/tickets/${ticket.id}`, { [name]: value, boardId });
       onUpdate(data);
-      setEditing(false);
-      if (form.project) {
-        const stored = localStorage.getItem(`board-projects-${boardId}`);
-        const existing: string[] = stored ? JSON.parse(stored) : [];
-        if (!existing.includes(form.project)) {
-          const updated = [...existing, form.project];
-          localStorage.setItem(`board-projects-${boardId}`, JSON.stringify(updated));
-          setProjectOptions((prev) => [...new Set([...prev, form.project])]);
-        }
+      if (name === 'project') rememberOption('projects', String(value ?? ''));
+      if (name === 'epic') rememberOption('epics', String(value ?? ''));
+      if (name === 'flow') rememberOption('flows', String(value ?? ''));
+      setEditingField(null);
+    } catch (e: any) {
+      setFieldMsg(e.response?.data?.error || 'Could not save that change');
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  /** Commits the field being edited, or does nothing if its value is unchanged. */
+  const commitField = (name: string) => {
+    if (!name) return;
+    const next = (form as Record<string, unknown>)[name];
+    const current = (ticket as unknown as Record<string, unknown>)[name];
+    const unchanged =
+      next === current ||
+      (next === '' && (current === null || current === undefined)) ||
+      (name === 'assignedDate' && typeof current === 'string' && current.split('T')[0] === next);
+
+    if (unchanged) {
+      setEditingField(null);
+      return;
+    }
+    void saveField(name, next === '' ? null : next);
+  };
+
+  /** Abandons the edit, putting the form back to what the ticket says. */
+  const cancelField = (name: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [name]: (ticket as unknown as Record<string, string | null>)[name] ?? '',
+    }));
+    setEditingField(null);
+    setFieldMsg('');
+  };
+
+  // Project, Epic and Flow are free text. The values people type are kept so they
+  // show up as options next time — behaviour the old bulk save owned.
+  const rememberOption = (kind: 'projects' | 'epics' | 'flows', value: string) => {
+    if (!value) return;
+    const key = `board-${kind}-${boardId}`;
+    const setOptions = {
+      projects: setProjectOptions,
+      epics: setEpicOptions,
+      flows: setFlowOptions,
+    }[kind];
+
+    try {
+      const stored = localStorage.getItem(key);
+      const existing: string[] = stored ? JSON.parse(stored) : [];
+      if (!existing.includes(value)) {
+        localStorage.setItem(key, JSON.stringify([...existing, value]));
       }
-      if (form.epic) {
-        const stored = localStorage.getItem(`board-epics-${boardId}`);
-        const existing: string[] = stored ? JSON.parse(stored) : [];
-        if (!existing.includes(form.epic)) {
-          const updated = [...existing, form.epic];
-          localStorage.setItem(`board-epics-${boardId}`, JSON.stringify(updated));
-          setEpicOptions((prev) => [...new Set([...prev, form.epic])]);
-        }
-      }
-      if (form.flow) {
-        const stored = localStorage.getItem(`board-flows-${boardId}`);
-        const existing: string[] = stored ? JSON.parse(stored) : [];
-        if (!existing.includes(form.flow)) {
-          const updated = [...existing, form.flow];
-          localStorage.setItem(`board-flows-${boardId}`, JSON.stringify(updated));
-          setFlowOptions((prev) => [...new Set([...prev, form.flow])]);
-        }
-      }
-    } finally { setSaving(false); }
+    } catch {
+      // Storage can be blocked; the option still shows for this session.
+    }
+    setOptions((prev) => [...new Set([...prev, value])]);
   };
 
   const deleteTicket = async () => {
-    if (!confirm('Delete this ticket?')) return;
-    await api.delete(`/tickets/${ticket.id}?boardId=${boardId}`);
-    onDelete(ticket.id);
+    setDeleting(true);
+    setDeleteMsg('');
+    try {
+      await api.delete(`/tickets/${ticket.id}?boardId=${boardId}`);
+      onDelete(ticket.id);
+    } catch (e: any) {
+      setDeleteMsg(e.response?.data?.error || 'Failed to delete ticket');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const addComment = async (e: React.FormEvent) => {
@@ -297,99 +410,59 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   };
 
   return (
+    <>
     <div
       className="fixed inset-0 flex items-end sm:items-center justify-center z-50"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-xl flex flex-col bg-white shadow-xl border border-gray-200"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Ticket: ${ticket.title}`}
+        tabIndex={-1}
+        className="w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-xl flex flex-col bg-white shadow-xl border border-gray-200 outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between px-4 sm:px-6 py-4 flex-shrink-0 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="flex-1 mr-4">
-            {editing ? (
+            {editingField === 'title' ? (
               <input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onBlur={() => commitField('title')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { e.stopPropagation(); cancelField('title'); }
+                  if (e.key === 'Enter') { e.preventDefault(); commitField('title'); }
+                }}
                 className="w-full text-lg font-bold text-gray-900 outline-none pb-1 bg-white"
                 style={{ borderBottom: '2px solid #e8390e' }}
                 autoFocus
               />
             ) : (
-              <h2 className="text-lg font-bold leading-snug" style={{ color: '#1a1f3c' }}>{ticket.title}</h2>
+              <button
+                type="button"
+                onClick={() => { setFieldMsg(''); setEditingField('title'); }}
+                aria-label="Edit title"
+                className="w-full text-left rounded outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+              >
+                <h2 className="text-lg font-bold leading-snug" style={{ color: '#1a1f3c' }}>{ticket.title}</h2>
+              </button>
             )}
             <p className="text-xs mt-1 text-gray-500">
               Created by {ticket.createdBy?.name} &middot; {formatDay(ticket.createdAt)}
             </p>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            {editing ? (
-              <>
-                <button
-                  onClick={save}
-                  disabled={saving}
-                  className="px-3 sm:px-4 py-1.5 min-h-[36px] rounded-lg text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50"
-                  style={{ background: '#c73009' }}
-                  onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
-                  onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#c73009'; }}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="px-3 sm:px-4 py-1.5 min-h-[36px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Mobile: icon buttons */}
-                <button
-                  onClick={() => setEditing(true)}
-                  aria-label="Edit ticket"
-                  className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300"
-                  title="Edit"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={deleteTicket}
-                  className="sm:hidden w-9 h-9 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-all duration-150"
-                  style={{ color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' }}
-                  title="Delete"
-                  aria-label="Delete ticket"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6l-1 14H6L5 6"/>
-                    <path d="M10 11v6M14 11v6"/>
-                    <path d="M9 6V4h6v2"/>
-                  </svg>
-                </button>
-                {/* Desktop: text buttons */}
-                <button
-                  onClick={() => setEditing(true)}
-                  className="hidden sm:block px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 bg-white transition-all duration-150 hover:border-gray-300 hover:text-gray-900"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={deleteTicket}
-                  className="hidden sm:block px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150"
-                  style={{ color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
-                >
-                  Delete
-                </button>
-              </>
-            )}
+            {/* Delete used to sit here beside Edit, shaded red, one click from
+                losing the ticket. There is no Edit mode any more — values are
+                edited in place — and delete is behind the menu. */}
+            <RowMenu
+              label={`Actions for ${ticket.title}`}
+              items={[{ label: 'Delete ticket', destructive: true, onSelect: () => setConfirmDelete(true) }]}
+            />
             <button
               onClick={onClose}
               aria-label="Close ticket"
@@ -405,11 +478,79 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
           {/* Left: details */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 lg:border-r border-gray-100">
 
+            {/* Description first: it is what people actually read. */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
+                    <path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/>
+                  </svg>
+                  Description
+                </label>
+                {editingField === 'description' ? (
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => commitField('description')}
+                      disabled={savingField === 'description'}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                      style={{ background: '#c73009' }}
+                    >
+                      {savingField === 'description' ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cancelField('description')}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium text-gray-600 border border-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setFieldMsg(''); setEditingField('description'); }}
+                    className="ml-auto text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              {editingField === 'description' ? (
+                <div onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); cancelField('description'); } }}>
+                  <RichTextEditor
+                    content={form.description}
+                    onChange={(html) => setForm({ ...form, description: html })}
+                    placeholder="Add a description..."
+                    minHeight={160}
+                  />
+                </div>
+              ) : ticket.description ? (
+                <RichTextView
+                  html={ticket.description}
+                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
+                  style={{ color: '#374151', minHeight: '120px' }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditingField('description')}
+                  className="w-full text-left rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50 hover:border-gray-300 transition-colors"
+                  style={{ color: '#6b7280', minHeight: '120px' }}
+                >
+                  No description yet — click to add one.
+                </button>
+              )}
+            </div>
+
             {/* Metadata grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 {
                   label: 'Assignee',
+                  name: 'assigneeId',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>,
                   editEl: (
                     <select
@@ -439,6 +580,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 boardType === 'kanban' ? {
                   label: 'Creator',
+                  name: '',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
                   editEl: null,
                   viewEl: (
@@ -449,6 +592,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   ),
                 } : {
                   label: 'Product Manager',
+                  name: 'productManagerId',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
                   editEl: (
                     <select
@@ -478,6 +623,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 {
                   label: 'Assigned Date',
+                  name: 'assignedDate',
+                  optional: true,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>,
                   editEl: (
                     <input
@@ -493,6 +640,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 {
                   label: 'Status',
+                  name: 'columnId',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>,
                   editEl: (
                     <select
@@ -520,6 +669,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 {
                   label: 'Type',
+                  name: 'type',
+                  optional: true,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/></svg>,
                   editEl: (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -549,6 +700,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 {
                   label: 'Priority',
+                  name: 'priority',
+                  optional: true,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.18L18 8v8l-6 3.75L6 16V8l6-3.82z"/></svg>,
                   editEl: (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -576,6 +729,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 {
                   label: 'Project',
+                  name: 'project',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.47 0 12 0S6 2.53 6 4.64c0 .48.11.92.18 1.36H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8-4c1.59 0 3 1.41 3 2.64 0 .47-.18.88-.45 1.36H9.45C9.18 5.52 9 5.11 9 4.64 9 3.41 10.41 2 12 2zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>,
                   editEl: (
                     <div className="relative mt-1.5">
@@ -614,6 +769,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 ...(boardType !== 'kanban' ? [{
                   label: 'Epic',
+                  name: 'epic',
+                  optional: true,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/></svg>,
                   editEl: (
                     <div className="relative mt-1.5">
@@ -654,6 +811,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 }] : []),
                 {
                   label: 'Flow',
+                  name: 'flow',
+                  optional: true,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>,
                   editEl: (
                     <div className="relative mt-1.5">
@@ -694,6 +853,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 },
                 ...((productFiles.length > 0 || ticket.productDoc) ? [{
                   label: 'Product Doc',
+                  name: 'productDocId',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
                   editEl: isAdmin ? (
                     <select
@@ -727,6 +888,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 }] : []),
                 ...(sprints.length > 0 ? [{
                   label: 'Sprint',
+                  name: 'sprintId',
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>,
                   editEl: isAdmin ? (
                     <select
@@ -753,47 +916,95 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     ) : <p className="mt-1.5 text-sm text-gray-500">—</p>;
                   })(),
                 }] : []),
-              ].map(({ label, icon, editEl, viewEl }) => (
-                <div key={label} className="rounded-lg p-3 bg-gray-50 border border-gray-100">
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5">
-                    <span className="text-gray-500">{icon}</span>
-                    {label}
-                  </label>
-                  {editing && editEl ? editEl : viewEl}
-                </div>
-              ))}
+              ]
+                .filter((f): f is NonNullable<typeof f> => Boolean(f))
+                // Empty optional fields are a row of "—" boxes that say nothing.
+                // They move behind "+ Add field" until asked for.
+                .filter((f) => !f.optional || !isFieldEmpty(f.name) || revealed.includes(f.name))
+                .map(({ label, icon, editEl, viewEl, name }) => {
+                  const isEditing = editingField === name;
+                  const canEdit = Boolean(editEl) && Boolean(name);
+
+                  return (
+                    <div key={label} className="rounded-lg p-3 bg-gray-50 border border-gray-100">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5">
+                        <span className="text-gray-500">{icon}</span>
+                        {label}
+                        {savingField === name && <span className="ml-auto text-xs font-normal normal-case text-gray-500">Saving…</span>}
+                      </label>
+
+                      {isEditing ? (
+                        <div
+                          // Blur commits, but only when focus leaves the field
+                          // entirely — a <select> moving focus internally should not save.
+                          onBlur={(e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) commitField(name);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              e.stopPropagation();
+                              cancelField(name);
+                            }
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              commitField(name);
+                            }
+                          }}
+                        >
+                          {editEl}
+                        </div>
+                      ) : canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => { setFieldMsg(''); setEditingField(name); }}
+                          aria-label={`Edit ${label}`}
+                          className="w-full text-left rounded outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                        >
+                          {viewEl}
+                        </button>
+                      ) : (
+                        viewEl
+                      )}
+                    </div>
+                  );
+                })}
             </div>
 
-            {/* Description */}
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
-                  <path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/>
-                </svg>
-                Description
-              </label>
-              {editing ? (
-                <RichTextEditor
-                  content={form.description}
-                  onChange={(html) => setForm({ ...form, description: html })}
-                  placeholder="Add a description..."
-                  minHeight={160}
-                />
-              ) : ticket.description ? (
-                <RichTextView
-                  html={ticket.description}
-                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
-                  style={{ color: '#374151', minHeight: '120px' }}
-                />
-              ) : (
-                <div
-                  className="rounded-lg px-3 py-2.5 text-sm leading-relaxed border border-gray-100 bg-gray-50"
-                  style={{ color: '#6b7280', minHeight: '120px' }}
+            {fieldMsg && <p role="alert" className="text-sm text-red-700">{fieldMsg}</p>}
+
+            {hiddenFields.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAddField((p) => !p)}
+                  aria-haspopup="menu"
+                  aria-expanded={showAddField}
+                  className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors"
                 >
-                  No description provided.
-                </div>
-              )}
-            </div>
+                  <span className="text-sm leading-none font-bold">+</span>
+                  Add field
+                </button>
+                {showAddField && (
+                  <div role="menu" className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[160px] py-1">
+                    {hiddenFields.map((f) => (
+                      <button
+                        key={f.name}
+                        role="menuitem"
+                        onClick={() => {
+                          setRevealed((prev) => [...prev, f.name]);
+                          setShowAddField(false);
+                          setEditingField(f.name);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
 
             {/* Sprint History (sprint boards only) */}
             {boardType !== 'kanban' && ticket.sprintId && (
@@ -1092,5 +1303,24 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
       </div>
       {viewingFile && <ProductFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />}
     </div>
+
+    {confirmDelete && (
+      <ConfirmByName
+        title="Delete ticket"
+        name={ticket.title}
+        description={
+          <>
+            This permanently deletes <strong>{ticket.title}</strong> and its comments.
+            It cannot be undone.
+          </>
+        }
+        confirmLabel="Delete ticket"
+        busy={deleting}
+        error={deleteMsg || null}
+        onCancel={() => { setConfirmDelete(false); setDeleteMsg(''); }}
+        onConfirm={deleteTicket}
+      />
+    )}
+    </>
   );
 }
