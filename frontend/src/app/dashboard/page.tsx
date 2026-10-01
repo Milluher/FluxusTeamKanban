@@ -5,8 +5,9 @@ import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
 import RowMenu from '@/components/RowMenu';
 import ConfirmByName from '@/components/ConfirmByName';
+import MyTicketsView from '@/components/MyTicketsView';
 import api from '@/lib/api';
-import { Board, User } from '@/types';
+import { AssignedTicket, Board, User } from '@/types';
 import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 
 export default function DashboardPage() {
@@ -20,6 +21,11 @@ export default function DashboardPage() {
   const [deleteBoard, setDeleteBoard] = useState<Board | null>(null);
   const [deletingBoard, setDeletingBoard] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState('');
+  // Landing view. Defaults to the work you have been given rather than a list of
+  // boards; the choice is remembered per person.
+  const [view, setView] = useState<'tickets' | 'boards'>('tickets');
+  const [myTickets, setMyTickets] = useState<AssignedTicket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -28,8 +34,37 @@ export default function DashboardPage() {
     const u = JSON.parse(stored);
     if (u.mustChangePassword) { router.push('/change-password'); return; }
     setUser(u);
+    try {
+      const saved = localStorage.getItem(`fluxus:dashboardView:${u.id}`);
+      if (saved === 'tickets' || saved === 'boards') setView(saved);
+    } catch {
+      // Storage can be blocked; the default stands.
+    }
     loadBoards();
+    loadMyTickets();
   }, []);
+
+  const loadMyTickets = async () => {
+    try {
+      const { data } = await api.get<AssignedTicket[]>('/tickets/assigned');
+      setMyTickets(data);
+    } catch {
+      // A board list is still useful if this fails; the empty state covers it.
+      setMyTickets([]);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const chooseView = (next: 'tickets' | 'boards') => {
+    setView(next);
+    if (!user) return;
+    try {
+      localStorage.setItem(`fluxus:dashboardView:${user.id}`, next);
+    } catch {
+      // Not persisting is acceptable.
+    }
+  };
 
   const loadBoards = async () => {
     try {
@@ -71,13 +106,45 @@ export default function DashboardPage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Page header */}
         <div className="flex items-center justify-between mb-5 sm:mb-7">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>Your Boards</h1>
-            <p className="text-sm mt-0.5 text-gray-500">
-              {boards.length} {boards.length === 1 ? 'board' : 'boards'} in your workspace
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>
+              {view === 'tickets' ? 'Your Tickets' : 'Your Boards'}
+            </h1>
+            <p className="text-sm mt-0.5 text-gray-600">
+              {view === 'tickets'
+                ? loadingTickets
+                  ? 'Loading your assigned work…'
+                  : `${myTickets.length} ${myTickets.length === 1 ? 'ticket' : 'tickets'} assigned to you`
+                : `${boards.length} ${boards.length === 1 ? 'board' : 'boards'} in your workspace`}
             </p>
           </div>
-          {user?.role === 'admin' && (<button
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex rounded-lg overflow-hidden text-xs font-semibold border border-gray-200">
+              <button
+                onClick={() => chooseView('tickets')}
+                aria-pressed={view === 'tickets'}
+                className="px-3 py-1.5 transition-all"
+                style={{
+                  background: view === 'tickets' ? '#1a1f3c' : 'white',
+                  color: view === 'tickets' ? 'white' : '#6b7280',
+                }}
+              >
+                My tickets{!loadingTickets && ` · ${myTickets.length}`}
+              </button>
+              <button
+                onClick={() => chooseView('boards')}
+                aria-pressed={view === 'boards'}
+                className="px-3 py-1.5 transition-all"
+                style={{
+                  background: view === 'boards' ? '#1a1f3c' : 'white',
+                  color: view === 'boards' ? 'white' : '#6b7280',
+                }}
+              >
+                Boards &middot; {boards.length}
+              </button>
+            </div>
+
+          {user?.role === 'admin' && view === 'boards' && (<button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold border transition-all duration-150"
             style={{
@@ -97,6 +164,7 @@ export default function DashboardPage() {
             <span className="text-base leading-none font-bold">+</span>
             New Board
           </button>)}
+          </div>
         </div>
 
         {/* Create board modal */}
@@ -196,8 +264,16 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {view === 'tickets' && (
+          <MyTicketsView
+            tickets={myTickets}
+            loading={loadingTickets}
+            onShowBoards={() => chooseView('boards')}
+          />
+        )}
+
         {/* Boards grid */}
-        {(() => {
+        {view === 'boards' && (() => {
           const myBoards = boards.filter((b) => (b as any).userRole === 'admin');
           const sharedBoards = boards.filter((b) => (b as any).userRole !== 'admin');
 
