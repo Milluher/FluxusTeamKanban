@@ -71,3 +71,17 @@ export function descriptionPreview(html: string | null | undefined): Description
   if (!html || !html.trim()) return { kind: 'empty' };
   return read(html, 0);
 }
+
+/**
+ * All the text in a description, checklist items included. Previews summarise a
+ * checklist as a tally, but search should still match what the items say.
+ */
+export function descriptionText(html: string | null | undefined): string {
+  if (!html || !html.trim()) return '';
+  const body = parseBody(html);
+  if (!body) return '';
+
+  const text = blockTexts(body).join(' ');
+  if (text && LOOKS_LIKE_MARKUP.test(text)) return descriptionText(text);
+  return text;
+}

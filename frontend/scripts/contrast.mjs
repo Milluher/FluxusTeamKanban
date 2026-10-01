@@ -81,6 +81,9 @@ const PAIRS = [
   // Sprint banner text on navy — already passing, asserted so it stays that way.
   ['Sprint dates on navy', NAVY, over('#ffffff', 0.5, NAVY), over('#ffffff', 0.75, NAVY), AA_TEXT],
   ['Inactive toggle on navy', NAVY, over('#ffffff', 0.65, NAVY), over('#ffffff', 0.65, NAVY), AA_TEXT],
+  // On the dark banner the brand tint needs a LIGHT text colour. Darkening it the
+  // way the rest of the sweep did made this one worse, not better.
+  ['Ticket count pill on navy', over('#e8390e', 0.2, NAVY), '#c73009', '#fdba74', AA_TEXT],
 
   // Left unchanged because they already pass; here to catch regressions.
   ['Changelog "Added"', '#e8f6ee', '#0f7b46', '#0f7b46', AA_TEXT],

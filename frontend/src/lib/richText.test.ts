@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descriptionPreview } from './richText';
+import { descriptionPreview, descriptionText } from './richText';
 
 describe('descriptionPreview', () => {
   it('reads a paragraph as plain text', () => {
@@ -79,5 +79,29 @@ describe('descriptionPreview', () => {
 
   it('keeps an image-only description out of the preview', () => {
     expect(descriptionPreview('<p><img src="x.png"></p>')).toEqual({ kind: 'empty' });
+  });
+});
+
+describe('descriptionText', () => {
+  it('returns the text of a paragraph description', () => {
+    expect(descriptionText('<p>Verify BVN</p><p>Then KYB</p>')).toBe('Verify BVN Then KYB');
+  });
+
+  it('includes checklist item text, which the preview summarises away', () => {
+    const html =
+      '<ul data-type="taskList">' +
+      '<li data-checked="true"><label><input type="checkbox" checked></label><div><p>Design review</p></div></li>' +
+      '<li data-checked="false"><label><input type="checkbox"></label><div><p>Ship it</p></div></li>' +
+      '</ul>';
+    expect(descriptionPreview(html)).toEqual({ kind: 'checklist', done: 1, total: 2 });
+    expect(descriptionText(html)).toBe('Design review Ship it');
+  });
+
+  it('is empty for missing or text-free content, and never leaks markup', () => {
+    expect(descriptionText(null)).toBe('');
+    expect(descriptionText('<p>  </p>')).toBe('');
+    expect(descriptionText('<p><img src="x.png"></p>')).toBe('');
+    expect(descriptionText('&lt;p&gt;Escaped&lt;/p&gt;')).toBe('Escaped');
+    expect(descriptionText('<p>Unclosed <b>bold')).toBe('Unclosed bold');
   });
 });
