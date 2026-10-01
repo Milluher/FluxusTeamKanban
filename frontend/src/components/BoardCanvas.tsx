@@ -211,7 +211,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
             {active && (
               <button
                 onClick={() => openModal({ kind: 'delete-project', project: active })}
-                className="text-xs font-semibold px-2 py-1 rounded-lg transition-all duration-150 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                className="text-xs font-semibold px-2 py-1 rounded-lg transition-all duration-150 text-gray-500 hover:text-red-700 hover:bg-red-50"
                 title="Delete current project"
               >
                 Delete
@@ -237,7 +237,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
           {projects.length === 0 ? (
             <EmptyState isAdmin={isAdmin} onAdd={() => openModal({ kind: 'add-project' })} />
           ) : !active ? null : active.blocks.length === 0 && !isAdmin ? (
-            <p className="text-xs text-gray-400 py-6 text-center">No overview blocks yet for this project.</p>
+            <p className="text-xs text-gray-500 py-6 text-center">No overview blocks yet for this project.</p>
           ) : (
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {active.blocks.map((block) => (
@@ -259,14 +259,14 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                     >
                       {block.title}
                     </h4>
-                    <span className="ml-auto text-[10px] font-semibold text-gray-400 flex-shrink-0">
+                    <span className="ml-auto text-[10px] font-semibold text-gray-500 flex-shrink-0">
                       {block.features.length}
                     </span>
                     {isAdmin && (
                       <button
                         onClick={() => openModal({ kind: 'delete-block', block })}
                         aria-label={`Remove section ${block.title}`}
-                        className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
                         title="Remove block"
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -279,7 +279,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                   {/* Features */}
                   <div className="flex-1 p-2.5 space-y-1.5">
                     {block.features.length === 0 && (
-                      <p className="text-[11px] text-gray-300 px-1 py-2">No features listed.</p>
+                      <p className="text-[11px] text-gray-500 px-1 py-2">No features listed.</p>
                     )}
                     {block.features.map((f) => (
                       <div key={f.id} className="flex items-start gap-2 group">
@@ -310,7 +310,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                           <div className="flex items-center gap-0.5 flex-shrink-0">
                             <button
                               onClick={() => toggleFeature(block, f)}
-                              className={`${f.active ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'} w-4 h-4 flex items-center justify-center rounded transition-all ${f.active ? 'text-gray-300 hover:text-amber-600' : 'text-amber-600 hover:text-green-600'}`}
+                              className={`${f.active ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'} w-4 h-4 flex items-center justify-center rounded transition-all ${f.active ? 'text-gray-500 hover:text-amber-700' : 'text-amber-700 hover:text-green-700'}`}
                               title={f.active ? 'Mark as no longer active' : 'Mark as active again'}
                             >
                               {f.active ? (
@@ -326,7 +326,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
                             <button
                               onClick={() => deleteFeature(block, f.id)}
                               aria-label={`Remove feature ${f.text}`}
-                              className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-300 hover:text-red-500 transition-all"
+                              className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-500 hover:text-red-700 transition-all"
                               title="Remove feature"
                             >
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -358,7 +358,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
               {isAdmin && (
                 <button
                   onClick={() => openModal({ kind: 'add-block' })}
-                  className="rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 py-8 text-gray-400 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all min-h-[120px]"
+                  className="rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 py-8 text-gray-500 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all min-h-[120px]"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -383,7 +383,7 @@ export default function BoardCanvas({ boardId, isAdmin }: Props) {
           >
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-base" style={{ color: NAVY }}>{MODAL_TITLES[modal.kind]}</h3>
-              <button onClick={closeModal} aria-label={`Close ${MODAL_TITLES[modal.kind]}`} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={closeModal} aria-label={`Close ${MODAL_TITLES[modal.kind]}`} className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
 
             {isConfirmModal ? (
@@ -463,7 +463,7 @@ function EmptyState({ isAdmin, onAdd }: { isAdmin: boolean; onAdd: () => void })
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <p className="text-sm font-semibold text-gray-500 mb-1">No project overview yet</p>
-      <p className="text-xs text-gray-400 mb-3">
+      <p className="text-xs text-gray-500 mb-3">
         {isAdmin
           ? 'Add a project, then create blocks (e.g. Security) to show its available features.'
           : 'An admin needs to set up the project overview.'}

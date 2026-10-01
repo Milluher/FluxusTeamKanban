@@ -7,17 +7,17 @@ const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false })
 
 const TICKET_TYPES = [
   { value: 'mobile', label: 'Mobile', color: 'bg-blue-50 text-blue-600 border-blue-200' },
-  { value: 'design', label: 'Design', color: 'bg-pink-50 text-pink-600 border-pink-200' },
+  { value: 'design', label: 'Design', color: 'bg-pink-50 text-pink-700 border-pink-200' },
   { value: 'product', label: 'Product', color: 'bg-purple-50 text-purple-600 border-purple-200' },
   { value: 'backend', label: 'Backend', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-600 border-green-200' },
+  { value: 'frontend', label: 'Frontend', color: 'bg-green-50 text-green-700 border-green-200' },
 ];
 
 const PRIORITIES = [
   { value: 'low',    label: 'Low',       style: { color: '#6b7280', background: '#f9fafb', border: '1px solid #d1d5db' } },
   { value: 'medium', label: 'Medium',    style: { color: '#b45309', background: '#fffbeb', border: '1px solid #fcd34d' } },
-  { value: 'high',   label: 'High',      style: { color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa' } },
-  { value: 'urgent', label: 'Urgent 🔥', style: { color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' } },
+  { value: 'high',   label: 'High',      style: { color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa' } },
+  { value: 'urgent', label: 'Urgent 🔥', style: { color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' } },
 ];
 
 interface Props {
@@ -176,7 +176,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
           <button
             onClick={onClose}
             aria-label="Close new ticket dialog"
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-lg text-gray-400 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-lg text-gray-500 bg-gray-100 transition-all duration-150 hover:bg-gray-200 hover:text-gray-700"
           >
             ×
           </button>
@@ -186,14 +186,14 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
         <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-              Title <span className="text-red-500">*</span>
+              Title <span className="text-red-700">*</span>
             </label>
             <input
               autoFocus
               type="text"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="px-3 py-2.5 text-sm placeholder-gray-400 transition-all duration-150"
+              className="px-3 py-2.5 text-sm placeholder-gray-500 transition-all duration-150"
               style={inputStyle}
               {...focusHandlers}
               placeholder="What needs to be done?"
@@ -426,7 +426,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                 <option value="">None</option>
                 {productFiles.map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
               </select>
-              <p className="text-xs text-gray-400 mt-1.5">Reference the product file this ticket falls under.</p>
+              <p className="text-xs text-gray-500 mt-1.5">Reference the product file this ticket falls under.</p>
             </div>
           )}
 
@@ -470,7 +470,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                   value={depSearch}
                   onChange={(e) => searchDeps(e.target.value)}
                   placeholder="Search tickets..."
-                  className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 transition-all duration-150"
+                  className="w-full px-3 py-2.5 text-sm text-gray-800 placeholder-gray-500 transition-all duration-150"
                   style={inputStyle}
                   {...focusHandlers}
                 />
@@ -494,7 +494,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                   </div>
                 )}
                 {depResults.length === 0 && depSearch.length > 0 && (
-                  <p className="text-xs text-gray-400 mt-1.5 px-1">No tickets found</p>
+                  <p className="text-xs text-gray-500 mt-1.5 px-1">No tickets found</p>
                 )}
               </div>
             )}
@@ -514,7 +514,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                     <button
                       type="button"
                       onClick={() => setSelectedDeps((prev) => prev.filter((d) => d.id !== dep.id))}
-                      className="text-xs font-medium ml-2 flex-shrink-0 px-2 py-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-150"
+                      className="text-xs font-medium ml-2 flex-shrink-0 px-2 py-1 rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all duration-150"
                     >
                       Remove
                     </button>

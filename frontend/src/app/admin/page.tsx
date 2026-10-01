@@ -89,7 +89,7 @@ export default function AdminPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa]">
-      <p className="text-sm text-gray-400">Loading...</p>
+      <p className="text-sm text-gray-500">Loading...</p>
     </div>
   );
 
@@ -120,7 +120,7 @@ export default function AdminPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">{u.name}</p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
                     {u.email === 'femi@fluxx.ng' ? 'super-admin' : u.role}
                   </span>
                 </div>
@@ -131,11 +131,11 @@ export default function AdminPage() {
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <button onClick={() => generateLink(u)} className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 min-h-[32px]">Reset pw</button>
                   {isSuperAdmin && (
-                    <button onClick={() => toggleRole(u)} className={`text-xs border rounded-lg px-3 py-1.5 min-h-[32px] ${u.role === 'admin' ? 'border-orange-200 text-orange-600' : 'border-blue-200 text-blue-600'}`}>
+                    <button onClick={() => toggleRole(u)} className={`text-xs border rounded-lg px-3 py-1.5 min-h-[32px] ${u.role === 'admin' ? 'border-orange-200 text-orange-700' : 'border-blue-200 text-blue-600'}`}>
                       {u.role === 'admin' ? 'Revoke admin' : 'Make admin'}
                     </button>
                   )}
-                  <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-500 min-h-[32px]">Delete</button>
+                  <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-700 min-h-[32px]">Delete</button>
                 </div>
               )}
             </div>
@@ -165,7 +165,7 @@ export default function AdminPage() {
                   </td>
                   <td className="px-5 py-3 text-gray-500">{u.email}</td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.email === 'femi@fluxx.ng' ? 'bg-orange-50 text-orange-600' : u.role === 'admin' ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.email === 'femi@fluxx.ng' ? 'bg-orange-50 text-orange-700' : u.role === 'admin' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
                       {u.email === 'femi@fluxx.ng' ? 'super-admin' : u.role}
                     </span>
                   </td>
@@ -179,11 +179,11 @@ export default function AdminPage() {
                           Reset Password
                         </button>
                         {isSuperAdmin && (
-                          <button onClick={() => toggleRole(u)} className={`text-xs border rounded px-2 py-1 transition-colors ${u.role === 'admin' ? 'border-orange-200 text-orange-500 hover:border-orange-400' : 'border-blue-200 text-blue-500 hover:border-blue-400'}`}>
+                          <button onClick={() => toggleRole(u)} className={`text-xs border rounded px-2 py-1 transition-colors ${u.role === 'admin' ? 'border-orange-200 text-orange-700 hover:border-orange-400' : 'border-blue-200 text-blue-700 hover:border-blue-400'}`}>
                             {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
                           </button>
                         )}
-                        <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs text-red-500 hover:text-red-700 border border-red-200 rounded px-2 py-1 hover:border-red-400 transition-colors">
+                        <button onClick={() => { setDeleteConfirm(u); setDeleteMsg(''); }} className="text-xs text-red-700 hover:text-red-700 border border-red-200 rounded px-2 py-1 hover:border-red-400 transition-colors">
                           Delete
                         </button>
                       </div>
@@ -202,11 +202,11 @@ export default function AdminPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold" style={{ color: '#1a1f3c' }}>Password Reset Link</h3>
-              <button onClick={() => setLinkModal(null)} aria-label="Close password reset link" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setLinkModal(null)} aria-label="Close password reset link" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <p className="text-sm text-gray-500 mb-4">Share this link with <strong>{linkModal.name}</strong>. It expires in 24 hours.</p>
-            {generatingLink && <p className="text-sm text-gray-400">Generating link...</p>}
-            {linkMsg && <p className="text-sm text-red-500">{linkMsg}</p>}
+            {generatingLink && <p className="text-sm text-gray-500">Generating link...</p>}
+            {linkMsg && <p className="text-sm text-red-700">{linkMsg}</p>}
             {resetLink && (
               <div className="space-y-3">
                 <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-xs text-gray-600 break-all font-mono">
@@ -231,7 +231,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-red-600">Delete User</h3>
-              <button onClick={() => setDeleteConfirm(null)} aria-label="Close delete user dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setDeleteConfirm(null)} aria-label="Close delete user dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
               <img src={avatarUrl(deleteConfirm.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={deleteConfirm.name} />
@@ -241,8 +241,8 @@ export default function AdminPage() {
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-1">This will permanently remove <strong>{deleteConfirm.name}</strong> from the workspace.</p>
-            <p className="text-xs text-gray-400 mb-5">Their ticket history will be preserved. Board memberships and comments will be removed.</p>
-            {deleteMsg && <p className="text-sm text-red-500 mb-3">{deleteMsg}</p>}
+            <p className="text-xs text-gray-500 mb-5">Their ticket history will be preserved. Board memberships and comments will be removed.</p>
+            {deleteMsg && <p className="text-sm text-red-700 mb-3">{deleteMsg}</p>}
             <div className="flex gap-2">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-medium text-gray-600 border border-gray-200">Cancel</button>
               <button onClick={deleteUser} disabled={deleting} className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">

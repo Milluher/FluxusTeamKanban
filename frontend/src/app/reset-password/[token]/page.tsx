@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
     }
   };
 
-  const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 bg-white transition-all duration-150";
+  const inputBase = "w-full rounded-lg px-4 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-500 outline-none border border-gray-200 bg-white transition-all duration-150";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">

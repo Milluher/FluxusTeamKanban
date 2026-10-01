@@ -102,7 +102,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
           </svg>
           Product Files
           {files.length > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-gray-400 bg-gray-100">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-gray-500 bg-gray-100">
               {files.length}
             </span>
           )}
@@ -128,7 +128,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
           {files.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <p className="text-sm font-semibold text-gray-500 mb-1">No product files yet</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {isAdmin
                   ? 'Add a Google Drive (or other) link so the team can read the product info.'
                   : 'An admin needs to add product files.'}
@@ -163,7 +163,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                     <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
                       <button
                         onClick={() => openModal({ kind: 'edit', file })}
-                        className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                        className="w-6 h-6 flex items-center justify-center rounded text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all"
                         title="Edit"
                         aria-label={`Edit ${file.title}`}
                       >
@@ -174,7 +174,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                       </button>
                       <button
                         onClick={() => openModal({ kind: 'delete', file })}
-                        className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="w-6 h-6 flex items-center justify-center rounded text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
                         title="Remove"
                         aria-label={`Remove ${file.title}`}
                       >
@@ -202,7 +202,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
               <h3 className="font-semibold text-base" style={{ color: NAVY }}>
                 {modal.kind === 'add' ? 'Add Product File' : modal.kind === 'edit' ? 'Edit Product File' : 'Remove Product File'}
               </h3>
-              <button onClick={closeModal} aria-label="Close product file dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={closeModal} aria-label="Close product file dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
 
             {isDelete ? (
@@ -222,7 +222,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
             ) : (
               <form onSubmit={(e) => { e.preventDefault(); submitModal(); }} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">File Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">File Name <span className="text-red-700">*</span></label>
                   <input
                     autoFocus
                     type="text"
@@ -236,7 +236,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Link <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Link <span className="text-red-700">*</span></label>
                   <input
                     type="url"
                     value={form.url}
@@ -247,7 +247,7 @@ export default function ProductFiles({ boardId, isAdmin }: Props) {
                     onFocus={(e) => { e.currentTarget.style.borderColor = ACCENT; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)'; }}
                     onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
-                  <p className="text-xs text-gray-400 mt-1.5">Paste a shareable Google Drive link (set to “anyone with the link”) so it can open in the browser.</p>
+                  <p className="text-xs text-gray-500 mt-1.5">Paste a shareable Google Drive link (set to “anyone with the link”) so it can open in the browser.</p>
                 </div>
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <div className="flex gap-2">

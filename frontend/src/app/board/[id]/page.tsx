@@ -460,7 +460,7 @@ export default function BoardPage() {
           className="w-8 h-8 rounded-lg animate-pulse"
           style={{ background: '#1a1f3c' }}
         />
-        <p className="text-sm text-gray-400">Loading board...</p>
+        <p className="text-sm text-gray-500">Loading board...</p>
       </div>
     </div>
   );
@@ -581,7 +581,7 @@ export default function BoardPage() {
           {/* Back link — arrow only on mobile, arrow + text on desktop */}
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1 text-sm font-medium text-gray-400 transition-all duration-150 hover:text-gray-800 min-h-[44px] flex-shrink-0"
+            className="flex items-center gap-1 text-sm font-medium text-gray-500 transition-all duration-150 hover:text-gray-800 min-h-[44px] flex-shrink-0"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -626,7 +626,7 @@ export default function BoardPage() {
 
             {showMembersPanel && (
               <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[220px] py-2">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-1 pb-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 pt-1 pb-2">
                   {board.members.length} {board.members.length === 1 ? 'Member' : 'Members'}
                 </p>
                 {board.members.map((m) => {
@@ -636,14 +636,14 @@ export default function BoardPage() {
                       <img src={avatarUrl(m.user.name)} className="w-8 h-8 rounded-full flex-shrink-0" alt={m.user.name} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-800 truncate">{m.user.name}</p>
-                        <p className="text-xs text-gray-400 capitalize">{m.role}</p>
+                        <p className="text-xs text-gray-500 capitalize">{m.role}</p>
                       </div>
                       {isCurrentUserBoardAdmin && m.user.id !== currentUser?.id && (
                         <button
                           onClick={() => removeMember(m.user.id)}
                           title="Remove from board"
                           aria-label={`Remove ${m.user.name} from board`}
-                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 transition-all"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -816,7 +816,7 @@ export default function BoardPage() {
           )}
 
           {/* Label */}
-          <div className="flex items-center gap-1.5 flex-shrink-0 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+          <div className="flex items-center gap-1.5 flex-shrink-0 text-xs font-semibold text-gray-500 uppercase tracking-wide">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
             </svg>
@@ -830,8 +830,8 @@ export default function BoardPage() {
                 const cfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
                   low:    { label: 'Low',       color: '#6b7280', bg: '#f9fafb', border: '#d1d5db' },
                   medium: { label: 'Medium',    color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
-                  high:   { label: 'High',      color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-                  urgent: { label: 'Urgent 🔥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                  high:   { label: 'High',      color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+                  urgent: { label: 'Urgent 🔥', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
                 };
                 const c = cfg[p];
                 const active = filterPriority === p;
@@ -943,7 +943,7 @@ export default function BoardPage() {
 
           {/* No filterable content placeholder */}
           {uniquePriorities.length === 0 && uniqueTypes.length === 0 && uniqueProjects.length === 0 && uniqueEpics.length === 0 && uniqueFlows.length === 0 && (
-            <span className="text-xs text-gray-300">No filters available</span>
+            <span className="text-xs text-gray-500">No filters available</span>
           )}
         </div>
       )}
@@ -986,7 +986,7 @@ export default function BoardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold" style={{ color: '#1a1f3c' }}>Sprints</h2>
-              <p className="text-sm text-gray-400 mt-0.5">{board.name}</p>
+              <p className="text-sm text-gray-600 mt-0.5">{board.name}</p>
             </div>
             {isAdmin && (
               <button
@@ -1019,8 +1019,8 @@ export default function BoardPage() {
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-gray-500 mb-1">No sprints yet</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-sm font-semibold text-gray-700 mb-1">No sprints yet</p>
+              <p className="text-xs text-gray-600">
                 {isAdmin ? 'Create your first sprint to get started.' : 'An admin needs to create sprints for this board.'}
               </p>
             </div>
@@ -1028,8 +1028,8 @@ export default function BoardPage() {
             (() => {
               const sprintCols: { key: string; label: string; color: string; bg: string; border: string }[] = [
                 { key: 'backlog', label: 'Backlog', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
-                { key: 'active', label: 'Active', color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd' },
-                { key: 'completed', label: 'Completed', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                { key: 'active', label: 'Active', color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
+                { key: 'completed', label: 'Completed', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
               ];
               return (
                 <div className="flex gap-4 overflow-x-auto pb-2" style={{ minHeight: 200 }}>
@@ -1067,7 +1067,7 @@ export default function BoardPage() {
                               <div className="absolute top-2.5 right-2.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); openDateEditor(sprint); }}
-                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition-all"
                                   title="Edit dates"
                                   aria-label={`Edit dates for ${sprint.title}`}
                                 >
@@ -1079,7 +1079,7 @@ export default function BoardPage() {
                                 <button
                                   onClick={(e) => { e.stopPropagation(); deleteSprint(sprint.id); }}
                                   disabled={deletingSprintId === sprint.id}
-                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-50 transition-all"
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition-all"
                                   title="Delete sprint"
                                 >
                                   {deletingSprintId === sprint.id ? (
@@ -1117,7 +1117,7 @@ export default function BoardPage() {
                                     <button
                                       onClick={(e) => { e.stopPropagation(); openDateEditor(sprint); }}
                                       className="font-medium underline decoration-dotted underline-offset-2"
-                                      style={{ color: '#0284c7' }}
+                                      style={{ color: '#0369a1' }}
                                     >
                                       Set dates
                                     </button>
@@ -1151,8 +1151,8 @@ export default function BoardPage() {
                                   <button
                                     onClick={() => moveSprint(sprint.id, 'active')}
                                     className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
-                                    style={{ background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0ea5e9'; e.currentTarget.style.color = 'white'; }}
+                                    style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0369a1'; e.currentTarget.style.color = 'white'; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f9ff'; e.currentTarget.style.color = '#0ea5e9'; }}
                                   >
                                     Start &rarr;
@@ -1172,8 +1172,8 @@ export default function BoardPage() {
                                     <button
                                       onClick={() => moveSprint(sprint.id, 'completed')}
                                       className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
-                                      style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = 'white'; }}
+                                      style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = '#15803d'; e.currentTarget.style.color = 'white'; }}
                                       onMouseLeave={(e) => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
                                     >
                                       Complete ✓
@@ -1184,8 +1184,8 @@ export default function BoardPage() {
                                   <button
                                     onClick={() => moveSprint(sprint.id, 'active')}
                                     className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all"
-                                    style={{ background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0ea5e9'; e.currentTarget.style.color = 'white'; }}
+                                    style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0369a1'; e.currentTarget.style.color = 'white'; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f9ff'; e.currentTarget.style.color = '#0ea5e9'; }}
                                   >
                                     &larr; Reopen
@@ -1198,7 +1198,7 @@ export default function BoardPage() {
 
                         {colSprints.length === 0 && (
                           <div
-                            className="rounded-xl border border-dashed p-6 text-center text-xs text-gray-400"
+                            className="rounded-xl border border-dashed p-6 text-center text-xs text-gray-600"
                             style={{ borderColor: col.border }}
                           >
                             No {col.label.toLowerCase()} sprints
@@ -1291,7 +1291,7 @@ export default function BoardPage() {
           <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>Edit Sprint Dates</h3>
-              <button onClick={() => setEditDatesSprintId(null)} aria-label="Close edit sprint dates" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setEditDatesSprintId(null)} aria-label="Close edit sprint dates" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <form onSubmit={updateSprintDates} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -1342,11 +1342,11 @@ export default function BoardPage() {
           <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>New Sprint</h3>
-              <button onClick={() => { setShowCreateSprint(false); setSprintForm({ title: '', startDate: '', endDate: '' }); }} aria-label="Close new sprint dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => { setShowCreateSprint(false); setSprintForm({ title: '', startDate: '', endDate: '' }); }} aria-label="Close new sprint dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <form onSubmit={createSprint} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sprint Title <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sprint Title <span className="text-red-700">*</span></label>
                 <input
                   autoFocus
                   type="text"
