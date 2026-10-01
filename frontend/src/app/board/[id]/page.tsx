@@ -642,6 +642,7 @@ export default function BoardPage() {
                         <button
                           onClick={() => removeMember(m.user.id)}
                           title="Remove from board"
+                          aria-label={`Remove ${m.user.name} from board`}
                           className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1068,6 +1069,7 @@ export default function BoardPage() {
                                   onClick={(e) => { e.stopPropagation(); openDateEditor(sprint); }}
                                   className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
                                   title="Edit dates"
+                                  aria-label={`Edit dates for ${sprint.title}`}
                                 >
                                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -1095,7 +1097,15 @@ export default function BoardPage() {
                             )}
 
                             {/* Title */}
-                            <h3 className="text-sm font-bold pr-7 mb-1" style={{ color: '#1a1f3c' }}>{sprint.title}</h3>
+                            <h3 className="text-sm font-bold pr-7 mb-1" style={{ color: '#1a1f3c' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setActiveSprint(sprint); }}
+                                className="text-left rounded outline-none hover:underline focus-visible:underline"
+                              >
+                                {sprint.title}
+                              </button>
+                            </h3>
 
                             {/* Date range */}
                             {(() => {
@@ -1281,7 +1291,7 @@ export default function BoardPage() {
           <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>Edit Sprint Dates</h3>
-              <button onClick={() => setEditDatesSprintId(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setEditDatesSprintId(null)} aria-label="Close edit sprint dates" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <form onSubmit={updateSprintDates} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -1332,7 +1342,7 @@ export default function BoardPage() {
           <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>New Sprint</h3>
-              <button onClick={() => { setShowCreateSprint(false); setSprintForm({ title: '', startDate: '', endDate: '' }); }} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => { setShowCreateSprint(false); setSprintForm({ title: '', startDate: '', endDate: '' }); }} aria-label="Close new sprint dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <form onSubmit={createSprint} className="space-y-4">
               <div>

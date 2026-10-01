@@ -202,7 +202,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold" style={{ color: '#1a1f3c' }}>Password Reset Link</h3>
-              <button onClick={() => setLinkModal(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setLinkModal(null)} aria-label="Close password reset link" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <p className="text-sm text-gray-500 mb-4">Share this link with <strong>{linkModal.name}</strong>. It expires in 24 hours.</p>
             {generatingLink && <p className="text-sm text-gray-400">Generating link...</p>}
@@ -231,7 +231,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-red-600">Delete User</h3>
-              <button onClick={() => setDeleteConfirm(null)} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={() => setDeleteConfirm(null)} aria-label="Close delete user dialog" className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
               <img src={avatarUrl(deleteConfirm.name)} className="w-10 h-10 rounded-full flex-shrink-0" alt={deleteConfirm.name} />

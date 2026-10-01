@@ -44,7 +44,7 @@ export default function AuthPage() {
           {/* Logo + Brand */}
           <div className="flex items-center justify-center gap-2.5 mb-8">
             <Image src="/logo.png" width={40} height={40} alt="Fluxus" className="rounded-lg" />
-            <span className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
+            <h1 className="text-xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>FluxusTeam</h1>
           </div>
 
           {/* Tab switcher — underline style */}

@@ -55,6 +55,7 @@ export default function KanbanColumn({ column, onTicketClick, onAddTicket, activ
           onClick={() => onAddTicket(column.id)}
           className="w-7 h-7 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:w-6 sm:h-6 rounded-md flex items-center justify-center text-base leading-none font-medium text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
           title="Add ticket"
+          aria-label={`Add ticket to ${column.name}`}
         >
           +
         </button>

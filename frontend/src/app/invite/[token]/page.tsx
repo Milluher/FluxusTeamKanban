@@ -84,7 +84,7 @@ export default function InvitePage() {
           <span className="font-bold text-lg" style={{ color: '#1a1f3c' }}>FluxusTeam</span>
         </div>
 
-        <h2 className="text-xl font-bold mb-1" style={{ color: '#1a1f3c' }}>You're invited!</h2>
+        <h1 className="text-xl font-bold mb-1" style={{ color: '#1a1f3c' }}>You're invited!</h1>
         <p className="text-sm text-gray-500 mb-6">Join <strong>{invite?.boardName}</strong> on FluxusTeam</p>
 
         <div className="flex rounded-lg overflow-hidden border border-gray-200 mb-5">

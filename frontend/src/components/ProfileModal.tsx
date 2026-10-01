@@ -49,7 +49,7 @@ export default function ProfileModal({ user, onClose, onLogout }: Props) {
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-base" style={{ color: '#1a1f3c' }}>My Profile</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+          <button onClick={onClose} aria-label="Close profile" className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
         </div>
 
         <div className="px-5 py-5 space-y-6">
