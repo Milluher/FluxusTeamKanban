@@ -30,9 +30,20 @@ cd backend && npm run dev
 cd frontend && npm run dev
 ```
 
-### 4. Open http://localhost:3000
+### 4. Point the frontend at your local backend
 
-**Demo credentials:**
-- admin@fluxus.com / password123
-- alice@fluxus.com / password123
-- bob@fluxus.com / password123
+`frontend/src/lib/api.ts` hardcodes the deployed API, so a local frontend talks to
+the deployed backend rather than the one you just started. Change `baseURL` to
+`http://localhost:4000/api` (or whatever `PORT` the backend logs) while working
+locally.
+
+### 5. Open http://localhost:3000
+
+**Sign in.** `npm run db:seed` creates one admin user, `femi@fluxx.ng`, with the
+password set in `backend/prisma/seed.js`. Change it after your first sign-in —
+that password is committed to this repository, and the account is the super-admin
+that the admin screens exempt from every guard.
+
+The seed only runs against an empty database: it counts users first and skips if
+any exist. So it will not reset a password or recreate a user you deleted, and it
+is safe to leave in the backend's start command.
