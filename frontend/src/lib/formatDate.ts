@@ -1,17 +1,33 @@
 // One date format for the whole app: "15 May 2026" — unambiguous in both the UK
 // and Nigeria, unlike 15/05/2026 vs 05/15/2026.
 
-// Sprint dates are calendar days, not instants. Prisma returns them as UTC
-// midnight ISO strings, so parsing with `new Date()` and reading local getters
-// shifts the day backwards west of UTC. Read the date parts directly instead.
-function toLocalDate(value: string | Date | null | undefined): Date | null {
+// Two kinds of value arrive here and they must not be treated alike.
+//
+// A *calendar day* — a sprint's start or end, an assigned date — is stored by
+// Prisma as UTC midnight. Parsing that as an instant and reading local getters
+// shifts the day backwards anywhere west of UTC, so 12 Oct displays as 11 Oct.
+// Those are read from their date parts.
+//
+// An *instant* — a comment's createdAt, a last login — carries a real time of
+// day. Truncating it to a date would make "3h ago" mean "hours since local
+// midnight", so those are parsed normally.
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const UTC_MIDNIGHT = /^(\d{4})-(\d{2})-(\d{2})T00:00:00(?:\.000)?Z$/;
+
+function toCalendarDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
 
-  const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  const parts = DATE_ONLY.exec(value) ?? UTC_MIDNIGHT.exec(value);
   if (parts) return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
 
   const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function toInstant(value: string | Date | null | undefined): Date | null {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -30,7 +46,7 @@ const daysBetween = (from: Date, to: Date) =>
 
 /** "15 May 2026", or null when there is no usable date. */
 export function formatDay(value: string | Date | null | undefined): string | null {
-  const date = toLocalDate(value);
+  const date = toCalendarDate(value);
   if (!date) return null;
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
@@ -44,8 +60,8 @@ export function formatDateRange(
   end: string | Date | null | undefined,
   now: Date = new Date()
 ): string | null {
-  const from = toLocalDate(start);
-  const to = toLocalDate(end);
+  const from = toCalendarDate(start);
+  const to = toCalendarDate(end);
 
   if (!from && !to) return null;
   if (from && !to) return `From ${formatDay(from)}`;
@@ -77,8 +93,8 @@ export function formatSprintTiming(
   end: string | Date | null | undefined,
   now: Date = new Date()
 ): string | null {
-  const from = toLocalDate(start);
-  const to = toLocalDate(end);
+  const from = toCalendarDate(start);
+  const to = toCalendarDate(end);
 
   if (from) {
     const untilStart = daysBetween(now, from);
@@ -113,7 +129,7 @@ export function formatSprintDates(
  * Null once it is a week old, where a date reads better than a day count.
  */
 export function formatTimeAgo(value: string | Date | null | undefined, now: Date = new Date()): string | null {
-  const date = toLocalDate(value);
+  const date = toInstant(value);
   if (!date) return null;
 
   const minutes = Math.floor((now.getTime() - date.getTime()) / 60_000);

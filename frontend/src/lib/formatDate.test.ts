@@ -110,3 +110,30 @@ describe('formatTimestamp', () => {
     expect(formatTimestamp(new Date(2026, 4, 15, 9, 0), now)).toBe('15 May 2026');
   });
 });
+
+describe('calendar days versus instants', () => {
+  it('reads a stored calendar day from its date parts, whatever the timezone', () => {
+    // Prisma stores a sprint date as UTC midnight. Parsed as an instant this
+    // would display as the previous day anywhere west of UTC.
+    expect(formatDay('2026-10-12T00:00:00.000Z')).toBe('12 Oct 2026');
+    expect(formatDay('2026-10-12')).toBe('12 Oct 2026');
+    expect(formatDateRange('2026-10-12T00:00:00.000Z', '2026-10-26T00:00:00.000Z', NOW)).toBe('12–26 Oct');
+  });
+
+  it('keeps the time of day on a real timestamp', () => {
+    // The bug this covers: the date-only prefix of an ISO timestamp used to be
+    // matched too, so "3h ago" became "hours since local midnight".
+    const now = new Date(2026, 9, 16, 15, 0, 0);
+    const threeHoursEarlier = new Date(2026, 9, 16, 12, 0, 0).toISOString();
+    expect(formatTimeAgo(threeHoursEarlier, now)).toBe('3h ago');
+
+    const aMinuteEarlier = new Date(2026, 9, 16, 14, 59, 30).toISOString();
+    expect(formatTimeAgo(aMinuteEarlier, now)).toBe('just now');
+  });
+
+  it('is relative for a recent ISO timestamp, not a date', () => {
+    const now = new Date(2026, 9, 16, 15, 0, 0);
+    const iso = new Date(2026, 9, 15, 15, 0, 0).toISOString();
+    expect(formatTimestamp(iso, now)).toBe('1d ago');
+  });
+});
