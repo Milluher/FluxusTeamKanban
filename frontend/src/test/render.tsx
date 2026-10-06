@@ -37,18 +37,21 @@ export function renderToDom(element: ReactElement): {
 }
 
 /**
- * Types into a controlled input the way a person would.
+ * Types into a controlled input or textarea the way a person would.
  *
  * React stores the last value it wrote on the DOM node and compares against it,
  * so a plain `el.value = x` is ignored. Writing through the prototype's setter
  * updates the node past React's bookkeeping, and the input event then reaches the
- * onChange handler.
+ * onChange handler. The prototype has to match the element — a textarea's value
+ * setter does not live on HTMLInputElement.
  */
-export function typeInto(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+export function typeInto(field: HTMLInputElement | HTMLTextAreaElement, value: string): void {
+  const prototype =
+    field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
   act(() => {
-    setter?.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    setter?.call(field, value);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
 

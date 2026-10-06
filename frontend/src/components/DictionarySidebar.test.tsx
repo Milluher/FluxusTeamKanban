@@ -83,10 +83,7 @@ describe('DictionarySidebar', () => {
     await flush();
 
     typeInto(container.querySelector('input[aria-label="Term"]') as HTMLInputElement, 'KYB');
-    const definition = container.querySelector('textarea[aria-label="Definition"]') as HTMLTextAreaElement;
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-    setter?.call(definition, 'Know Your Business');
-    definition.dispatchEvent(new Event('input', { bubbles: true }));
+    typeInto(container.querySelector('textarea[aria-label="Definition"]') as HTMLTextAreaElement, 'Know Your Business');
     await flush();
 
     (container.querySelector('form') as HTMLFormElement).dispatchEvent(
@@ -107,10 +104,7 @@ describe('DictionarySidebar', () => {
     Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Add a term'))!.click();
     await flush();
     typeInto(container.querySelector('input[aria-label="Term"]') as HTMLInputElement, 'KYB');
-    const definition = container.querySelector('textarea[aria-label="Definition"]') as HTMLTextAreaElement;
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-    setter?.call(definition, 'dupe');
-    definition.dispatchEvent(new Event('input', { bubbles: true }));
+    typeInto(container.querySelector('textarea[aria-label="Definition"]') as HTMLTextAreaElement, 'dupe');
     await flush();
     (container.querySelector('form') as HTMLFormElement).dispatchEvent(
       new Event('submit', { bubbles: true, cancelable: true })

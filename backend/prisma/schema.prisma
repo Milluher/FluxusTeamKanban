@@ -27,6 +27,7 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   changelogEntries     ChangelogEntry[]
   dictionaryTerms      DictionaryTerm[]
+  initiatives          Initiative[]
 }
 
 model Board {
@@ -89,6 +90,8 @@ model Ticket {
   sprint           Sprint?   @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   productDocId     String?
   productDoc       ProductFile? @relation(fields: [productDocId], references: [id], onDelete: SetNull)
+  initiativeId     String?
+  initiative       Initiative?  @relation(fields: [initiativeId], references: [id], onDelete: SetNull)
 
   column         Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
   assignee       User?    @relation("AssigneeRelation", fields: [assigneeId], references: [id])
@@ -278,4 +281,26 @@ model DictionaryTerm {
   createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([term])
+}
+
+// --- Initiatives ---
+// "A large, coordinated body of work aimed at a specific strategic goal."
+//
+// Workspace-wide, like the dictionary: any member can create one and every
+// member can see them all, along with the tickets opened to fulfil them.
+// Tickets point at an initiative rather than the other way round, so one
+// initiative spans as many boards as the work needs.
+model Initiative {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   @default("in_progress") // "in_progress" | "achieved"
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  tickets   Ticket[]
+
+  @@index([status])
 }

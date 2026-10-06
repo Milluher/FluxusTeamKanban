@@ -65,6 +65,32 @@ describe('TicketModal', () => {
     localStorage.clear();
   });
 
+  it('names the initiative a ticket was raised to fulfil', async () => {
+    const { container, unmount } = await open(
+      ticket({
+        initiativeId: 'i1',
+        initiative: { id: 'i1', title: 'Self-serve onboarding', status: 'in_progress' },
+      })
+    );
+    const label = byText(container, 'label', 'Initiative');
+    expect(label).toBeDefined();
+    expect(label?.parentElement?.textContent).toContain('Self-serve onboarding');
+    unmount();
+  });
+
+  it('keeps Initiative behind "Add field" when the ticket serves none', async () => {
+    const { container, unmount } = await open();
+    expect(byText(container, 'label', 'Initiative')).toBeUndefined();
+
+    const addField = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === '+Add field' || b.textContent?.includes('Add field')
+    )!;
+    await act(async () => { addField.click(); });
+    const offered = Array.from(container.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent?.trim());
+    expect(offered).toContain('Initiative');
+    unmount();
+  });
+
   it('shows the board the ticket was created on', async () => {
     const { container, unmount } = await open();
     const label = byText(container, 'label', 'Board');

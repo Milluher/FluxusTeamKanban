@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { Ticket, Board, User, Comment, Sprint, ProductFile } from '@/types';
+import { Ticket, Board, User, Comment, Sprint, ProductFile, Initiative } from '@/types';
 import ProductFileViewer from './ProductFileViewer';
 import RichTextView from './RichTextView';
 import { formatDay, formatTimestamp } from '@/lib/formatDate';
@@ -34,6 +34,7 @@ const OPTIONAL_FIELDS = [
   { name: 'epic', label: 'Epic' },
   { name: 'flow', label: 'Flow' },
   { name: 'assignedDate', label: 'Assigned Date' },
+  { name: 'initiativeId', label: 'Initiative' },
 ] as const;
 
 /** The editable shape of a ticket. */
@@ -51,6 +52,7 @@ function formFromTicket(t: Ticket) {
     flow: t.flow || '',
     sprintId: t.sprintId || '',
     productDocId: t.productDocId || '',
+    initiativeId: t.initiativeId || '',
     columnId: t.columnId,
   };
 }
@@ -151,6 +153,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   );
 
   const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
+  const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [viewingFile, setViewingFile] = useState<ProductFile | null>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
@@ -198,6 +201,14 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
       .then(({ data }) => setProductFiles(data))
       .catch(() => {});
   }, [boardId]);
+
+  // Initiatives are workspace-wide, so this list does not depend on the board:
+  // one initiative is fulfilled by tickets from wherever the work sits.
+  useEffect(() => {
+    api.get<Initiative[]>('/initiatives')
+      .then(({ data }) => setInitiatives(data))
+      .catch(() => {});
+  }, []);
 
   const members = board.members.map((m) => m.user);
   const activeMemberIds = new Set(members.map((u) => u.id));
@@ -674,6 +685,41 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       </span>
                     </div>
                   ),
+                },
+                {
+                  // The initiative this ticket was raised to fulfil. Workspace-wide,
+                  // so the options do not depend on the board — and the ticket is
+                  // what holds the link, letting one initiative span boards.
+                  label: 'Initiative',
+                  name: 'initiativeId',
+                  optional: true,
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6.1 4.4 2.3 7.2L12 16.4 5.8 20.8l2.3-7.2L2 9.2h7.6z"/></svg>,
+                  editEl: (
+                    <select
+                      value={form.initiativeId}
+                      onChange={(e) => setForm({ ...form, initiativeId: e.target.value })}
+                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                      style={inputStyle}
+                      {...inputFocusHandlers}
+                    >
+                      <option value="">None</option>
+                      {initiatives.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.title}{i.status === 'achieved' ? ' (achieved)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ),
+                  viewEl: ticket.initiative ? (
+                    <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-800 truncate">{ticket.initiative.title}</span>
+                      {ticket.initiative.status === 'achieved' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 bg-emerald-50 text-emerald-700">
+                          Achieved
+                        </span>
+                      )}
+                    </div>
+                  ) : <p className="mt-1.5 text-sm text-gray-500">—</p>,
                 },
                 {
                   label: 'Status',
