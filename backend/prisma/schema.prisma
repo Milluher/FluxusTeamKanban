@@ -26,6 +26,7 @@ model User {
   notifications        Notification[]
   passwordResetTokens  PasswordResetToken[]
   changelogEntries     ChangelogEntry[]
+  dictionaryTerms      DictionaryTerm[]
 }
 
 model Board {
@@ -259,4 +260,22 @@ model ChangelogEntry {
 
   @@index([publishedAt])
   @@index([boardId])
+}
+
+// --- Riverly Dictionary ---
+// The workspace's shared vocabulary. Anyone can add a term, everyone can read
+// one, and the creator stays attached so a definition can be queried at source.
+// Terms are unique case-insensitively, enforced by an index on LOWER("term")
+// that the migration adds — Prisma's schema language cannot express it.
+model DictionaryTerm {
+  id          String   @id @default(uuid())
+  term        String
+  definition  String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([term])
 }

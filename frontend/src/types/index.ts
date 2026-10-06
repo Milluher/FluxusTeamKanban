@@ -7,6 +7,16 @@ export interface User {
   lastLoginAt?: string | null;
 }
 
+/** A Riverly Dictionary entry: a workspace-wide term, defined by whoever added it. */
+export interface DictionaryTerm {
+  id: string;
+  term: string;
+  definition: string;
+  createdBy: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Comment {
   id: string;
   content: string;

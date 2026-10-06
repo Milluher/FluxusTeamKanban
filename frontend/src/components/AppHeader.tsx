@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { User } from '@/types';
+import DictionarySidebar from './DictionarySidebar';
 import NotificationBell from './NotificationBell';
 import ProfileModal from './ProfileModal';
 import Avatar from './Avatar';
@@ -28,6 +29,9 @@ interface Props {
 export default function AppHeader({ user, current, breadcrumb, actions }: Props) {
   const router = useRouter();
   const [showProfile, setShowProfile] = useState(false);
+  // The dictionary lives in the header rather than on a page, so a term is
+  // reachable from the workspace and from inside every board alike.
+  const [showDictionary, setShowDictionary] = useState(false);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -67,6 +71,22 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
 
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
           {actions}
+          {user && (
+            <button
+              onClick={() => setShowDictionary((open) => !open)}
+              aria-expanded={showDictionary}
+              aria-label="Riverly Dictionary"
+              className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                showDictionary ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              }`}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              </svg>
+              <span className="hidden lg:inline">Dictionary</span>
+            </button>
+          )}
           {navLink('boards', '/dashboard', 'Boards')}
           {navLink('changelog', '/changelog', 'Changelog')}
           {user?.role === 'admin' && (
@@ -95,6 +115,10 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
 
       {showProfile && user && (
         <ProfileModal user={user} onClose={() => setShowProfile(false)} onLogout={logout} />
+      )}
+
+      {showDictionary && user && (
+        <DictionarySidebar user={user} onClose={() => setShowDictionary(false)} />
       )}
     </>
   );
