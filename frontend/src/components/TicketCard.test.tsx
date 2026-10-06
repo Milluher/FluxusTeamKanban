@@ -73,3 +73,41 @@ describe('TicketCard description preview', () => {
     expect(html).toContain('tabindex="0"');
   });
 });
+
+describe('TicketCard board property', () => {
+  const renderWithBoard = (boardName?: string) =>
+    renderToHtml(
+      <DndContext>
+        <SortableContext items={['t1']}>
+          <TicketCard ticket={ticket('<p>Verify BVN</p>')} onClick={() => {}} boardName={boardName} />
+        </SortableContext>
+      </DndContext>
+    );
+
+  it('names the board when one is given, for views that mix boards together', () => {
+    expect(renderWithBoard('Lending')).toContain('Lending');
+  });
+
+  it('names the sprint and its deadline when one is given', () => {
+    const html = renderToHtml(
+      <DndContext>
+        <SortableContext items={['t1']}>
+          <TicketCard
+            ticket={ticket('<p>Verify BVN</p>')}
+            onClick={() => {}}
+            boardName="Lending"
+            sprint={{ title: 'Sprint 12', endDate: '2099-10-26T00:00:00.000Z' }}
+          />
+        </SortableContext>
+      </DndContext>
+    );
+    expect(html).toContain('Sprint 12');
+    expect(html).toContain('Oct');
+  });
+
+  it('leaves the board off otherwise, since a board page is already the board', () => {
+    const html = renderWithBoard();
+    expect(html).toContain('KYB onboarding');
+    expect(html).not.toContain('Lending');
+  });
+});

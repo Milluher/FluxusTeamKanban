@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Ticket } from '@/types';
 import { descriptionPreview } from '@/lib/richText';
+import { formatSprintDates } from '@/lib/formatDate';
 import Avatar from './Avatar';
 
 const TYPE_STYLES: Record<string, string> = {
@@ -27,9 +28,21 @@ interface Props {
   isDragging?: boolean;
   columnColor?: string;
   activeMemberIds?: Set<string>;
+  /**
+   * The board this ticket was created on. Shown as a property on the card, for
+   * views that mix boards together ("My tickets") — on a board of its own the
+   * board is the page you are already looking at, so it is left off.
+   */
+  boardName?: string;
+  /**
+   * The sprint this ticket is in. Like `boardName`, only for views that mix
+   * boards: a sprint board already filters by sprint, so the card need not
+   * repeat it there.
+   */
+  sprint?: { title: string; endDate: string | null } | null;
 }
 
-export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#e8390e', activeMemberIds }: Props) {
+export default function TicketCard({ ticket, onClick, isDragging, columnColor = '#e8390e', activeMemberIds, boardName, sprint }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({ id: ticket.id });
 
   const priorityCfg = ticket.priority ? PRIORITY_CONFIG[ticket.priority] : null;
@@ -88,6 +101,18 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
         }
       }}
     >
+      {/* Board — only in views that mix boards together */}
+      {boardName && (
+        <div className="mb-1.5 flex">
+          <span className="inline-flex items-center gap-1 min-w-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0" aria-hidden="true">
+              <path d="M3 3h6v12H3V3zm8 0h6v8h-6V3zm8 0h2v18h-2V3zM3 17h6v4H3v-4zm8-4h6v8h-6v-8z"/>
+            </svg>
+            <span className="truncate">{boardName}</span>
+          </span>
+        </div>
+      )}
+
       {/* Title */}
       <p className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 leading-5">
         {ticket.title}
@@ -145,6 +170,22 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
           )}
         </div>
       )}
+
+      {/* Sprint — only in views that mix boards together */}
+      {sprint && (() => {
+        const dates = formatSprintDates(null, sprint.endDate);
+        return (
+          <div className="mb-2.5 flex items-center gap-1.5 text-xs text-gray-500 min-w-0">
+            <span className="truncate">{sprint.title}</span>
+            {dates && (
+              <>
+                <span className="text-gray-300 flex-shrink-0" aria-hidden="true">·</span>
+                <span className="whitespace-nowrap flex-shrink-0">{dates}</span>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Footer: assignee + type + comment count */}
       <div className="flex items-center justify-between gap-2 mt-1">
