@@ -1083,6 +1083,12 @@ export default function BoardPage() {
             setBoard((prev) => updateTicketInBoard(prev, updated));
             setSelectedTicket(updated);
           }}
+          onDuplicate={(copy) => {
+            // Show the copy and switch to it: duplicating is almost always the
+            // first step in editing the new one.
+            setBoard((prev) => updateTicketInBoard(prev, copy));
+            setSelectedTicket(copy);
+          }}
           onDelete={(id) => {
             setBoard((prev) => {
               if (!prev) return prev;

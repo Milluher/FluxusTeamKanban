@@ -7,7 +7,8 @@ import { Board, Ticket, User } from '@/types';
 const get = vi.fn();
 const patch = vi.fn();
 const del = vi.fn();
-vi.mock('@/lib/api', () => ({ default: { get, patch, delete: del, post: vi.fn() } }));
+const post = vi.fn();
+vi.mock('@/lib/api', () => ({ default: { get, patch, delete: del, post } }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const { renderToDom, flush, typeInto } = await import('@/test/render');
@@ -23,6 +24,7 @@ const ticket = (overrides: Partial<Ticket> = {}): Ticket =>
     columnId: 'c1',
     order: 0,
     createdAt: '2026-05-15T00:00:00.000Z',
+    createdById: user.id,
     createdBy: user,
     comments: [],
     ...overrides,
@@ -54,6 +56,32 @@ const open = async (t: Ticket = ticket()) => {
   return { ...handle, onClose, onUpdate, onDelete };
 };
 
+const openWithDuplicate = async (t: Ticket = ticket(), as: User = user) => {
+  const onDuplicate = vi.fn();
+  const handle = renderToDom(
+    <TicketModal
+      ticket={t}
+      boardId="b1"
+      board={board}
+      currentUser={as}
+      isAdmin={as.role === 'admin'}
+      onClose={vi.fn()}
+      onUpdate={vi.fn()}
+      onDelete={vi.fn()}
+      onDuplicate={onDuplicate}
+    />
+  );
+  await flush();
+  return { ...handle, onDuplicate };
+};
+
+/** Opens the "⋯" menu and returns the labels it offers. */
+const menuLabels = async (container: HTMLElement) => {
+  const trigger = container.querySelector('[aria-label^="Actions for"]') as HTMLButtonElement;
+  await act(async () => { trigger.click(); });
+  return Array.from(container.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent?.trim());
+};
+
 const byText = (container: HTMLElement, selector: string, text: string) =>
   Array.from(container.querySelectorAll(selector)).find((el) => el.textContent?.trim() === text);
 
@@ -62,7 +90,45 @@ describe('TicketModal', () => {
     get.mockReset().mockResolvedValue({ data: [] });
     patch.mockReset().mockResolvedValue({ data: ticket() });
     del.mockReset().mockResolvedValue({ data: {} });
+    post.mockReset().mockResolvedValue({ data: {} });
     localStorage.clear();
+  });
+
+  it('offers the creator a duplicate, and hands the copy back', async () => {
+    const copy = ticket({ id: 't2', title: 'KYB onboarding (copy)' });
+    post.mockResolvedValue({ data: copy });
+    const { container, onDuplicate, unmount } = await openWithDuplicate();
+
+    expect(await menuLabels(container)).toContain('Duplicate ticket');
+    const item = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+      (b) => b.textContent?.trim() === 'Duplicate ticket'
+    ) as HTMLButtonElement;
+    await act(async () => { item.click(); });
+    await flush();
+
+    expect(post).toHaveBeenCalledWith('/tickets/t1/duplicate', { boardId: 'b1' });
+    expect(onDuplicate).toHaveBeenCalledWith(copy);
+    unmount();
+  });
+
+  it('does not offer to duplicate somebody else\u2019s ticket', async () => {
+    const other: User = { ...user, id: 'u9', name: 'Bob Roe' };
+    const { container, unmount } = await openWithDuplicate(ticket(), other);
+    expect(await menuLabels(container)).not.toContain('Duplicate ticket');
+    unmount();
+  });
+
+  it('lets an admin duplicate a ticket they did not raise', async () => {
+    const adminUser: User = { ...user, id: 'u9', name: 'Femi A', role: 'admin' };
+    const { container, unmount } = await openWithDuplicate(ticket(), adminUser);
+    expect(await menuLabels(container)).toContain('Duplicate ticket');
+    unmount();
+  });
+
+  it('hides the action entirely where the board cannot receive a copy', async () => {
+    const { container, unmount } = await open();
+    expect(await menuLabels(container)).not.toContain('Duplicate ticket');
+    unmount();
   });
 
   it('names the initiative a ticket was raised to fulfil', async () => {

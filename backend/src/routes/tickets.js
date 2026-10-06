@@ -192,6 +192,71 @@ router.patch('/:id/move', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
+// Duplicate a ticket.
+//
+// Copies what describes the work — title, description, classification, the
+// initiative and doc it points at, its sprint and its people — into the same
+// column. Deliberately not copied: comments, which are a conversation about
+// the original, and dependencies, which say what *that* ticket waits on.
+//
+// The copy is created by whoever duplicated it, not by the original's author,
+// so "created by" stays true.
+router.post('/:id/duplicate', authenticate, async (req, res) => {
+  try {
+    const original = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      include: { column: { select: { boardId: true, name: true } } },
+    });
+    if (!original) return res.status(404).json({ error: 'Not found' });
+    if (original.createdById !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the person who created a ticket can duplicate it' });
+    }
+
+    const copy = await prisma.ticket.create({
+      data: {
+        title: `${original.title} (copy)`,
+        description: original.description,
+        status: original.status,
+        columnId: original.columnId,
+        assigneeId: original.assigneeId,
+        productManagerId: original.productManagerId,
+        assignedDate: original.assignedDate,
+        createdById: req.user.id,
+        type: original.type,
+        priority: original.priority,
+        project: original.project,
+        epic: original.epic,
+        flow: original.flow,
+        sprintId: original.sprintId,
+        productDocId: original.productDocId,
+        initiativeId: original.initiativeId,
+      },
+      include: ticketInclude,
+    });
+
+    const boardId = req.body.boardId || original.column.boardId;
+    req.io.to(`board:${boardId}`).emit('ticket-created', copy);
+
+    // The copy carries the assignee across, so they are told about it the same
+    // way they would be told about a ticket raised for them from scratch.
+    if (copy.assigneeId && copy.assigneeId !== req.user.id) {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: copy.assigneeId,
+          type: 'ticket_assigned',
+          title: 'You were assigned a ticket',
+          body: `"${copy.title}"`,
+          ticketId: copy.id,
+          boardId,
+        },
+      });
+      req.io.to(`user:${copy.assigneeId}`).emit('notification', notification);
+    }
+
+    res.json(copy);
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
+});
+
 // Delete ticket
 router.delete('/:id', authenticate, async (req, res) => {
   try {
