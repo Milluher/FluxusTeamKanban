@@ -42,12 +42,21 @@ describe('AppHeader', () => {
     expect(seen[1]).toEqual(seen[2]);
     expect(seen[0]).toEqual([
       'FluxusTeam home',
+      'Riverly Dictionary',
       'Boards',
       'Changelog',
       'Admin',
       'Notifications, no unread',
       'Account menu for Femi A',
     ]);
+  });
+
+  it('reaches the dictionary from every page, since a term is looked up anywhere', () => {
+    for (const current of ['boards', 'changelog', 'admin'] as const) {
+      const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
+      expect(controls(container)).toContain('Riverly Dictionary');
+      unmount();
+    }
   });
 
   it('marks only the current page', () => {
@@ -64,6 +73,7 @@ describe('AppHeader', () => {
     expect(names).not.toContain('Admin');
     expect(names).toEqual([
       'FluxusTeam home',
+      'Riverly Dictionary',
       'Boards',
       'Changelog',
       'Notifications, no unread',
