@@ -653,6 +653,29 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   viewEl: <p className="mt-1.5 text-sm text-gray-700">{formatDay(ticket.assignedDate) ?? <span className="text-gray-500">—</span>}</p>,
                 },
                 {
+                  // Read-only: the board is where the ticket was created, and
+                  // moving a ticket between boards is not a thing you can do.
+                  // Worth stating all the same — "My tickets" mixes boards, so
+                  // you can arrive here without knowing which one you are on.
+                  label: 'Board',
+                  name: '',
+                  optional: false,
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h6v12H3V3zm8 0h6v8h-6V3zm8 0h2v18h-2V3zM3 17h6v4H3v-4zm8-4h6v8h-6v-8z"/></svg>,
+                  editEl: null,
+                  viewEl: (
+                    <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-800 truncate">{board.name}</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 ${
+                          board.type === 'kanban' ? 'bg-purple-50 text-purple-700' : 'bg-orange-50 text-orange-700'
+                        }`}
+                      >
+                        {board.type === 'kanban' ? 'Kanban' : 'Sprint'}
+                      </span>
+                    </div>
+                  ),
+                },
+                {
                   label: 'Status',
                   name: 'columnId',
                   optional: false,

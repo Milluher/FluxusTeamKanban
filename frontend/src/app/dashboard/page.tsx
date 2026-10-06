@@ -56,6 +56,29 @@ export default function DashboardPage() {
     }
   };
 
+  // "My tickets" is a board of its own, so a card dropped in another column has
+  // to be persisted against the column of that *same* name on the ticket's own
+  // board — resolved by the view, which has the board list.
+  const moveTicket = async (ticket: AssignedTicket, column: { id: string; name: string }) => {
+    setMyTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticket.id
+          ? { ...t, columnId: column.id, status: column.name, column: { ...t.column, id: column.id, name: column.name } }
+          : t
+      )
+    );
+    try {
+      await api.patch(`/tickets/${ticket.id}/move`, {
+        columnId: column.id,
+        boardId: ticket.column.board.id,
+      });
+    } catch (e) {
+      // Put the card back where it was; the view reports the failure.
+      setMyTickets((prev) => prev.map((t) => (t.id === ticket.id ? ticket : t)));
+      throw e;
+    }
+  };
+
   const chooseView = (next: 'tickets' | 'boards') => {
     setView(next);
     if (!user) return;
@@ -267,8 +290,10 @@ export default function DashboardPage() {
         {view === 'tickets' && (
           <MyTicketsView
             tickets={myTickets}
+            boards={boards}
             loading={loadingTickets}
             onShowBoards={() => chooseView('boards')}
+            onMove={moveTicket}
           />
         )}
 

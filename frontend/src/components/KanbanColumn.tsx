@@ -2,6 +2,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Column, Ticket } from '@/types';
+import { columnStyle } from '@/lib/columnStyle';
 import TicketCard from './TicketCard';
 
 interface Props {
@@ -12,20 +13,10 @@ interface Props {
   activeMemberIds: Set<string>;
 }
 
-const columnConfig: Record<string, { dot: string; badgeBg: string; badgeText: string }> = {
-  'Backlog':     { dot: '#94a3b8', badgeBg: '#f1f5f9', badgeText: '#475569' },
-  'To Do':       { dot: '#60a5fa', badgeBg: '#eff6ff', badgeText: '#2563eb' },
-  'In Progress': { dot: '#e8390e', badgeBg: '#fff7f5', badgeText: '#c73009' },
-  'Review':      { dot: '#a78bfa', badgeBg: '#f5f3ff', badgeText: '#7c3aed' },
-  'Done':        { dot: '#34d399', badgeBg: '#ecfdf5', badgeText: '#047857' },
-};
-
-const defaultConfig = { dot: '#94a3b8', badgeBg: '#f1f5f9', badgeText: '#475569' };
-
 export default function KanbanColumn({ column, onTicketClick, onAddTicket, activeMemberIds }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
-  const cfg = columnConfig[column.name] || defaultConfig;
+  const cfg = columnStyle(column.name);
 
   return (
     <div className="flex flex-col w-72 flex-shrink-0 board-column-snap">

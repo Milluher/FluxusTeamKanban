@@ -65,6 +65,20 @@ describe('TicketModal', () => {
     localStorage.clear();
   });
 
+  it('shows the board the ticket was created on', async () => {
+    const { container, unmount } = await open();
+    const label = byText(container, 'label', 'Board');
+    expect(label).toBeDefined();
+    expect(label?.parentElement?.textContent).toContain('Roadmap');
+    unmount();
+  });
+
+  it('does not offer to edit the board, which a ticket cannot change', async () => {
+    const { container, unmount } = await open();
+    expect(container.querySelector('[aria-label="Edit Board"]')).toBeNull();
+    unmount();
+  });
+
   it('is announced as a modal dialog naming the ticket', async () => {
     const { container, unmount } = await open();
     const dialog = container.querySelector('[role="dialog"]');
