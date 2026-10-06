@@ -9,7 +9,7 @@ import NotificationBell from './NotificationBell';
 import ProfileModal from './ProfileModal';
 import Avatar from './Avatar';
 
-type Section = 'boards' | 'changelog' | 'admin';
+type Section = 'boards' | 'initiatives' | 'changelog' | 'admin';
 
 interface Props {
   user: User | null;
@@ -88,6 +88,7 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
             </button>
           )}
           {navLink('boards', '/dashboard', 'Boards')}
+          {navLink('initiatives', '/initiatives', 'Initiatives')}
           {navLink('changelog', '/changelog', 'Changelog')}
           {user?.role === 'admin' && (
             <Link

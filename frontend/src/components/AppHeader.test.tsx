@@ -31,7 +31,7 @@ describe('AppHeader', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('offers the same controls in the same order on every page', () => {
-    const seen = (['boards', 'changelog', 'admin'] as const).map((current) => {
+    const seen = (['boards', 'initiatives', 'changelog', 'admin'] as const).map((current) => {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
       const names = controls(container);
       unmount();
@@ -40,10 +40,12 @@ describe('AppHeader', () => {
 
     expect(seen[0]).toEqual(seen[1]);
     expect(seen[1]).toEqual(seen[2]);
+    expect(seen[2]).toEqual(seen[3]);
     expect(seen[0]).toEqual([
       'FluxusTeam home',
       'Riverly Dictionary',
       'Boards',
+      'Initiatives',
       'Changelog',
       'Admin',
       'Notifications, no unread',
@@ -52,7 +54,7 @@ describe('AppHeader', () => {
   });
 
   it('reaches the dictionary from every page, since a term is looked up anywhere', () => {
-    for (const current of ['boards', 'changelog', 'admin'] as const) {
+    for (const current of ['boards', 'initiatives', 'changelog', 'admin'] as const) {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
       expect(controls(container)).toContain('Riverly Dictionary');
       unmount();
@@ -75,6 +77,7 @@ describe('AppHeader', () => {
       'FluxusTeam home',
       'Riverly Dictionary',
       'Boards',
+      'Initiatives',
       'Changelog',
       'Notifications, no unread',
       'Account menu for Alice Doe',

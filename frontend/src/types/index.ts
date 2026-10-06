@@ -7,6 +7,29 @@ export interface User {
   lastLoginAt?: string | null;
 }
 
+export type InitiativeStatus = 'in_progress' | 'achieved';
+
+/** A ticket raised to fulfil an initiative — title and status only, by design. */
+export interface InitiativeTicket {
+  id: string;
+  title: string;
+  status: string;
+  column: { board: { id: string; name: string } };
+}
+
+/** "A large, coordinated body of work aimed at a specific strategic goal." */
+export interface Initiative {
+  id: string;
+  title: string;
+  description: string;
+  status: InitiativeStatus;
+  createdById: string;
+  createdBy: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+  tickets: InitiativeTicket[];
+}
+
 /** A Riverly Dictionary entry: a workspace-wide term, defined by whoever added it. */
 export interface DictionaryTerm {
   id: string;
@@ -65,6 +88,8 @@ export interface Ticket {
   sprintId?: string;
   productDocId?: string;
   productDoc?: { id: string; title: string; url: string };
+  initiativeId?: string;
+  initiative?: { id: string; title: string; status: InitiativeStatus };
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };
