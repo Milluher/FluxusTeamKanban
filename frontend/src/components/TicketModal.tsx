@@ -68,6 +68,8 @@ interface Props {
   onClose: () => void;
   onUpdate: (ticket: Ticket) => void;
   onDelete: (id: string) => void;
+  /** Hands back the copy, so the board can show it. Omit to hide the action. */
+  onDuplicate?: (ticket: Ticket) => void;
 }
 
 interface MentionOption {
@@ -76,7 +78,7 @@ interface MentionOption {
   group?: boolean;
 }
 
-export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete }: Props) {
+export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete, onDuplicate }: Props) {
   const [form, setForm] = useState(() => formFromTicket(ticket));
   // Inline editing: one field at a time, saved on blur or Enter, abandoned on
   // Escape. Replaces an Edit mode that made changing one value a three-click job.
@@ -152,6 +154,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
     (f) => isFieldEmpty(f.name) && !revealed.includes(f.name)
   );
 
+  const [duplicating, setDuplicating] = useState(false);
   const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [viewingFile, setViewingFile] = useState<ProductFile | null>(null);
@@ -237,6 +240,24 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   };
 
   /** Commits the field being edited, or does nothing if its value is unchanged. */
+  // Only the person who raised a ticket can copy it, which is what the server
+  // enforces too — so the action is not offered to anyone else.
+  const canDuplicate = Boolean(onDuplicate) && (ticket.createdById === currentUser.id || isAdmin);
+
+  const duplicate = async () => {
+    if (!onDuplicate) return;
+    setDuplicating(true);
+    setFieldMsg('');
+    try {
+      const { data } = await api.post<Ticket>(`/tickets/${ticket.id}/duplicate`, { boardId });
+      onDuplicate(data);
+    } catch (e: any) {
+      setFieldMsg(e.response?.data?.error || 'Could not duplicate this ticket.');
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const commitField = (name: string) => {
     if (!name) return;
     const next = (form as Record<string, unknown>)[name];
@@ -486,7 +507,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                 edited in place — and delete is behind the menu. */}
             <RowMenu
               label={`Actions for ${ticket.title}`}
-              items={[{ label: 'Delete ticket', destructive: true, onSelect: () => setConfirmDelete(true) }]}
+              items={[
+                ...(canDuplicate
+                  ? [{ label: duplicating ? 'Duplicating…' : 'Duplicate ticket', onSelect: duplicate }]
+                  : []),
+                { label: 'Delete ticket', destructive: true, onSelect: () => setConfirmDelete(true) },
+              ]}
             />
             <button
               onClick={onClose}

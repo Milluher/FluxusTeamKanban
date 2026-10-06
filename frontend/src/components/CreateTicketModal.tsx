@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Board, Ticket, ProductFile } from '@/types';
+import { clearDraft, currentUserId, draftKey, readDraft, writeDraft } from '@/lib/ticketDraft';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
 
@@ -30,20 +31,42 @@ interface Props {
   boardType?: string;
 }
 
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  assigneeId: '',
+  productManagerId: '',
+  assignedDate: '',
+  type: '',
+  priority: '',
+  project: '',
+  epic: '',
+  flow: '',
+  productDocId: '',
+};
+
 export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId, boardType = 'sprint' }: Props) {
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    assigneeId: '',
-    productManagerId: '',
-    assignedDate: '',
-    type: '',
-    priority: '',
-    project: '',
-    epic: '',
-    flow: '',
-    productDocId: '',
-  });
+  // The draft is read once, as the initial state, rather than in an effect:
+  // restoring after the first render would race the effect below, which would
+  // have already written the empty form over the stored draft.
+  const [key] = useState(() =>
+    typeof window === 'undefined' ? '' : draftKey(boardId, columnId, currentUserId())
+  );
+  const [restoredDraft, setRestoredDraft] = useState(() => (key ? readDraft(key) !== null : false));
+  const [form, setForm] = useState(() => ({ ...EMPTY_FORM, ...(key ? readDraft(key) ?? {} : {}) }));
+
+  // Autosave. Every edit is kept, so an accidental close, a navigation or a
+  // reload costs nothing — which is the whole point, so it deliberately does
+  // *not* clear on close.
+  useEffect(() => {
+    if (key) writeDraft(key, form);
+  }, [key, form]);
+
+  const discardDraft = () => {
+    if (key) clearDraft(key);
+    setForm(EMPTY_FORM);
+    setRestoredDraft(false);
+  };
   const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -113,6 +136,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
           api.post(`/tickets/${data.id}/dependencies`, { dependsOnId: dep.id, boardId })
         )
       );
+      if (key) clearDraft(key);
       onCreate(data);
       if (form.project) {
         const stored = localStorage.getItem(`board-projects-${boardId}`);
@@ -184,6 +208,24 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 space-y-4">
+          {/* Says so when the form did not start blank, and offers the way out:
+              a silently pre-filled form is worse than no draft at all. */}
+          {restoredDraft && (
+            <div
+              role="status"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800 border border-amber-200"
+            >
+              <span className="flex-1">Restored from an unfinished draft.</span>
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-xs font-semibold px-2 py-1 rounded hover:bg-amber-100 transition-colors"
+              >
+                Discard draft
+              </button>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1.5">
               Title <span className="text-red-700">*</span>
