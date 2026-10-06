@@ -7,6 +7,27 @@ export interface User {
   lastLoginAt?: string | null;
 }
 
+export type TechComfort = 'low' | 'medium' | 'high';
+
+/**
+ * The attributes of a user category. A fixed research template, so two
+ * personas answer the same questions and are comparable; only `name` is
+ * required, since a persona is filled in as research arrives.
+ */
+export interface Persona {
+  id: string;
+  name: string;
+  segment?: string | null;
+  description?: string | null;
+  goals?: string | null;
+  painPoints?: string | null;
+  behaviours?: string | null;
+  techComfort?: TechComfort | null;
+  createdBy: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type InitiativeStatus = 'in_progress' | 'achieved';
 
 /** A ticket raised to fulfil an initiative — title and status only, by design. */

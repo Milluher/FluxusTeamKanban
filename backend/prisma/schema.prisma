@@ -28,6 +28,7 @@ model User {
   changelogEntries     ChangelogEntry[]
   dictionaryTerms      DictionaryTerm[]
   initiatives          Initiative[]
+  personas             Persona[]
 }
 
 model Board {
@@ -303,4 +304,29 @@ model Initiative {
   tickets   Ticket[]
 
   @@index([status])
+}
+
+// --- Personas ---
+// The attributes of a user category, so a product decision can name who it is
+// for. Admins curate them; everyone reads them.
+//
+// A fixed research template rather than free text or admin-defined attributes:
+// every persona then answers the same questions, which is what makes two of
+// them comparable and lets a PRD summarise one in a card.
+model Persona {
+  id          String   @id @default(uuid())
+  name        String
+  segment     String?
+  description String?
+  goals       String?
+  painPoints  String?
+  behaviours  String?
+  techComfort String?  // "low" | "medium" | "high"
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([name])
 }

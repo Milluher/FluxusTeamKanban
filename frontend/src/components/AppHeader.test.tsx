@@ -1,5 +1,6 @@
 // F8's claim is that the global header is identical on every page. That is a
 // structural property, so it is asserted rather than eyeballed.
+import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { User } from '@/types';
 
@@ -43,6 +44,7 @@ describe('AppHeader', () => {
     expect(seen[2]).toEqual(seen[3]);
     expect(seen[0]).toEqual([
       'FluxusTeam home',
+      'Personas',
       'Riverly Dictionary',
       'Boards',
       'Initiatives',
@@ -53,12 +55,32 @@ describe('AppHeader', () => {
     ]);
   });
 
-  it('reaches the dictionary from every page, since a term is looked up anywhere', () => {
+  it('reaches the dictionary and the personas from every page, since both are consulted mid-task', () => {
     for (const current of ['boards', 'initiatives', 'changelog', 'admin'] as const) {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
       expect(controls(container)).toContain('Riverly Dictionary');
+      expect(controls(container)).toContain('Personas');
       unmount();
     }
+  });
+
+  it('shows one panel at a time, since they share the same space', async () => {
+    const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
+    const byLabel = (label: string) =>
+      container.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement;
+
+    await act(async () => { byLabel('Personas').click(); });
+    expect(container.querySelector('aside[aria-label="Personas"]')).not.toBeNull();
+    expect(container.querySelector('aside[aria-label="Riverly Dictionary"]')).toBeNull();
+
+    await act(async () => { byLabel('Riverly Dictionary').click(); });
+    expect(container.querySelector('aside[aria-label="Riverly Dictionary"]')).not.toBeNull();
+    expect(container.querySelector('aside[aria-label="Personas"]')).toBeNull();
+
+    // Clicking the open one again closes it.
+    await act(async () => { byLabel('Riverly Dictionary').click(); });
+    expect(container.querySelector('aside')).toBeNull();
+    unmount();
   });
 
   it('marks only the current page', () => {
@@ -75,6 +97,7 @@ describe('AppHeader', () => {
     expect(names).not.toContain('Admin');
     expect(names).toEqual([
       'FluxusTeam home',
+      'Personas',
       'Riverly Dictionary',
       'Boards',
       'Initiatives',

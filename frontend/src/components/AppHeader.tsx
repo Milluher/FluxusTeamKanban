@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { User } from '@/types';
 import DictionarySidebar from './DictionarySidebar';
+import PersonasPanel from './PersonasPanel';
 import NotificationBell from './NotificationBell';
 import ProfileModal from './ProfileModal';
 import Avatar from './Avatar';
@@ -29,9 +30,12 @@ interface Props {
 export default function AppHeader({ user, current, breadcrumb, actions }: Props) {
   const router = useRouter();
   const [showProfile, setShowProfile] = useState(false);
-  // The dictionary lives in the header rather than on a page, so a term is
-  // reachable from the workspace and from inside every board alike.
-  const [showDictionary, setShowDictionary] = useState(false);
+  // The dictionary and the personas both live in the header rather than on a
+  // page, so each is reachable from the workspace and from inside every board
+  // alike. One slot, because they would otherwise render on top of each other.
+  const [panel, setPanel] = useState<'dictionary' | 'personas' | null>(null);
+  const togglePanel = (next: 'dictionary' | 'personas') =>
+    setPanel((open) => (open === next ? null : next));
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -72,20 +76,37 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
           {actions}
           {user && (
-            <button
-              onClick={() => setShowDictionary((open) => !open)}
-              aria-expanded={showDictionary}
-              aria-label="Riverly Dictionary"
-              className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                showDictionary ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-              }`}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-              </svg>
-              <span className="hidden lg:inline">Dictionary</span>
-            </button>
+            <>
+              <button
+                onClick={() => togglePanel('personas')}
+                aria-expanded={panel === 'personas'}
+                aria-label="Personas"
+                className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                  panel === 'personas' ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                </svg>
+                <span className="hidden lg:inline">Personas</span>
+              </button>
+              <button
+                onClick={() => togglePanel('dictionary')}
+                aria-expanded={panel === 'dictionary'}
+                aria-label="Riverly Dictionary"
+                className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                  panel === 'dictionary' ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                <span className="hidden lg:inline">Dictionary</span>
+              </button>
+            </>
           )}
           {navLink('boards', '/dashboard', 'Boards')}
           {navLink('initiatives', '/initiatives', 'Initiatives')}
@@ -118,8 +139,12 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
         <ProfileModal user={user} onClose={() => setShowProfile(false)} onLogout={logout} />
       )}
 
-      {showDictionary && user && (
-        <DictionarySidebar user={user} onClose={() => setShowDictionary(false)} />
+      {panel === 'dictionary' && user && (
+        <DictionarySidebar user={user} onClose={() => setPanel(null)} />
+      )}
+
+      {panel === 'personas' && user && (
+        <PersonasPanel user={user} onClose={() => setPanel(null)} />
       )}
     </>
   );
