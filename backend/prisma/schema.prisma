@@ -29,6 +29,7 @@ model User {
   dictionaryTerms      DictionaryTerm[]
   initiatives          Initiative[]
   personas             Persona[]
+  prds                 Prd[]
 }
 
 model Board {
@@ -45,6 +46,7 @@ model Board {
   canvasProjects CanvasProject[]
   productFiles   ProductFile[]
   changelogEntries ChangelogEntry[]
+  prds           Prd[]
 }
 
 model BoardMember {
@@ -224,6 +226,7 @@ model CanvasFeature {
   createdAt DateTime @default(now())
 
   block CanvasBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  prd   Prd?
 }
 
 // --- Product Files ---
@@ -326,7 +329,70 @@ model Persona {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  prds      PrdPersona[]
 
   @@index([name])
+}
+
+// --- PRD Builder ---
+// The document behind a feature. Adding a feature to a project block starts
+// one, so a feature on the canvas and the thinking behind it stay attached.
+//
+// Every section is nullable even where the brief calls it required. A PRD is
+// written over days and saved as a draft from the first keystroke, so
+// "required" is a condition of *publishing*, enforced on the publish route —
+// not a NOT NULL that would make a half-written draft impossible to store.
+//
+// The section fields are the brief's, with its duplicates merged: goals and
+// success metrics are asked once each (§3, §15) rather than together and again,
+// and acceptance criteria belong to §14 alone rather than also hiding inside
+// §5. An author meeting the same question twice does not know which box to use.
+model Prd {
+  id      String  @id @default(uuid())
+  title   String
+  version String?
+  status  String  @default("draft") // "draft" | "published"
+
+  overview           String? // §2  Overview and problem statement
+  goals              String? // §3  Goals
+  userStories        String? // §4  User stories and use cases
+  functionalReqs     String? // §5  Functional requirements
+  nonFunctionalReqs  String? // §6  Non-functional requirements
+  userFlows          String? // §7  User flows and design
+  assumptions        String? // §8  Assumptions, constraints, dependencies
+  platforms          String? // §9  Platforms
+  classification     String? // §11 "new_product" | "major_feature" | "minor_enhancement"
+  inScope            String? // §12 In-Scope
+  outOfScope         String? // §13 Out-of-Scope
+  acceptanceCriteria String? // §14 Acceptance Criteria
+  successMetrics     String? // §15 Success Metrics
+
+  boardId         String
+  canvasFeatureId String?   @unique
+  createdById     String
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  board         Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  canvasFeature CanvasFeature? @relation(fields: [canvasFeatureId], references: [id], onDelete: SetNull)
+  createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  personas      PrdPersona[]
+
+  @@index([boardId])
+  @@index([status])
+}
+
+// §10 Target Personas, multi-select. A join rather than a list of ids, so a
+// deleted persona disappears from every PRD that named it.
+model PrdPersona {
+  id        String @id @default(uuid())
+  prdId     String
+  personaId String
+
+  prd     Prd     @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  persona Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  @@unique([prdId, personaId])
 }

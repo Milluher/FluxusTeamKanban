@@ -1,11 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import BoardCanvas from './BoardCanvas';
+import { User } from '@/types';
 import ProductFiles from './ProductFiles';
 
 interface Props {
   boardId: string;
   isAdmin: boolean;
+  /** Passed through to the canvas, which needs it to authorise PRD edits. */
+  currentUser?: User | null;
 }
 
 // Project Overview and Product Files took around 420px between them even with
@@ -15,7 +18,7 @@ interface Props {
 //
 // Both sections stay mounted either way: each fetches its own data and reports
 // its count back, which is how this knows whether there is anything to show.
-export default function BoardInfo({ boardId, isAdmin }: Props) {
+export default function BoardInfo({ boardId, isAdmin, currentUser }: Props) {
   const [overviewCount, setOverviewCount] = useState<number | null>(null);
   const [filesCount, setFilesCount] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -79,7 +82,7 @@ export default function BoardInfo({ boardId, isAdmin }: Props) {
             </button>
           </div>
         )}
-        <BoardCanvas boardId={boardId} isAdmin={isAdmin} onCountChange={setOverviewCount} />
+        <BoardCanvas boardId={boardId} isAdmin={isAdmin} onCountChange={setOverviewCount} currentUser={currentUser} />
         <ProductFiles boardId={boardId} isAdmin={isAdmin} onCountChange={setFilesCount} />
       </div>
     </>

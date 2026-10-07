@@ -20,6 +20,7 @@ const changelogRoutes = require('./routes/changelog');
 const dictionaryRoutes = require('./routes/dictionary');
 const initiativeRoutes = require('./routes/initiatives');
 const personaRoutes = require('./routes/personas');
+const prdRoutes = require('./routes/prds');
 const presence = require('./lib/presence');
 const { JWT_SECRET } = require('./middleware/auth');
 
@@ -58,6 +59,7 @@ app.use('/api/changelog', changelogRoutes);
 app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/initiatives', initiativeRoutes);
 app.use('/api/personas', personaRoutes);
+app.use('/api/prds', prdRoutes);
 
 // Display names aren't in the JWT, and presence needs one per connection —
 // cache them so repeated connects don't re-query for the same user.

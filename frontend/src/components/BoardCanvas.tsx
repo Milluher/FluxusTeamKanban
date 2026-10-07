@@ -2,13 +2,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
 import socket from '@/lib/socket';
-import { CanvasProject, CanvasBlock, CanvasFeature } from '@/types';
+import { CanvasProject, CanvasBlock, CanvasFeature, Prd, User } from '@/types';
+import PrdBuilderModal from './PrdBuilderModal';
 
 interface Props {
   /** Reports how many items this section has, once loaded. */
   onCountChange?: (count: number) => void;
   boardId: string;
   isAdmin: boolean;
+  /** Needed to decide who may write to a PRD. */
+  currentUser?: User | null;
 }
 
 const ACCENT = '#e8390e';
@@ -27,7 +30,7 @@ type ModalState =
   | { kind: 'delete-block'; block: CanvasBlock }
   | null;
 
-export default function BoardCanvas({ boardId, isAdmin, onCountChange }: Props) {
+export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUser }: Props) {
   const [projects, setProjects] = useState<CanvasProject[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,10 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange }: Props) 
   }, [loading, projects.length, onCountChange]);
   // Per-block "add feature" draft text, keyed by block id
   const [featureDrafts, setFeatureDrafts] = useState<Record<string, string>>({});
+  // PRDs for this board, so a feature can show whether its document exists and
+  // how far along it is.
+  const [prds, setPrds] = useState<Prd[]>([]);
+  const [openPrd, setOpenPrd] = useState<Prd | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [modalInput, setModalInput] = useState('');
   const [modalBusy, setModalBusy] = useState(false);
@@ -75,6 +82,15 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange }: Props) 
   }, [boardId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadPrds = useCallback(async () => {
+    try {
+      const { data } = await api.get<Prd[]>('/prds', { params: { boardId } });
+      setPrds(data);
+    } catch { /* a member without board access simply sees none */ }
+  }, [boardId]);
+
+  useEffect(() => { loadPrds(); }, [loadPrds]);
 
   // Real-time: refetch when anyone changes this board's canvas
   useEffect(() => {
@@ -137,13 +153,50 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange }: Props) 
     updateBlock(block.id, (b) => ({ ...b, features: b.features.map((f) => (f.id === featureId ? { ...f, text } : f)) }));
   };
 
-  // Feature add/delete stay inline (no modal)
+  // Adding a feature starts its PRD, which is what the brief asks for: the
+  // feature on the canvas and the document behind it are the same decision, so
+  // they are created together rather than one being remembered later.
+  //
+  // The feature is created first and the PRD second, so a failure to start the
+  // document leaves a feature rather than nothing — the canvas keeps working
+  // whether or not the builder does.
   const addFeature = async (block: CanvasBlock) => {
     const text = (featureDrafts[block.id] ?? '').trim();
     if (!text) return;
     setFeatureDrafts((d) => ({ ...d, [block.id]: '' }));
     const { data } = await api.post(`/boards/${boardId}/canvas/blocks/${block.id}/features`, { text });
     updateBlock(block.id, (b) => ({ ...b, features: [...b.features, data] }));
+
+    try {
+      const { data: prd } = await api.post<Prd>('/prds', {
+        boardId,
+        canvasFeatureId: data.id,
+        title: text,
+      });
+      setPrds((prev) => [prd, ...prev]);
+      setOpenPrd(prd);
+    } catch {
+      // The feature is already on the canvas and its PRD can be started from
+      // the feature itself. Not worth an error dialog over.
+    }
+  };
+
+  /** Opens the PRD for a feature, starting one if it has none yet. */
+  const openPrdForFeature = async (feature: CanvasFeature) => {
+    const existing = prds.find((p) => p.canvasFeatureId === feature.id);
+    if (existing) { setOpenPrd(existing); return; }
+    if (!isAdmin) return;
+    try {
+      const { data: prd } = await api.post<Prd>('/prds', {
+        boardId,
+        canvasFeatureId: feature.id,
+        title: feature.text,
+      });
+      setPrds((prev) => [prd, ...prev]);
+      setOpenPrd(prd);
+    } catch {
+      // Nothing to do: the canvas is still usable without the document.
+    }
   };
 
   const deleteFeature = async (block: CanvasBlock, featureId: string) => {
@@ -337,6 +390,27 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange }: Props) 
                             <span className={featureText}>{f.text}</span>
                           );
                         })()}
+                        {(() => {
+                          // The document behind the feature: its state when it
+                          // exists, an invitation to start it when it does not.
+                          const prd = prds.find((p) => p.canvasFeatureId === f.id);
+                          if (!prd && !isAdmin) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => openPrdForFeature(f)}
+                              aria-label={prd ? `Open PRD for ${f.text}` : `Start a PRD for ${f.text}`}
+                              className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-colors"
+                              style={prd
+                                ? (prd.status === 'published'
+                                    ? { background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }
+                                    : { background: '#fffbeb', color: '#b45309', borderColor: '#fcd34d' })
+                                : { background: 'white', color: '#9ca3af', borderColor: '#e5e7eb' }}
+                            >
+                              {prd ? (prd.status === 'published' ? 'PRD' : 'PRD draft') : '+ PRD'}
+                            </button>
+                          );
+                        })()}
                         {isAdmin && (
                           <div className="flex items-center gap-0.5 flex-shrink-0">
                             <button
@@ -465,6 +539,23 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange }: Props) 
             )}
           </div>
         </div>
+      )}
+      {openPrd && (
+        <PrdBuilderModal
+          prd={openPrd}
+          canEdit={Boolean(
+            currentUser && (openPrd.createdById === currentUser.id || currentUser.role === 'admin')
+          )}
+          onClose={() => setOpenPrd(null)}
+          onSaved={(saved) => {
+            setPrds((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+            setOpenPrd(saved);
+          }}
+          onDeleted={(id) => {
+            setPrds((prev) => prev.filter((p) => p.id !== id));
+            setOpenPrd(null);
+          }}
+        />
       )}
     </div>
   );

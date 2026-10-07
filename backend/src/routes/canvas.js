@@ -1,27 +1,10 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { canViewBoard, canEditBoard } = require('../lib/boardAccess');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-
-// Verify the requester can READ the board (system admin or any board member).
-async function canViewBoard(req, boardId) {
-  if (req.user.role === 'admin') return true;
-  const membership = await prisma.boardMember.findUnique({
-    where: { userId_boardId: { userId: req.user.id, boardId } },
-  });
-  return !!membership;
-}
-
-// Verify the requester can EDIT the canvas (system admin or board admin).
-async function canEditBoard(req, boardId) {
-  if (req.user.role === 'admin') return true;
-  const membership = await prisma.boardMember.findUnique({
-    where: { userId_boardId: { userId: req.user.id, boardId } },
-  });
-  return !!membership && membership.role === 'admin';
-}
 
 // Resolve the boardId that owns a given block, for nested edit auth.
 async function boardIdForBlock(blockId) {

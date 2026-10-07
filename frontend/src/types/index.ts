@@ -7,6 +7,52 @@ export interface User {
   lastLoginAt?: string | null;
 }
 
+export type PrdStatus = 'draft' | 'published';
+export type PrdClassification = 'new_product' | 'major_feature' | 'minor_enhancement';
+
+/** §10 Target Personas — the join row, so the persona travels with it. */
+export interface PrdPersonaLink {
+  id: string;
+  personaId: string;
+  persona: { id: string; name: string; segment?: string | null };
+}
+
+/**
+ * A PRD: the document behind a feature.
+ *
+ * Every section is optional on the type as well as in the database — a draft is
+ * saved from the first keystroke, and "required" is a condition of publishing.
+ */
+export interface Prd {
+  id: string;
+  title: string;
+  version?: string | null;
+  status: PrdStatus;
+  overview?: string | null;
+  goals?: string | null;
+  userStories?: string | null;
+  functionalReqs?: string | null;
+  nonFunctionalReqs?: string | null;
+  userFlows?: string | null;
+  assumptions?: string | null;
+  platforms?: string | null;
+  classification?: PrdClassification | null;
+  inScope?: string | null;
+  outOfScope?: string | null;
+  acceptanceCriteria?: string | null;
+  successMetrics?: string | null;
+  boardId: string;
+  canvasFeatureId?: string | null;
+  createdById: string;
+  createdBy: { id: string; name: string };
+  board: { id: string; name: string };
+  canvasFeature?: { id: string; text: string } | null;
+  personas: PrdPersonaLink[];
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type TechComfort = 'low' | 'medium' | 'high';
 
 /**
