@@ -131,6 +131,43 @@ describe('TicketModal', () => {
     unmount();
   });
 
+  it('names the PRD a ticket implements', async () => {
+    const { container, unmount } = await open(
+      ticket({ prdId: 'p1', prd: { id: 'p1', title: 'Self-serve onboarding', status: 'published' } })
+    );
+    const label = byText(container, 'label', 'PRD');
+    expect(label).toBeDefined();
+    expect(label?.parentElement?.textContent).toContain('Self-serve onboarding');
+    unmount();
+  });
+
+  it('marks a PRD that is still a draft', async () => {
+    const { container, unmount } = await open(
+      ticket({ prdId: 'p1', prd: { id: 'p1', title: 'Self-serve onboarding', status: 'draft' } })
+    );
+    expect(byText(container, 'label', 'PRD')?.parentElement?.textContent).toContain('Draft');
+    unmount();
+  });
+
+  it('keeps PRD behind "Add field" when the ticket implements none', async () => {
+    const { container, unmount } = await open();
+    expect(byText(container, 'label', 'PRD')).toBeUndefined();
+
+    const addField = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Add field')
+    )!;
+    await act(async () => { addField.click(); });
+    const offered = Array.from(container.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent?.trim());
+    expect(offered).toContain('PRD');
+    unmount();
+  });
+
+  it('scopes the PRD list to the board the ticket lives on', async () => {
+    const { unmount } = await open();
+    expect(get).toHaveBeenCalledWith('/prds', { params: { boardId: 'b1' } });
+    unmount();
+  });
+
   it('names the initiative a ticket was raised to fulfil', async () => {
     const { container, unmount } = await open(
       ticket({

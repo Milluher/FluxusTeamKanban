@@ -10,6 +10,7 @@ const ticketInclude = {
   productManager: { select: { id: true, name: true, email: true } },
   productDoc: { select: { id: true, title: true, url: true } },
   initiative: { select: { id: true, title: true, status: true } },
+  prd: { select: { id: true, title: true, status: true } },
   createdBy: { select: { id: true, name: true } },
   _count: { select: { comments: true } },
   dependsOn: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },

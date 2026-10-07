@@ -203,6 +203,7 @@ export interface Ticket {
   initiativeId?: string;
   initiative?: { id: string; title: string; status: InitiativeStatus };
   prdId?: string | null;
+  prd?: { id: string; title: string; status: PrdStatus } | null;
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };
