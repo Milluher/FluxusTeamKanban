@@ -1,28 +1,11 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { ticketInclude } = require('../lib/ticketInclude');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const ticketInclude = {
-  assignee: { select: { id: true, name: true, email: true } },
-  productManager: { select: { id: true, name: true, email: true } },
-  productDoc: { select: { id: true, title: true, url: true } },
-  initiative: { select: { id: true, title: true, status: true } },
-  createdBy: { select: { id: true, name: true } },
-  _count: { select: { comments: true } },
-  dependsOn: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
-  dependedOnBy: { include: { ticket: { select: { id: true, title: true, status: true } } } },
-  comments: {
-    orderBy: { createdAt: 'asc' },
-    include: { author: { select: { id: true, name: true } } },
-  },
-  sprintHistories: {
-    orderBy: { addedAt: 'asc' },
-    include: { sprint: { select: { id: true, title: true } } },
-  },
-};
 
 // Create ticket
 router.post('/', authenticate, async (req, res) => {

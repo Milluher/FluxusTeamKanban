@@ -9,6 +9,8 @@ interface Props {
   isAdmin: boolean;
   /** Passed through to the canvas, which needs it to authorise PRD edits. */
   currentUser?: User | null;
+  /** Board members, for choosing who a PRD's admin blocks belong to. */
+  members?: { user: User }[];
 }
 
 // Project Overview and Product Files took around 420px between them even with
@@ -18,7 +20,7 @@ interface Props {
 //
 // Both sections stay mounted either way: each fetches its own data and reports
 // its count back, which is how this knows whether there is anything to show.
-export default function BoardInfo({ boardId, isAdmin, currentUser }: Props) {
+export default function BoardInfo({ boardId, isAdmin, currentUser, members }: Props) {
   const [overviewCount, setOverviewCount] = useState<number | null>(null);
   const [filesCount, setFilesCount] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -82,7 +84,7 @@ export default function BoardInfo({ boardId, isAdmin, currentUser }: Props) {
             </button>
           </div>
         )}
-        <BoardCanvas boardId={boardId} isAdmin={isAdmin} onCountChange={setOverviewCount} currentUser={currentUser} />
+        <BoardCanvas boardId={boardId} isAdmin={isAdmin} onCountChange={setOverviewCount} currentUser={currentUser} members={members} />
         <ProductFiles boardId={boardId} isAdmin={isAdmin} onCountChange={setFilesCount} />
       </div>
     </>

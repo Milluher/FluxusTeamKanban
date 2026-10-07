@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Prd } from '@/types';
+import { Prd, PrdAdminBlock, User } from '@/types';
 
 const get = vi.fn();
 const patch = vi.fn();
@@ -8,6 +8,17 @@ const del = vi.fn();
 vi.mock('@/lib/api', () => ({ default: { get, patch, post, delete: del } }));
 
 const { renderToDom, flush, typeInto } = await import('@/test/render');
+const { act } = await import('react');
+
+/**
+ * React listens for `focusout`, not `blur`, to drive onBlur — blur does not
+ * bubble, so dispatching it reaches nothing.
+ */
+const blurField = async (el: Element) => {
+  await act(async () => {
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+  });
+};
 const { PRD_SECTIONS } = await import('@/lib/prdSections');
 const PrdBuilderModal = (await import('./PrdBuilderModal')).default;
 
@@ -23,6 +34,7 @@ const prd = (overrides: Partial<Prd> = {}): Prd => ({
   board: { id: 'b1', name: 'Roadmap' },
   canvasFeature: { id: 'f1', text: 'Self-serve onboarding' },
   personas: [],
+  adminBlocks: [],
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',
   ...overrides,
@@ -37,12 +49,38 @@ const complete = {
   successMetrics: 'Activation up 10%.',
 };
 
-const open = (p: Prd = prd(), canEdit = true) => {
+const author: User = { id: 'u1', name: 'Alice Doe', email: 'a@f.com', role: 'standard' } as User;
+const assignee: User = { id: 'u2', name: 'Bob Roe', email: 'b@f.com', role: 'standard' } as User;
+
+const block = (overrides: Partial<PrdAdminBlock> = {}): PrdAdminBlock => ({
+  id: 'ab1',
+  prdId: 'p1',
+  role: 'Compliance',
+  assigneeId: assignee.id,
+  assignee: { id: assignee.id, name: assignee.name },
+  dataNeeded: null,
+  actionsNeeded: null,
+  ticketId: null,
+  ticket: null,
+  createdAt: '2026-10-01T00:00:00.000Z',
+  updatedAt: '2026-10-01T00:00:00.000Z',
+  ...overrides,
+});
+
+const open = (p: Prd = prd(), canEdit = true, as: User | null = author) => {
   const onSaved = vi.fn();
   const onClose = vi.fn();
   const onDeleted = vi.fn();
   const handle = renderToDom(
-    <PrdBuilderModal prd={p} canEdit={canEdit} onClose={onClose} onSaved={onSaved} onDeleted={onDeleted} />
+    <PrdBuilderModal
+      prd={p}
+      canEdit={canEdit}
+      currentUser={as}
+      members={[{ user: author }, { user: assignee }]}
+      onClose={onClose}
+      onSaved={onSaved}
+      onDeleted={onDeleted}
+    />
   );
   return { ...handle, onSaved, onClose, onDeleted };
 };
@@ -178,6 +216,96 @@ describe('PrdBuilderModal', () => {
 
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Only the author');
     expect(container.querySelector('[role="status"]')?.textContent).toContain('Not saved');
+    unmount();
+  });
+
+  it('lets the author assign a block to a board member', async () => {
+    patch.mockReset();
+    post.mockResolvedValue({ data: prd({ adminBlocks: [block()] }) });
+    const { container, onSaved, unmount } = open();
+    await flush();
+
+    typeInto(container.querySelector('input[aria-label="Block role"]') as HTMLInputElement, 'Compliance');
+    const select = container.querySelector('select[aria-label="Block assignee"]') as HTMLSelectElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+    setter?.call(select, assignee.id);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await flush();
+
+    button(container, 'Add block').click();
+    await flush();
+
+    expect(post).toHaveBeenCalledWith('/prds/p1/admin-blocks', { role: 'Compliance', assigneeId: assignee.id });
+    expect(onSaved).toHaveBeenCalled();
+    unmount();
+  });
+
+  it('asks the assignee the brief\u2019s two questions, and nobody else', async () => {
+    const withBlock = prd({ adminBlocks: [block()] });
+
+    const mine = open(withBlock, false, assignee);
+    await flush();
+    expect(mine.container.textContent).toContain('Data you need');
+    expect(mine.container.textContent).toContain('Actions you need to take with this product');
+    expect((mine.container.querySelector('#block-ab1-data') as HTMLTextAreaElement).disabled).toBe(false);
+    expect(mine.container.textContent).toContain('Yours');
+    mine.unmount();
+
+    // The author can see the block but must not answer it.
+    const theirs = open(withBlock, true, author);
+    await flush();
+    expect((theirs.container.querySelector('#block-ab1-data') as HTMLTextAreaElement).disabled).toBe(true);
+    theirs.unmount();
+  });
+
+  it('saves the assignee\u2019s answers when they leave the field', async () => {
+    patch.mockReset().mockResolvedValue({ data: prd({ adminBlocks: [block({ dataNeeded: 'Transaction logs' })] }) });
+    const { container, unmount } = open(prd({ adminBlocks: [block()] }), false, assignee);
+    await flush();
+
+    const data = container.querySelector('#block-ab1-data') as HTMLTextAreaElement;
+    typeInto(data, 'Transaction logs');
+    await flush();
+    expect(patch).not.toHaveBeenCalled(); // not per keystroke
+
+    await blurField(data);
+    await flush();
+    expect(patch).toHaveBeenCalledWith('/prds/admin-blocks/ab1', expect.objectContaining({ dataNeeded: 'Transaction logs' }));
+    unmount();
+  });
+
+  it('does not re-send answers that have not changed', async () => {
+    patch.mockReset();
+    const { container, unmount } = open(prd({ adminBlocks: [block({ dataNeeded: 'Already here' })] }), false, assignee);
+    await flush();
+    const data = container.querySelector('#block-ab1-data') as HTMLTextAreaElement;
+    await blurField(data);
+    await flush();
+    expect(patch).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('stops offering new blocks once the PRD is published', async () => {
+    const { container, unmount } = open(
+      prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', adminBlocks: [block()] })
+    );
+    await flush();
+    expect(container.querySelector('input[aria-label="Block role"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Remove the Compliance block"]')).toBeNull();
+    unmount();
+  });
+
+  it('shows the task a published block raised', async () => {
+    const { container, unmount } = open(
+      prd({
+        ...complete,
+        status: 'published',
+        publishedAt: '2026-10-02T00:00:00.000Z',
+        adminBlocks: [block({ ticketId: 't9', ticket: { id: 't9', title: 'x', status: 'To Do' } })],
+      })
+    );
+    await flush();
+    expect(container.textContent).toContain('To Do');
     unmount();
   });
 

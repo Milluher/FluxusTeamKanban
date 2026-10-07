@@ -774,7 +774,7 @@ export default function BoardPage() {
 
       {/* Project Overview canvas — sits above the board on kanban + sprint overview.
           Hidden once a sprint is opened so the sprint board takes the full page. */}
-      {!activeSprint && <BoardInfo boardId={boardId} isAdmin={isAdmin} currentUser={currentUser} />}
+      {!activeSprint && <BoardInfo boardId={boardId} isAdmin={isAdmin} currentUser={currentUser} members={board.members} />}
 
       {/* Main content: Direct Kanban (kanban board), Sprint Overview, or Sprint Ticket View */}
       {board.type === 'kanban' ? (

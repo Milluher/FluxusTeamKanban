@@ -10,6 +10,27 @@ export interface User {
 export type PrdStatus = 'draft' | 'published';
 export type PrdClassification = 'new_product' | 'major_feature' | 'minor_enhancement';
 
+/**
+ * §16 Administrative — a block of the PRD assigned to one board member.
+ *
+ * The author owns `role` and `assignee`; the assignee owns the two answers.
+ * `ticket` is the task raised when the PRD is published, so it is absent while
+ * the PRD is still a draft.
+ */
+export interface PrdAdminBlock {
+  id: string;
+  prdId: string;
+  role: string;
+  assigneeId: string;
+  assignee: { id: string; name: string; email?: string };
+  dataNeeded?: string | null;
+  actionsNeeded?: string | null;
+  ticketId?: string | null;
+  ticket?: { id: string; title: string; status: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** §10 Target Personas — the join row, so the persona travels with it. */
 export interface PrdPersonaLink {
   id: string;
@@ -48,6 +69,7 @@ export interface Prd {
   board: { id: string; name: string };
   canvasFeature?: { id: string; text: string } | null;
   personas: PrdPersonaLink[];
+  adminBlocks: PrdAdminBlock[];
   publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -157,6 +179,7 @@ export interface Ticket {
   productDoc?: { id: string; title: string; url: string };
   initiativeId?: string;
   initiative?: { id: string; title: string; status: InitiativeStatus };
+  prdId?: string | null;
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };

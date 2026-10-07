@@ -12,6 +12,8 @@ interface Props {
   isAdmin: boolean;
   /** Needed to decide who may write to a PRD. */
   currentUser?: User | null;
+  /** Board members, for choosing who a PRD's admin blocks belong to. */
+  members?: { user: User }[];
 }
 
 const ACCENT = '#e8390e';
@@ -30,7 +32,7 @@ type ModalState =
   | { kind: 'delete-block'; block: CanvasBlock }
   | null;
 
-export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUser }: Props) {
+export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUser, members }: Props) {
   const [projects, setProjects] = useState<CanvasProject[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -543,6 +545,8 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
       {openPrd && (
         <PrdBuilderModal
           prd={openPrd}
+          currentUser={currentUser ?? null}
+          members={members ?? []}
           canEdit={Boolean(
             currentUser && (openPrd.createdById === currentUser.id || currentUser.role === 'admin')
           )}

@@ -30,6 +30,7 @@ model User {
   initiatives          Initiative[]
   personas             Persona[]
   prds                 Prd[]
+  prdAdminBlocks       PrdAdminBlock[] @relation("PrdAdminAssignee")
 }
 
 model Board {
@@ -95,6 +96,8 @@ model Ticket {
   productDoc       ProductFile? @relation(fields: [productDocId], references: [id], onDelete: SetNull)
   initiativeId     String?
   initiative       Initiative?  @relation(fields: [initiativeId], references: [id], onDelete: SetNull)
+  prdId            String?
+  prd              Prd?         @relation(fields: [prdId], references: [id], onDelete: SetNull)
 
   column         Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
   assignee       User?    @relation("AssigneeRelation", fields: [assigneeId], references: [id])
@@ -106,6 +109,7 @@ model Ticket {
   dependsOn      Dependency[] @relation("DependentTicket")
   dependedOnBy   Dependency[] @relation("BlockingTicket")
   sprintHistories SprintHistory[]
+  prdAdminBlock  PrdAdminBlock?
 }
 
 model Dependency {
@@ -379,6 +383,8 @@ model Prd {
   canvasFeature CanvasFeature? @relation(fields: [canvasFeatureId], references: [id], onDelete: SetNull)
   createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
   personas      PrdPersona[]
+  adminBlocks   PrdAdminBlock[]
+  tickets       Ticket[]
 
   @@index([boardId])
   @@index([status])
@@ -395,4 +401,33 @@ model PrdPersona {
   persona Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
 
   @@unique([prdId, personaId])
+}
+
+// §16 Administrative.
+//
+// A block of fields the PRD's author assigns to a board member: they name the
+// role, pick the person, and that person answers the two questions. The author
+// owns the role and the assignee; the assignee owns the answers. Neither writes
+// the other's half, which is the whole point of assigning it.
+//
+// `ticketId` is the task raised when the PRD is published. It is nullable
+// because a block exists while the PRD is still a draft, and the brief is
+// explicit that nobody is told anything until it is published.
+model PrdAdminBlock {
+  id            String   @id @default(uuid())
+  prdId         String
+  role          String
+  assigneeId    String
+  dataNeeded    String?  // "Data you need"
+  actionsNeeded String?  // "Actions you need to take with this product"
+  ticketId      String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  prd      Prd     @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  assignee User    @relation("PrdAdminAssignee", fields: [assigneeId], references: [id], onDelete: Cascade)
+  ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([prdId])
+  @@index([assigneeId])
 }

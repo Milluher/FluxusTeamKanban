@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
-import { Persona, Prd, PrdClassification } from '@/types';
+import { Persona, Prd, PrdAdminBlock, PrdClassification, User } from '@/types';
 import { PRD_CLASSIFICATIONS, PRD_SECTIONS, missingBeforePublish, sectionsFilled } from '@/lib/prdSections';
 import { formatTimestamp } from '@/lib/formatDate';
 
@@ -9,6 +9,10 @@ interface Props {
   prd: Prd;
   /** True when the viewer may write to it — its author, or a system admin. */
   canEdit: boolean;
+  /** Who is reading. An assignee may answer their own admin block. */
+  currentUser?: User | null;
+  /** Board members, for choosing who an admin block belongs to. */
+  members?: { user: User }[];
   onClose: () => void;
   onSaved: (prd: Prd) => void;
   onDeleted?: (id: string) => void;
@@ -54,7 +58,15 @@ function draftFrom(prd: Prd): Draft {
 // on a Save button, because the brief asks that an incomplete PRD can be left
 // and picked up later — and because losing a document this long would be
 // unforgivable. "Required" is checked when publishing, never while writing.
-export default function PrdBuilderModal({ prd, canEdit, onClose, onSaved, onDeleted }: Props) {
+export default function PrdBuilderModal({
+  prd,
+  canEdit,
+  currentUser,
+  members = [],
+  onClose,
+  onSaved,
+  onDeleted,
+}: Props) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(prd));
   const [personaIds, setPersonaIds] = useState<string[]>(() => prd.personas.map((p) => p.personaId));
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -63,6 +75,14 @@ export default function PrdBuilderModal({ prd, canEdit, onClose, onSaved, onDele
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
+  const [newBlock, setNewBlock] = useState({ role: '', assigneeId: '' });
+  const [blockBusy, setBlockBusy] = useState<string | null>(null);
+  // The assignee's two answers, held locally so typing is not a round trip.
+  const [answers, setAnswers] = useState<Record<string, { dataNeeded: string; actionsNeeded: string }>>(() =>
+    Object.fromEntries(
+      prd.adminBlocks.map((b) => [b.id, { dataNeeded: b.dataNeeded ?? '', actionsNeeded: b.actionsNeeded ?? '' }])
+    )
+  );
 
   // What has actually been sent, so the autosave can tell a real edit from a
   // re-render and from the server's own echo.
@@ -73,6 +93,17 @@ export default function PrdBuilderModal({ prd, canEdit, onClose, onSaved, onDele
   useEffect(() => {
     api.get<Persona[]>('/personas').then(({ data }) => setPersonas(data)).catch(() => {});
   }, []);
+
+  // New blocks get an entry; existing ones keep whatever is being typed.
+  useEffect(() => {
+    setAnswers((prev) => {
+      const next = { ...prev };
+      for (const b of prd.adminBlocks) {
+        if (!next[b.id]) next[b.id] = { dataNeeded: b.dataNeeded ?? '', actionsNeeded: b.actionsNeeded ?? '' };
+      }
+      return next;
+    });
+  }, [prd.adminBlocks]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -116,6 +147,52 @@ export default function PrdBuilderModal({ prd, canEdit, onClose, onSaved, onDele
 
   const togglePersona = (id: string) =>
     setPersonaIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
+
+  const addBlock = async () => {
+    if (!newBlock.role.trim() || !newBlock.assigneeId) return;
+    setBlockBusy('new');
+    setError('');
+    try {
+      const { data } = await api.post<Prd>(`/prds/${prd.id}/admin-blocks`, newBlock);
+      setNewBlock({ role: '', assigneeId: '' });
+      onSaved(data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Could not add that block.');
+    } finally {
+      setBlockBusy(null);
+    }
+  };
+
+  const removeBlock = async (blockId: string) => {
+    setBlockBusy(blockId);
+    setError('');
+    try {
+      const { data } = await api.delete<Prd>(`/prds/admin-blocks/${blockId}`);
+      onSaved(data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Could not remove that block.');
+    } finally {
+      setBlockBusy(null);
+    }
+  };
+
+  // The assignee's answers save on blur rather than on a debounce: they are two
+  // long-form fields filled in one sitting, not a document written over days.
+  const saveAnswers = async (block: PrdAdminBlock) => {
+    const local = answers[block.id];
+    if (!local) return;
+    if (local.dataNeeded === (block.dataNeeded ?? '') && local.actionsNeeded === (block.actionsNeeded ?? '')) return;
+    setBlockBusy(block.id);
+    setError('');
+    try {
+      const { data } = await api.patch<Prd>(`/prds/admin-blocks/${block.id}`, local);
+      onSaved(data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Could not save your answers.');
+    } finally {
+      setBlockBusy(null);
+    }
+  };
 
   const publish = async () => {
     if (missing.length) { setShowMissing(true); return; }
@@ -342,6 +419,144 @@ export default function PrdBuilderModal({ prd, canEdit, onClose, onSaved, onDele
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
+          </div>
+
+
+          {/* §16 Administrative */}
+          <div className="pt-1">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">§16 Administrative</span>
+            <p className="text-xs text-gray-500 mb-2.5">
+              Blocks of the PRD owned by individual board members. You set the role and the person;
+              they answer the two questions. Each becomes a task on their board when this PRD is published.
+            </p>
+
+            <div className="space-y-2.5">
+              {prd.adminBlocks.length === 0 && (
+                <p className="text-xs text-gray-500">No admin blocks yet.</p>
+              )}
+
+              {prd.adminBlocks.map((block) => {
+                const mine = currentUser?.id === block.assigneeId;
+                const local = answers[block.id] ?? { dataNeeded: '', actionsNeeded: '' };
+                return (
+                  <div key={block.id} className="rounded-xl border border-gray-200 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-bold min-w-0 truncate" style={{ color: '#1a1f3c' }}>
+                        {block.role}
+                      </span>
+                      <span className="text-xs text-gray-500 truncate">{block.assignee.name}</span>
+                      {mine && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-800 flex-shrink-0">
+                          Yours
+                        </span>
+                      )}
+                      {block.ticket && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0 whitespace-nowrap">
+                          {block.ticket.status}
+                        </span>
+                      )}
+                      {editable && (
+                        <button
+                          type="button"
+                          onClick={() => removeBlock(block.id)}
+                          disabled={blockBusy === block.id}
+                          aria-label={`Remove the ${block.role} block`}
+                          className="ml-auto text-xs font-semibold text-gray-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Only the assignee may answer; everyone who can read the
+                        PRD sees the answers, which is what the brief asks for. */}
+                    <div className="space-y-2">
+                      <div>
+                        <label
+                          htmlFor={`block-${block.id}-data`}
+                          className="block text-xs font-semibold text-gray-500 mb-1"
+                        >
+                          Data you need
+                        </label>
+                        <textarea
+                          id={`block-${block.id}-data`}
+                          value={local.dataNeeded}
+                          disabled={!mine}
+                          onChange={(e) =>
+                            setAnswers((prev) => ({ ...prev, [block.id]: { ...local, dataNeeded: e.target.value } }))
+                          }
+                          rows={3}
+                          placeholder={mine ? 'What you need in order to do your part…' : 'Not filled in yet'}
+                          className="px-3 py-2 text-sm text-gray-900 placeholder-gray-500 resize-y disabled:bg-gray-50"
+                          style={inputStyle}
+                          {...inputFocus}
+                          onBlur={(e) => { inputFocus.onBlur(e); void saveAnswers(block); }}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`block-${block.id}-actions`}
+                          className="block text-xs font-semibold text-gray-500 mb-1"
+                        >
+                          Actions you need to take with this product
+                        </label>
+                        <textarea
+                          id={`block-${block.id}-actions`}
+                          value={local.actionsNeeded}
+                          disabled={!mine}
+                          onChange={(e) =>
+                            setAnswers((prev) => ({ ...prev, [block.id]: { ...local, actionsNeeded: e.target.value } }))
+                          }
+                          rows={3}
+                          placeholder={mine ? 'What you will do…' : 'Not filled in yet'}
+                          className="px-3 py-2 text-sm text-gray-900 placeholder-gray-500 resize-y disabled:bg-gray-50"
+                          style={inputStyle}
+                          {...inputFocus}
+                          onBlur={(e) => { inputFocus.onBlur(e); void saveAnswers(block); }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {editable && (
+                <div className="rounded-xl border border-dashed border-gray-300 p-3 flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newBlock.role}
+                    onChange={(e) => setNewBlock({ ...newBlock, role: e.target.value })}
+                    placeholder="Role, e.g. Compliance"
+                    aria-label="Block role"
+                    className="px-3 py-2 text-sm text-gray-900 placeholder-gray-500 sm:flex-1"
+                    style={inputStyle}
+                    {...inputFocus}
+                  />
+                  <select
+                    value={newBlock.assigneeId}
+                    onChange={(e) => setNewBlock({ ...newBlock, assigneeId: e.target.value })}
+                    aria-label="Block assignee"
+                    className="px-3 py-2 text-sm text-gray-900 sm:flex-1"
+                    style={inputStyle}
+                    {...inputFocus}
+                  >
+                    <option value="">Assign to…</option>
+                    {members.map((m) => (
+                      <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addBlock}
+                    disabled={blockBusy === 'new' || !newBlock.role.trim() || !newBlock.assigneeId}
+                    className="px-4 py-2 min-h-[40px] rounded-lg text-sm font-bold text-white disabled:opacity-50 flex-shrink-0"
+                    style={{ background: '#c73009' }}
+                  >
+                    {blockBusy === 'new' ? 'Adding…' : 'Add block'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-gray-500 pt-1">
