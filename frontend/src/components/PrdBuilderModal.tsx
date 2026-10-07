@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { Persona, Prd, PrdAdminBlock, PrdClassification, User } from '@/types';
 import { PRD_CLASSIFICATIONS, PRD_SECTIONS, missingBeforePublish, sectionsFilled } from '@/lib/prdSections';
 import { approvalCount, approvalState, approverShortfall, isWritable } from '@/lib/prdApproval';
+import { canExportPrd, downloadPrdPdf } from '@/lib/prdPdf';
 import { formatTimestamp } from '@/lib/formatDate';
 
 interface Props {
@@ -80,6 +81,7 @@ export default function PrdBuilderModal({
   const [newApproverId, setNewApproverId] = useState('');
   const [decisionNote, setDecisionNote] = useState('');
   const [deciding, setDeciding] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [blockBusy, setBlockBusy] = useState<string | null>(null);
   // The assignee's two answers, held locally so typing is not a round trip.
   const [answers, setAnswers] = useState<Record<string, { dataNeeded: string; actionsNeeded: string }>>(() =>
@@ -248,6 +250,22 @@ export default function PrdBuilderModal({
       setError(e.response?.data?.error || 'Could not record your decision.');
     } finally {
       setDeciding(false);
+    }
+  };
+
+  // §19: its creator, or a workspace admin. Available whatever state it is in —
+  // a draft worth circulating is worth exporting.
+  const canExport = canExportPrd(prd, currentUser);
+
+  const exportPdf = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      await downloadPrdPdf(prd);
+    } catch {
+      setError('Could not build the PDF.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -773,7 +791,7 @@ export default function PrdBuilderModal({
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-gray-200 flex items-center gap-2.5 flex-shrink-0">
-          {canEdit && !published && (
+          {canEdit && writable && (
             confirmDelete ? (
               <>
                 <span className="text-xs font-medium text-red-700 flex-1">Remove this PRD?</span>
@@ -803,6 +821,16 @@ export default function PrdBuilderModal({
                   Remove
                 </button>
                 <div className="flex-1" />
+                {canExport && (
+                  <button
+                    type="button"
+                    onClick={exportPdf}
+                    disabled={exporting}
+                    className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 bg-white hover:text-gray-900 disabled:opacity-50"
+                  >
+                    {exporting ? 'Building…' : 'Export PDF'}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onClose}
@@ -823,9 +851,19 @@ export default function PrdBuilderModal({
               </>
             )
           )}
-          {(!canEdit || published) && (
+          {(!canEdit || !writable) && (
             <>
               <div className="flex-1" />
+              {canExport && (
+                <button
+                  type="button"
+                  onClick={exportPdf}
+                  disabled={exporting}
+                  className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 bg-white hover:text-gray-900 disabled:opacity-50"
+                >
+                  {exporting ? 'Building…' : 'Export PDF'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}

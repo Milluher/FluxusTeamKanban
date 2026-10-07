@@ -441,6 +441,32 @@ describe('PrdBuilderModal', () => {
     done.unmount();
   });
 
+  it('offers an export to the creator and to a workspace admin, and to nobody else', async () => {
+    const live = prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: twoApprovers });
+
+    const asAuthor = open(live, true, author);
+    await flush();
+    expect(button(asAuthor.container, 'Export PDF')).toBeDefined();
+    asAuthor.unmount();
+
+    const asAdmin = open(live, true, { ...assignee, role: 'admin' } as User);
+    await flush();
+    expect(button(asAdmin.container, 'Export PDF')).toBeDefined();
+    asAdmin.unmount();
+
+    const asOther = open(live, false, assignee);
+    await flush();
+    expect(button(asOther.container, 'Export PDF')).toBeUndefined();
+    asOther.unmount();
+  });
+
+  it('offers an export of a draft too — one worth circulating is worth exporting', async () => {
+    const { container, unmount } = open();
+    await flush();
+    expect(button(container, 'Export PDF')).toBeDefined();
+    unmount();
+  });
+
   it('closes on Escape', async () => {
     const { onClose, unmount } = open();
     await flush();
