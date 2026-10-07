@@ -31,6 +31,7 @@ model User {
   personas             Persona[]
   prds                 Prd[]
   prdAdminBlocks       PrdAdminBlock[] @relation("PrdAdminAssignee")
+  prdApprovals         PrdApprover[]   @relation("PrdApproverUser")
 }
 
 model Board {
@@ -110,6 +111,7 @@ model Ticket {
   dependedOnBy   Dependency[] @relation("BlockingTicket")
   sprintHistories SprintHistory[]
   prdAdminBlock  PrdAdminBlock?
+  prdApprover    PrdApprover?
 }
 
 model Dependency {
@@ -384,6 +386,7 @@ model Prd {
   createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
   personas      PrdPersona[]
   adminBlocks   PrdAdminBlock[]
+  approvers     PrdApprover[]
   tickets       Ticket[]
 
   @@index([boardId])
@@ -430,4 +433,32 @@ model PrdAdminBlock {
 
   @@index([prdId])
   @@index([assigneeId])
+}
+
+// §17 Approval.
+//
+// The author names at least two approvers — enforced when publishing, since
+// that is the moment they are told. Each is pending until they act; the PRD
+// counts as approved once all of them have approved.
+//
+// An approver can also ask for changes, with a note. That is the reason a
+// published PRD can become editable again: feedback nobody can act on is not
+// feedback.
+model PrdApprover {
+  id        String    @id @default(uuid())
+  prdId     String
+  userId    String
+  status    String    @default("pending") // "pending" | "approved" | "changes_requested"
+  note      String?
+  decidedAt DateTime?
+  ticketId  String?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  prd    Prd     @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  user   User    @relation("PrdApproverUser", fields: [userId], references: [id], onDelete: Cascade)
+  ticket Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@unique([prdId, userId])
+  @@index([userId])
 }

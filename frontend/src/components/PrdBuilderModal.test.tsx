@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Prd, PrdAdminBlock, User } from '@/types';
+import { Prd, PrdAdminBlock, PrdApprover, User } from '@/types';
 
 const get = vi.fn();
 const patch = vi.fn();
@@ -35,6 +35,7 @@ const prd = (overrides: Partial<Prd> = {}): Prd => ({
   canvasFeature: { id: 'f1', text: 'Self-serve onboarding' },
   personas: [],
   adminBlocks: [],
+  approvers: [],
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',
   ...overrides,
@@ -67,6 +68,25 @@ const block = (overrides: Partial<PrdAdminBlock> = {}): PrdAdminBlock => ({
   ...overrides,
 });
 
+const reviewer: User = { id: 'u3', name: 'Cara Nwosu', email: 'c@f.com', role: 'standard' } as User;
+
+const approver = (overrides: Partial<PrdApprover> = {}): PrdApprover => ({
+  id: 'ap1',
+  prdId: 'p1',
+  userId: reviewer.id,
+  user: { id: reviewer.id, name: reviewer.name },
+  status: 'pending',
+  note: null,
+  decidedAt: null,
+  ticketId: null,
+  ticket: null,
+  createdAt: '2026-10-01T00:00:00.000Z',
+  updatedAt: '2026-10-01T00:00:00.000Z',
+  ...overrides,
+});
+
+const twoApprovers = [approver(), approver({ id: 'ap2', userId: assignee.id, user: { id: assignee.id, name: assignee.name } })];
+
 const open = (p: Prd = prd(), canEdit = true, as: User | null = author) => {
   const onSaved = vi.fn();
   const onClose = vi.fn();
@@ -76,7 +96,7 @@ const open = (p: Prd = prd(), canEdit = true, as: User | null = author) => {
       prd={p}
       canEdit={canEdit}
       currentUser={as}
-      members={[{ user: author }, { user: assignee }]}
+      members={[{ user: author }, { user: assignee }, { user: reviewer }]}
       onClose={onClose}
       onSaved={onSaved}
       onDeleted={onDeleted}
@@ -147,8 +167,8 @@ describe('PrdBuilderModal', () => {
     unmount();
   });
 
-  it('publishes once the required sections are written', async () => {
-    const { container, onSaved, unmount } = open(prd(complete));
+  it('publishes once the required sections are written and the approvers are named', async () => {
+    const { container, onSaved, unmount } = open(prd({ ...complete, approvers: twoApprovers }));
     await flush();
     button(container, 'Publish').click();
     await flush();
@@ -159,7 +179,9 @@ describe('PrdBuilderModal', () => {
   });
 
   it('shows a published PRD read-only, even to its author', async () => {
-    const { container, unmount } = open(prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z' }));
+    const { container, unmount } = open(
+      prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: twoApprovers })
+    );
     await flush();
     expect(field(container, 'overview').disabled).toBe(true);
     expect(button(container, 'Publish')).toBeUndefined();
@@ -307,6 +329,116 @@ describe('PrdBuilderModal', () => {
     await flush();
     expect(container.textContent).toContain('To Do');
     unmount();
+  });
+
+  it('refuses to publish with fewer than two approvers, and says so', async () => {
+    const { container, unmount } = open(prd({ ...complete, approvers: [approver()] }));
+    await flush();
+    button(container, 'Publish').click();
+    await flush();
+
+    expect(post).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('1 more approver');
+    unmount();
+  });
+
+  it('only offers a decision to the approver, and only after publishing', async () => {
+    const draft = prd({ ...complete, approvers: twoApprovers });
+    const asReviewerDraft = open(draft, false, reviewer);
+    await flush();
+    // Nothing to sign off on a draft.
+    expect(button(asReviewerDraft.container, 'Approve')).toBeUndefined();
+    asReviewerDraft.unmount();
+
+    const live = prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: twoApprovers });
+    const asReviewer = open(live, false, reviewer);
+    await flush();
+    expect(button(asReviewer.container, 'Approve')).toBeDefined();
+    expect(button(asReviewer.container, 'Request changes')).toBeDefined();
+    asReviewer.unmount();
+
+    // The author is not an approver here, so is offered no decision.
+    const asAuthor = open(live, true, author);
+    await flush();
+    expect(button(asAuthor.container, 'Approve')).toBeUndefined();
+    asAuthor.unmount();
+  });
+
+  it('records an approval, with the note', async () => {
+    const live = prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: twoApprovers });
+    post.mockResolvedValue({ data: live });
+    const { container, unmount } = open(live, false, reviewer);
+    await flush();
+
+    typeInto(container.querySelector('textarea[aria-label="Decision note"]') as HTMLTextAreaElement, 'Looks right.');
+    await flush();
+    button(container, 'Approve').click();
+    await flush();
+
+    expect(post).toHaveBeenCalledWith('/prds/approvers/ap1/decision', { status: 'approved', note: 'Looks right.' });
+    unmount();
+  });
+
+  it('records a change request', async () => {
+    const live = prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: twoApprovers });
+    post.mockResolvedValue({ data: live });
+    const { container, unmount } = open(live, false, reviewer);
+    await flush();
+    button(container, 'Request changes').click();
+    await flush();
+    expect(post).toHaveBeenCalledWith('/prds/approvers/ap1/decision', { status: 'changes_requested', note: '' });
+    unmount();
+  });
+
+  it('reopens the sections for the author once changes are requested', async () => {
+    const changed = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      approvers: [approver({ status: 'changes_requested', note: 'Tighten the scope.' }), twoApprovers[1]],
+    });
+    const { container, unmount } = open(changed, true, author);
+    await flush();
+
+    expect(field(container, 'overview').disabled).toBe(false);
+    expect(container.textContent).toContain('asked for changes, so the sections are editable again');
+    expect(container.textContent).toContain('Tighten the scope.');
+    unmount();
+  });
+
+  it('keeps a published PRD closed while every decision is approval or pending', async () => {
+    const live = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      approvers: [approver({ status: 'approved' }), twoApprovers[1]],
+    });
+    const { container, unmount } = open(live, true, author);
+    await flush();
+    expect(field(container, 'overview').disabled).toBe(true);
+    expect(container.textContent).toContain('no longer editable');
+    unmount();
+  });
+
+  it('shows where approval stands in the header', async () => {
+    const pending = open(
+      prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: [approver({ status: 'approved' }), twoApprovers[1]] })
+    );
+    await flush();
+    expect(pending.container.textContent).toContain('1 of 2 approved');
+    pending.unmount();
+
+    const done = open(
+      prd({
+        ...complete,
+        status: 'published',
+        publishedAt: '2026-10-02T00:00:00.000Z',
+        approvers: [approver({ status: 'approved' }), approver({ id: 'ap2', userId: assignee.id, user: { id: assignee.id, name: assignee.name }, status: 'approved' })],
+      })
+    );
+    await flush();
+    expect(done.container.textContent).toContain('Approved');
+    done.unmount();
   });
 
   it('closes on Escape', async () => {

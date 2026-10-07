@@ -10,6 +10,28 @@ export interface User {
 export type PrdStatus = 'draft' | 'published';
 export type PrdClassification = 'new_product' | 'major_feature' | 'minor_enhancement';
 
+export type PrdApprovalStatus = 'pending' | 'approved' | 'changes_requested';
+
+/**
+ * §17 Approval — one named approver and their decision.
+ *
+ * `ticket` is the task raised when the PRD is published, so it is absent while
+ * the PRD is still a draft.
+ */
+export interface PrdApprover {
+  id: string;
+  prdId: string;
+  userId: string;
+  user: { id: string; name: string; email?: string };
+  status: PrdApprovalStatus;
+  note?: string | null;
+  decidedAt?: string | null;
+  ticketId?: string | null;
+  ticket?: { id: string; title: string; status: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * §16 Administrative — a block of the PRD assigned to one board member.
  *
@@ -70,6 +92,7 @@ export interface Prd {
   canvasFeature?: { id: string; text: string } | null;
   personas: PrdPersonaLink[];
   adminBlocks: PrdAdminBlock[];
+  approvers: PrdApprover[];
   publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;

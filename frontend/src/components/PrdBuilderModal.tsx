@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { Persona, Prd, PrdAdminBlock, PrdClassification, User } from '@/types';
 import { PRD_CLASSIFICATIONS, PRD_SECTIONS, missingBeforePublish, sectionsFilled } from '@/lib/prdSections';
+import { approvalCount, approvalState, approverShortfall, isWritable } from '@/lib/prdApproval';
 import { formatTimestamp } from '@/lib/formatDate';
 
 interface Props {
@@ -76,6 +77,9 @@ export default function PrdBuilderModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const [newBlock, setNewBlock] = useState({ role: '', assigneeId: '' });
+  const [newApproverId, setNewApproverId] = useState('');
+  const [decisionNote, setDecisionNote] = useState('');
+  const [deciding, setDeciding] = useState(false);
   const [blockBusy, setBlockBusy] = useState<string | null>(null);
   // The assignee's two answers, held locally so typing is not a round trip.
   const [answers, setAnswers] = useState<Record<string, { dataNeeded: string; actionsNeeded: string }>>(() =>
@@ -88,7 +92,14 @@ export default function PrdBuilderModal({
   // re-render and from the server's own echo.
   const savedRef = useRef<string>(JSON.stringify({ draft: draftFrom(prd), personaIds: prd.personas.map((p) => p.personaId) }));
   const published = prd.status === 'published';
-  const editable = canEdit && !published;
+  // A published PRD reopens when an approver asks for changes, so the author
+  // can actually act on the feedback. Mirrors the server.
+  const writable = isWritable(prd);
+  const editable = canEdit && writable;
+  const state = approvalState(prd);
+  const counts = approvalCount(prd);
+  const shortfall = approverShortfall(prd);
+  const myApproval = prd.approvers.find((a) => a.userId === currentUser?.id);
 
   useEffect(() => {
     api.get<Persona[]>('/personas').then(({ data }) => setPersonas(data)).catch(() => {});
@@ -194,8 +205,54 @@ export default function PrdBuilderModal({
     }
   };
 
+  const addApprover = async () => {
+    if (!newApproverId) return;
+    setBlockBusy('approver');
+    setError('');
+    try {
+      const { data } = await api.post<Prd>(`/prds/${prd.id}/approvers`, { userId: newApproverId });
+      setNewApproverId('');
+      onSaved(data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Could not add that approver.');
+    } finally {
+      setBlockBusy(null);
+    }
+  };
+
+  const removeApprover = async (approverId: string) => {
+    setBlockBusy(approverId);
+    setError('');
+    try {
+      const { data } = await api.delete<Prd>(`/prds/approvers/${approverId}`);
+      onSaved(data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Could not remove that approver.');
+    } finally {
+      setBlockBusy(null);
+    }
+  };
+
+  const decide = async (status: 'approved' | 'changes_requested') => {
+    if (!myApproval) return;
+    setDeciding(true);
+    setError('');
+    try {
+      const { data } = await api.post<Prd>(`/prds/approvers/${myApproval.id}/decision`, {
+        status,
+        note: decisionNote,
+      });
+      setDecisionNote('');
+      onSaved(data);
+    } catch (e: any) {
+      setError(e.response?.data?.error || 'Could not record your decision.');
+    } finally {
+      setDeciding(false);
+    }
+  };
+
   const publish = async () => {
-    if (missing.length) { setShowMissing(true); return; }
+    if (missing.length || shortfall) { setShowMissing(true); return; }
     setPublishing(true);
     setError('');
     try {
@@ -249,14 +306,22 @@ export default function PrdBuilderModal({
               <h2 className="font-bold text-base min-w-0 truncate" style={{ color: '#1a1f3c' }}>
                 {draft.title || 'Untitled PRD'}
               </h2>
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
-                style={published
-                  ? { background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }
-                  : { background: '#fffbeb', color: '#b45309', border: '1px solid #fcd34d' }}
-              >
-                {published ? 'Published' : 'Draft'}
-              </span>
+              {(() => {
+                const badge =
+                  !published ? { label: 'Draft', bg: '#fffbeb', fg: '#b45309', bd: '#fcd34d' }
+                  : state === 'approved' ? { label: 'Approved', bg: '#ecfdf5', fg: '#047857', bd: '#a7f3d0' }
+                  : state === 'changes_requested' ? { label: 'Changes requested', bg: '#fef2f2', fg: '#b91c1c', bd: '#fecaca' }
+                  : state === 'pending' ? { label: `${counts.approved} of ${counts.total} approved`, bg: '#eff6ff', fg: '#1d4ed8', bd: '#bfdbfe' }
+                  : { label: 'Published', bg: '#ecfdf5', fg: '#047857', bd: '#a7f3d0' };
+                return (
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
+                    style={{ background: badge.bg, color: badge.fg, border: `1px solid ${badge.bd}` }}
+                  >
+                    {badge.label}
+                  </span>
+                );
+              })()}
             </div>
             <p className="text-xs text-gray-500">
               {prd.board.name}
@@ -295,19 +360,27 @@ export default function PrdBuilderModal({
             </p>
           )}
 
-          {published && canEdit && (
+          {published && canEdit && !writable && (
             <p className="px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-600 border border-gray-200">
               This PRD is published, so its sections are no longer editable.
             </p>
           )}
 
-          {showMissing && missing.length > 0 && (
+          {published && canEdit && writable && (
+            <p className="px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800 border border-amber-200">
+              An approver asked for changes, so the sections are editable again. The tasks already
+              raised stay where they are.
+            </p>
+          )}
+
+          {showMissing && (missing.length > 0 || shortfall) && (
             <div role="alert" className="px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800 border border-amber-200">
               <p className="font-semibold mb-1">Not ready to publish</p>
               <ul className="list-disc list-inside space-y-0.5">
                 {missing.map((s) => (
                   <li key={s.name}>§{s.number} {s.label}</li>
                 ))}
+                {shortfall && <li>{shortfall}</li>}
               </ul>
             </div>
           )}
@@ -554,6 +627,140 @@ export default function PrdBuilderModal({
                   >
                     {blockBusy === 'new' ? 'Adding…' : 'Add block'}
                   </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+
+          {/* §17 Approval */}
+          <div className="pt-1">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">§17 Approval</span>
+            <p className="text-xs text-gray-500 mb-2.5">
+              At least two people must sign this off. They are asked, and see it on their board,
+              when the PRD is published — not before.
+            </p>
+
+            <div className="space-y-2">
+              {prd.approvers.length === 0 && (
+                <p className="text-xs text-gray-500">Nobody named yet.</p>
+              )}
+
+              {prd.approvers.map((approver) => {
+                const cfg =
+                  approver.status === 'approved'
+                    ? { label: 'Approved', bg: '#ecfdf5', fg: '#047857' }
+                    : approver.status === 'changes_requested'
+                    ? { label: 'Changes requested', bg: '#fef2f2', fg: '#b91c1c' }
+                    : { label: 'Pending', bg: '#f3f4f6', fg: '#6b7280' };
+                return (
+                  <div key={approver.id} className="rounded-lg border border-gray-200 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-800 min-w-0 truncate">
+                        {approver.user.name}
+                      </span>
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+                        style={{ background: cfg.bg, color: cfg.fg }}
+                      >
+                        {cfg.label}
+                      </span>
+                      {approver.decidedAt && (
+                        <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap">
+                          {formatTimestamp(approver.decidedAt)}
+                        </span>
+                      )}
+                      {canEdit && !published && (
+                        <button
+                          type="button"
+                          onClick={() => removeApprover(approver.id)}
+                          disabled={blockBusy === approver.id}
+                          aria-label={`Remove ${approver.user.name} as an approver`}
+                          className="ml-auto text-xs font-semibold text-gray-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {approver.note && (
+                      <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{approver.note}</p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {canEdit && !published && (
+                <div className="rounded-lg border border-dashed border-gray-300 p-3 flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={newApproverId}
+                    onChange={(e) => setNewApproverId(e.target.value)}
+                    aria-label="Approver"
+                    className="px-3 py-2 text-sm text-gray-900 sm:flex-1"
+                    style={inputStyle}
+                    {...inputFocus}
+                  >
+                    <option value="">Ask someone to approve…</option>
+                    {members
+                      .filter((m) => !prd.approvers.some((a) => a.userId === m.user.id))
+                      .map((m) => (
+                        <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addApprover}
+                    disabled={blockBusy === 'approver' || !newApproverId}
+                    className="px-4 py-2 min-h-[40px] rounded-lg text-sm font-bold text-white disabled:opacity-50 flex-shrink-0"
+                    style={{ background: '#c73009' }}
+                  >
+                    {blockBusy === 'approver' ? 'Adding…' : 'Add approver'}
+                  </button>
+                </div>
+              )}
+
+              {shortfall && !published && (
+                <p className="text-xs text-amber-800">{shortfall}</p>
+              )}
+
+              {/* The approver's own decision. Only once published — there is
+                  nothing to sign off on a draft. */}
+              {myApproval && published && (
+                <div className="rounded-xl border p-3" style={{ borderColor: '#fbd5c8', background: '#fff7f5' }}>
+                  <p className="text-xs font-semibold text-gray-700 mb-2">
+                    {myApproval.status === 'pending'
+                      ? 'You were asked to approve this PRD'
+                      : `You ${myApproval.status === 'approved' ? 'approved this' : 'asked for changes'}`}
+                  </p>
+                  <textarea
+                    value={decisionNote}
+                    onChange={(e) => setDecisionNote(e.target.value)}
+                    rows={2}
+                    aria-label="Decision note"
+                    placeholder="A note, if it helps (optional)"
+                    className="px-3 py-2 text-sm text-gray-900 placeholder-gray-500 resize-y mb-2"
+                    style={inputStyle}
+                    {...inputFocus}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => decide('changes_requested')}
+                      disabled={deciding}
+                      className="flex-1 py-2 min-h-[40px] rounded-lg text-sm font-semibold border bg-white disabled:opacity-50"
+                      style={{ color: '#b91c1c', borderColor: '#fecaca' }}
+                    >
+                      Request changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => decide('approved')}
+                      disabled={deciding}
+                      className="flex-1 py-2 min-h-[40px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
+                      style={{ background: '#047857' }}
+                    >
+                      Approve
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
