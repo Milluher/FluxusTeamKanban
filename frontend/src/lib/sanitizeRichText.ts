@@ -1,4 +1,4 @@
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify, { type Config } from 'dompurify';
 
 /**
  * Sanitises stored rich text before it is put into the DOM.
@@ -10,9 +10,13 @@ import DOMPurify from 'isomorphic-dompurify';
  *
  * Sanitising at render rather than only at write is deliberate: it protects
  * content that is *already* stored, which a write-side filter alone would not.
- * A write-side filter is still worth adding — it keeps the database from being
- * a store of attack payloads — but it needs a backfill to be worth anything on
- * its own.
+ *
+ * Browser-only on purpose. The isomorphic build of DOMPurify brings jsdom with
+ * it, and jsdom's dependency chain fails to load in Vercel's Node runtime
+ * (ERR_REQUIRE_ESM out of html-encoding-sniffer) — which took the whole board
+ * page down with a 500 before this was split out. The content this guards only
+ * ever arrives from a client-side fetch, so there is nothing to sanitise during
+ * a server render; the caller renders nothing until it is mounted.
  *
  * The allowlist is deny-by-default and derived from what the editor can
  * actually produce: TipTap StarterKit, plus Table, TaskList/TaskItem and Image.
@@ -52,7 +56,7 @@ const ALLOWED_ATTR = [
   'class',
 ];
 
-const CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
+const CONFIG: Config = {
   ALLOWED_TAGS,
   ALLOWED_ATTR,
   // Pasted and uploaded images are stored inline as data: URIs, so img has to
@@ -62,13 +66,20 @@ const CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   // Keep the text of anything dropped, so removing a stray tag does not
   // silently delete a sentence.
   KEEP_CONTENT: true,
-  // Return a string, not a node.
   RETURN_DOM: false,
   RETURN_DOM_FRAGMENT: false,
 };
 
-/** The stored HTML, with anything the editor could not have produced removed. */
+/**
+ * The stored HTML, with anything the editor could not have produced removed.
+ *
+ * Returns an empty string where DOMPurify cannot run. That matters: without a
+ * DOM, DOMPurify reports `isSupported: false` and `sanitize` hands the input
+ * straight back — so trusting its return value outside a browser would quietly
+ * reintroduce exactly the hole this closes.
+ */
 export function sanitizeRichText(html: string | null | undefined): string {
   if (!html) return '';
+  if (typeof window === 'undefined' || !DOMPurify.isSupported) return '';
   return DOMPurify.sanitize(html, CONFIG) as unknown as string;
 }

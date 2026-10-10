@@ -25,7 +25,7 @@
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
     "axios": "^1.6.7",
-    "isomorphic-dompurify": "^3.19.0",
+    "dompurify": "^3.4.16",
     "next": "^15.3.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
