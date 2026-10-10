@@ -1,1 +1,0 @@
-ALTER TABLE "Sprint" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'backlog';

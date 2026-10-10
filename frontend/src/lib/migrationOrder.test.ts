@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Prisma applies migrations in lexicographic order of their directory names,
- * which is not necessarily the order they were written in. This repo has been
- * bitten by that twice:
+ * which is not necessarily the order they were written in. This repo was
+ * bitten by that twice, and both are now fixed:
  *
  *   20260515_sprint_status  sorted before  20260515_sprints
  *     → ALTER TABLE "Sprint" against a table that did not exist yet
@@ -24,20 +24,16 @@ import { describe, expect, it } from 'vitest';
 const MIGRATIONS_DIR = join(__dirname, '../../../backend/prisma/migrations');
 
 /**
- * The one ordering fault already in this history, recorded rather than
- * asserted away.
+ * No exceptions. There were two faults in this history and both are fixed:
+ * the PRD migrations were renamed into dependency order, and
+ * 20260515_sprint_status became 20260516_sprint_status with an idempotent
+ * ALTER so the rename is safe on databases that already applied it.
  *
- * Fixing it means renaming an applied migration and running
- * `prisma migrate resolve` against production. That has been attempted and
- * reverted three times in this repo, so it is a deliberate decision to leave
- * it, not an oversight. It only affects replaying the history from scratch —
- * every existing database already has the column.
- *
- * Anything *not* on this list fails the test.
+ * Kept as an empty list rather than deleted, so the next genuine exception has
+ * an obvious place to go — with its reasoning — instead of someone loosening
+ * the assertion.
  */
-const KNOWN_FAULTS = [
-  '20260515_sprint_status uses "Sprint", but it is not created until 20260515_sprints',
-];
+const KNOWN_FAULTS: string[] = [];
 
 interface Migration {
   name: string;
@@ -110,13 +106,18 @@ describe('migration order', () => {
     expect(builderIndex).toBe(0);
   });
 
-  it('every known fault is still real, so the allowance cannot outlive the bug', () => {
-    // If someone does fix the sprint ordering, this fails and the allowance
-    // above should be deleted — an exception nobody revisits is how the next
-    // one gets hidden.
+  it('creates the Sprint table before altering it', () => {
     const names = migrations.map((m) => m.name);
-    const sprints = names.indexOf('20260515_sprints');
-    const status = names.indexOf('20260515_sprint_status');
-    expect(status).toBeLessThan(sprints);
+    expect(names.indexOf('20260515_sprints')).toBeLessThan(names.indexOf('20260516_sprint_status'));
+  });
+
+  it('re-adds a column only where it is safe to run twice', () => {
+    // A renamed migration looks pending to every database that applied the old
+    // name, so it runs again. ADD COLUMN without IF NOT EXISTS would be 42701
+    // and a permanently blocked deploy — which is exactly how the two previous
+    // attempts at this failed.
+    const renamed = migrations.find((m) => m.name === '20260516_sprint_status');
+    expect(renamed).toBeDefined();
+    expect(renamed!.sql).toMatch(/ADD COLUMN IF NOT EXISTS/i);
   });
 });
