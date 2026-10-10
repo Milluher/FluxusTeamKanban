@@ -5,14 +5,13 @@
 # green build: the tests, the typecheck and the build all passed, and none of
 # them was looking at migration order.
 #
-# Deliberately not here: replaying the migration history into an empty
-# database. That is the strongest check available and it is the one that would
-# have caught the PRD outage outright — but it cannot pass yet, because
-# 20260515_sprint_status sorts before the migration that creates the table it
-# alters. A check that is always red teaches people to ignore CI, so it stays
-# out until that fault is fixed, and then it belongs here. Until then
-# frontend/src/lib/migrationOrder.test.ts covers the same class of fault by
-# reading the files, and runs as part of `npm test` below.
+# The replay job below is the important one. It builds the whole schema from
+# the migration history into a throwaway Postgres, which is the only check that
+# would have caught either of this repo's two ordering faults outright —
+# production applies migrations incrementally, so an ordering fault is
+# invisible there until the day a database is rebuilt. Staging cannot do this
+# job: its own history has been blocked since September. A container per run
+# can, for free, and it is destroyed afterwards.
 name: verify
 
 on:
@@ -88,3 +87,69 @@ jobs:
           # validate parses; it does not connect. A placeholder keeps it from
           # failing on a missing variable.
           DATABASE_URL: postgresql://user:pass@localhost:5432/placeholder
+
+  replay:
+    name: migration history replays into an empty database
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: replay
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      # Every migration, in order, against nothing. An ordering fault, a typo
+      # in a constraint, a column referenced before it exists — all surface
+      # here rather than on a deploy that reports SUCCESS and serves a broken
+      # schema.
+      - name: prisma migrate deploy
+        run: npx prisma migrate deploy
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/replay
+
+      - name: nothing is left pending
+        run: npx prisma migrate status
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/replay
+
+      # The case that broke the two previous attempts at fixing the sprint
+      # ordering, reproduced exactly.
+      #
+      # Prisma tracks migrations by name. Every existing database applied
+      # 20260515_sprint_status under its old name, so after the rename it sees
+      # 20260516_sprint_status as pending and runs it again — against a column
+      # that is already there. Forgetting the old row is a faithful stand-in
+      # for that state.
+      #
+      # With ADD COLUMN IF NOT EXISTS this is a no-op and the deploy succeeds.
+      # Without it, it is 42701 and every later deploy is blocked by P3009.
+      - name: a renamed migration is safe to re-run on an existing database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/replay
+        run: |
+          echo "DELETE FROM \"_prisma_migrations\" WHERE migration_name = '20260516_sprint_status';" \
+            | npx prisma db execute --schema prisma/schema.prisma --stdin
+          npx prisma migrate deploy

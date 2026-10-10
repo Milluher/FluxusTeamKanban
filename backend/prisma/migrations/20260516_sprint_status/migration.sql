@@ -1,0 +1,24 @@
+-- Sprint.status: "backlog" | "active" | "completed".
+--
+-- Renamed from 20260515_sprint_status. Prisma applies migrations in
+-- lexicographic order, and "_" (0x5F) sorts before "s" (0x73), so
+-- 20260515_sprint_status ran before 20260515_sprints — altering a table the
+-- next migration had not created yet. Any database built from this history
+-- failed on the fifth migration with 42P01; only databases grown
+-- incrementally were unaffected, which is why it survived this long.
+--
+-- IF NOT EXISTS is what makes the rename safe, and is the difference between
+-- this and the two attempts that were reverted.
+--
+-- Prisma tracks migrations by name, so every database that already applied
+-- the old name sees this one as pending and runs it again. Without
+-- IF NOT EXISTS that is ALTER TABLE ... ADD COLUMN "status" against a column
+-- that already exists: 42701, a failed migration, and P3009 blocking every
+-- deploy after it. The previous attempts handled that with a manual
+-- `migrate resolve --applied` to be run before the next deploy — correct, but
+-- a step that has to win a race against a deploy will eventually lose it.
+--
+-- With IF NOT EXISTS the migration is simply a no-op wherever the column is
+-- already there, and does the right thing on a fresh database. No manual
+-- step, no window.
+ALTER TABLE "Sprint" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'backlog';
