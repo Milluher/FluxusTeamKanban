@@ -8,3 +8,7 @@ backend/prisma/dev.db
 backend/prisma/dev.db-journal
 *.log
 .DS_Store
+
+# TypeScript incremental build cache. Rewritten by every `tsc --noEmit`, so
+# tracking it means a typecheck shows up as a pending change.
+*.tsbuildinfo
