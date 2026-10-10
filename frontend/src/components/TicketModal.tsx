@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { Ticket, Board, User, Comment, Sprint, ProductFile, Initiative } from '@/types';
+import { Ticket, Board, User, Comment, Sprint, ProductFile, Initiative, Prd } from '@/types';
 import ProductFileViewer from './ProductFileViewer';
 import RichTextView from './RichTextView';
 import { formatDay, formatTimestamp } from '@/lib/formatDate';
@@ -35,6 +35,7 @@ const OPTIONAL_FIELDS = [
   { name: 'flow', label: 'Flow' },
   { name: 'assignedDate', label: 'Assigned Date' },
   { name: 'initiativeId', label: 'Initiative' },
+  { name: 'prdId', label: 'PRD' },
 ] as const;
 
 /** The editable shape of a ticket. */
@@ -53,6 +54,7 @@ function formFromTicket(t: Ticket) {
     sprintId: t.sprintId || '',
     productDocId: t.productDocId || '',
     initiativeId: t.initiativeId || '',
+    prdId: t.prdId || '',
     columnId: t.columnId,
   };
 }
@@ -157,6 +159,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   const [duplicating, setDuplicating] = useState(false);
   const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
+  const [prds, setPrds] = useState<Prd[]>([]);
   const [viewingFile, setViewingFile] = useState<ProductFile | null>(null);
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
@@ -212,6 +215,14 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
       .then(({ data }) => setInitiatives(data))
       .catch(() => {});
   }, []);
+
+  // PRDs, unlike initiatives, belong to a board — a document describes a
+  // feature of this product, so the list is scoped to where the ticket lives.
+  useEffect(() => {
+    api.get<Prd[]>('/prds', { params: { boardId } })
+      .then(({ data }) => setPrds(data))
+      .catch(() => {});
+  }, [boardId]);
 
   const members = board.members.map((m) => m.user);
   const activeMemberIds = new Set(members.map((u) => u.id));
@@ -742,6 +753,41 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       {ticket.initiative.status === 'achieved' && (
                         <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 bg-emerald-50 text-emerald-700">
                           Achieved
+                        </span>
+                      )}
+                    </div>
+                  ) : <p className="mt-1.5 text-sm text-gray-500">—</p>,
+                },
+                {
+                  // §4 of Ticket Modification: the PRD this ticket implements.
+                  // Scoped to the board, and hidden until wanted like the other
+                  // reference fields — most tickets point at no document.
+                  label: 'PRD',
+                  name: 'prdId',
+                  optional: true,
+                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>,
+                  editEl: (
+                    <select
+                      value={form.prdId}
+                      onChange={(e) => setForm({ ...form, prdId: e.target.value })}
+                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                      style={inputStyle}
+                      {...inputFocusHandlers}
+                    >
+                      <option value="">None</option>
+                      {prds.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}{p.status === 'draft' ? ' (draft)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ),
+                  viewEl: ticket.prd ? (
+                    <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-800 truncate">{ticket.prd.title}</span>
+                      {ticket.prd.status === 'draft' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 bg-amber-50 text-amber-800">
+                          Draft
                         </span>
                       )}
                     </div>

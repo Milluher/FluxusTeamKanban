@@ -1,33 +1,16 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { ticketInclude } = require('../lib/ticketInclude');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const ticketInclude = {
-  assignee: { select: { id: true, name: true, email: true } },
-  productManager: { select: { id: true, name: true, email: true } },
-  productDoc: { select: { id: true, title: true, url: true } },
-  initiative: { select: { id: true, title: true, status: true } },
-  createdBy: { select: { id: true, name: true } },
-  _count: { select: { comments: true } },
-  dependsOn: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
-  dependedOnBy: { include: { ticket: { select: { id: true, title: true, status: true } } } },
-  comments: {
-    orderBy: { createdAt: 'asc' },
-    include: { author: { select: { id: true, name: true } } },
-  },
-  sprintHistories: {
-    orderBy: { addedAt: 'asc' },
-    include: { sprint: { select: { id: true, title: true } } },
-  },
-};
 
 // Create ticket
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, flow, sprintId, productDocId, initiativeId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, flow, sprintId, productDocId, initiativeId, prdId } = req.body;
     if (!title || !columnId) return res.status(400).json({ error: 'Title and columnId required' });
     const column = await prisma.column.findUnique({ where: { id: columnId } });
     if (!column) return res.status(404).json({ error: 'Column not found' });
@@ -49,6 +32,7 @@ router.post('/', authenticate, async (req, res) => {
         sprintId: sprintId || null,
         productDocId: productDocId || null,
         initiativeId: initiativeId || null,
+        prdId: prdId || null,
       },
       include: ticketInclude,
     });
@@ -93,6 +77,7 @@ router.get('/assigned', authenticate, async (req, res) => {
         },
         sprint: { select: { id: true, title: true, endDate: true } },
         initiative: { select: { id: true, title: true, status: true } },
+        prd: { select: { id: true, title: true, status: true } },
         _count: { select: { comments: true } },
       },
       orderBy: [{ updatedAt: 'desc' }],
@@ -129,7 +114,7 @@ router.patch('/reorder', authenticate, async (req, res) => {
 // Update ticket
 router.patch('/:id', authenticate, async (req, res) => {
   try {
-    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, flow, sprintId, productDocId, initiativeId } = req.body;
+    const { title, description, columnId, assigneeId, productManagerId, assignedDate, boardId, type, priority, project, epic, flow, sprintId, productDocId, initiativeId, prdId } = req.body;
     const data = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
@@ -144,6 +129,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (sprintId !== undefined) data.sprintId = sprintId || null;
     if (productDocId !== undefined) data.productDocId = productDocId || null;
     if (initiativeId !== undefined) data.initiativeId = initiativeId || null;
+    if (prdId !== undefined) data.prdId = prdId || null;
     if (columnId) {
       const col = await prisma.column.findUnique({ where: { id: columnId } });
       if (col) { data.columnId = columnId; data.status = col.name; }
@@ -230,6 +216,7 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
         sprintId: original.sprintId,
         productDocId: original.productDocId,
         initiativeId: original.initiativeId,
+        prdId: original.prdId,
       },
       include: ticketInclude,
     });

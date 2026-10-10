@@ -7,6 +7,97 @@ export interface User {
   lastLoginAt?: string | null;
 }
 
+export type PrdStatus = 'draft' | 'published';
+export type PrdClassification = 'new_product' | 'major_feature' | 'minor_enhancement';
+
+export type PrdApprovalStatus = 'pending' | 'approved' | 'changes_requested';
+
+/**
+ * §17 Approval — one named approver and their decision.
+ *
+ * `ticket` is the task raised when the PRD is published, so it is absent while
+ * the PRD is still a draft.
+ */
+export interface PrdApprover {
+  id: string;
+  prdId: string;
+  userId: string;
+  user: { id: string; name: string; email?: string };
+  status: PrdApprovalStatus;
+  note?: string | null;
+  decidedAt?: string | null;
+  ticketId?: string | null;
+  ticket?: { id: string; title: string; status: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * §16 Administrative — a block of the PRD assigned to one board member.
+ *
+ * The author owns `role` and `assignee`; the assignee owns the two answers.
+ * `ticket` is the task raised when the PRD is published, so it is absent while
+ * the PRD is still a draft.
+ */
+export interface PrdAdminBlock {
+  id: string;
+  prdId: string;
+  role: string;
+  assigneeId: string;
+  assignee: { id: string; name: string; email?: string };
+  dataNeeded?: string | null;
+  actionsNeeded?: string | null;
+  ticketId?: string | null;
+  ticket?: { id: string; title: string; status: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** §10 Target Personas — the join row, so the persona travels with it. */
+export interface PrdPersonaLink {
+  id: string;
+  personaId: string;
+  persona: { id: string; name: string; segment?: string | null };
+}
+
+/**
+ * A PRD: the document behind a feature.
+ *
+ * Every section is optional on the type as well as in the database — a draft is
+ * saved from the first keystroke, and "required" is a condition of publishing.
+ */
+export interface Prd {
+  id: string;
+  title: string;
+  version?: string | null;
+  status: PrdStatus;
+  overview?: string | null;
+  goals?: string | null;
+  userStories?: string | null;
+  functionalReqs?: string | null;
+  nonFunctionalReqs?: string | null;
+  userFlows?: string | null;
+  assumptions?: string | null;
+  platforms?: string | null;
+  classification?: PrdClassification | null;
+  inScope?: string | null;
+  outOfScope?: string | null;
+  acceptanceCriteria?: string | null;
+  successMetrics?: string | null;
+  boardId: string;
+  canvasFeatureId?: string | null;
+  createdById: string;
+  createdBy: { id: string; name: string };
+  board: { id: string; name: string };
+  canvasFeature?: { id: string; text: string } | null;
+  personas: PrdPersonaLink[];
+  adminBlocks: PrdAdminBlock[];
+  approvers: PrdApprover[];
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type TechComfort = 'low' | 'medium' | 'high';
 
 /**
@@ -111,6 +202,8 @@ export interface Ticket {
   productDoc?: { id: string; title: string; url: string };
   initiativeId?: string;
   initiative?: { id: string; title: string; status: InitiativeStatus };
+  prdId?: string | null;
+  prd?: { id: string; title: string; status: PrdStatus } | null;
   assignee?: User;
   productManager?: User;
   createdBy: { id: string; name: string };
