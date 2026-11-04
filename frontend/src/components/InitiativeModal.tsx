@@ -2,10 +2,16 @@
 import { useState } from 'react';
 import api from '@/lib/api';
 import { Initiative } from '@/types';
+import { useBoards } from '@/lib/useBoards';
 
 interface Props {
   /** The initiative being edited, or null to create one. */
   initiative: Initiative | null;
+  /**
+   * The board to create on, when the caller already knows it. Left undefined —
+   * as it is on the workspace-level `/initiatives` page — the form asks.
+   */
+  boardId?: string;
   onClose: () => void;
   onSaved: (initiative: Initiative) => void;
 }
@@ -18,11 +24,11 @@ const inputStyle: React.CSSProperties = {
 };
 
 const inputFocus = {
-  onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     e.currentTarget.style.borderColor = '#e8390e';
     e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,57,14,0.1)';
   },
-  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     e.currentTarget.style.borderColor = '#e5e7eb';
     e.currentTarget.style.boxShadow = 'none';
   },
@@ -30,19 +36,32 @@ const inputFocus = {
 
 // The two fields the brief names, labelled in its words: an initiative is
 // described in prose, not configured, so the form asks questions.
-export default function InitiativeModal({ initiative, onClose, onSaved }: Props) {
+export default function InitiativeModal({ initiative, boardId, onClose, onSaved }: Props) {
   const [title, setTitle] = useState(initiative?.title ?? '');
   const [description, setDescription] = useState(initiative?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // An initiative belongs to a board. Editing one keeps the board it is already
+  // on — the picker is a create-time question, so an edit never silently moves
+  // work to another board.
+  const needsBoard = !initiative && !boardId;
+  const { boards } = useBoards(needsBoard);
+  const [chosenBoardId, setChosenBoardId] = useState('');
+  const targetBoardId = initiative?.boardId || boardId || chosenBoardId;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
+    if (!initiative && !targetBoardId) return;
     setSaving(true);
     setError('');
     try {
-      const body = { title, description };
+      // Only sent on create: PATCH would accept it, but an edit form that can
+      // move a board without saying so is a trap.
+      const body = initiative
+        ? { title, description }
+        : { title, description, boardId: targetBoardId };
       const { data } = initiative
         ? await api.patch<Initiative>(`/initiatives/${initiative.id}`, body)
         : await api.post<Initiative>('/initiatives', body);
@@ -84,6 +103,27 @@ export default function InitiativeModal({ initiative, onClose, onSaved }: Props)
         </div>
 
         <div className="px-5 py-5 space-y-4">
+          {needsBoard && (
+            <div>
+              <label htmlFor="initiative-board" className="block text-xs font-semibold text-gray-500 mb-1.5">
+                Which board is it for?
+              </label>
+              <select
+                id="initiative-board"
+                value={chosenBoardId}
+                onChange={(e) => setChosenBoardId(e.target.value)}
+                className="px-3 py-2.5 text-sm text-gray-900 bg-white"
+                style={inputStyle}
+                {...inputFocus}
+              >
+                <option value="">Choose a board…</option>
+                {boards.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label htmlFor="initiative-title" className="block text-xs font-semibold text-gray-500 mb-1.5">
               What is this initiative?
@@ -134,7 +174,7 @@ export default function InitiativeModal({ initiative, onClose, onSaved }: Props)
           </button>
           <button
             type="submit"
-            disabled={saving || !title.trim() || !description.trim()}
+            disabled={saving || !title.trim() || !description.trim() || (!initiative && !targetBoardId)}
             className="flex-1 py-2.5 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
             style={{ background: '#c73009' }}
           >

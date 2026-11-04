@@ -13,7 +13,8 @@ import { useInactivityTimeout } from '@/lib/useInactivityTimeout';
 // Straight from the brief. An initiative is a word people use loosely, so the
 // page says what one is here rather than leaving it to be inferred.
 const WHAT_AN_INITIATIVE_IS =
-  'Initiatives are a large, coordinated body of work aimed at a specific strategic goal.';
+  'Initiatives are a large, coordinated body of work aimed at a specific strategic goal. ' +
+  'Each one belongs to a board; this page shows every board you can see.';
 
 const STATUS: Record<InitiativeStatus, { label: string; color: string; bg: string; border: string }> = {
   in_progress: { label: 'In Progress', color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
@@ -204,6 +205,17 @@ export default function InitiativesPage() {
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{initiative.description}</p>
 
                     <div className="mt-2.5 flex items-center gap-1.5 text-xs text-gray-500">
+                      {initiative.board && (
+                        <>
+                          <Link
+                            href={`/board/${initiative.board.id}`}
+                            className="font-medium text-gray-600 truncate hover:underline"
+                          >
+                            {initiative.board.name}
+                          </Link>
+                          <span className="text-gray-300 flex-shrink-0" aria-hidden="true">·</span>
+                        </>
+                      )}
                       <span className="truncate">{initiative.createdBy.name}</span>
                       {added && (
                         <>
@@ -226,19 +238,31 @@ export default function InitiativesPage() {
                         </p>
                       ) : (
                         <ul className="space-y-1.5">
-                          {initiative.tickets.map((t) => (
-                            <li key={t.id} className="flex items-center gap-2 min-w-0">
-                              <Link
-                                href={`/board/${t.column.board.id}?ticket=${t.id}`}
-                                className="text-sm text-gray-800 truncate min-w-0 flex-1 hover:underline"
-                              >
-                                {t.title}
-                              </Link>
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap flex-shrink-0">
-                                {t.status}
-                              </span>
-                            </li>
-                          ))}
+                          {initiative.tickets.map((t) => {
+                            const elsewhere = t.column.board.id !== initiative.boardId;
+                            return (
+                              <li key={t.id} className="flex items-center gap-2 min-w-0">
+                                <Link
+                                  href={`/board/${t.column.board.id}?ticket=${t.id}`}
+                                  className="text-sm text-gray-800 truncate min-w-0 flex-1 hover:underline"
+                                >
+                                  {t.title}
+                                </Link>
+                                {elsewhere && (
+                                  <span
+                                    title={`On ${t.column.board.name}, not ${initiative.board?.name ?? 'this board'}`}
+                                    className="text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
+                                    style={{ background: '#fffbeb', color: '#b45309' }}
+                                  >
+                                    {t.column.board.name}
+                                  </span>
+                                )}
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap flex-shrink-0">
+                                  {t.status}
+                                </span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>

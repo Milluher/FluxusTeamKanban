@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { listScope, writeScope } = require('../lib/boardScope');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -20,8 +21,10 @@ const personaSelect = {
   painPoints: true,
   behaviours: true,
   techComfort: true,
+  boardId: true,
   createdAt: true,
   updatedAt: true,
+  board: { select: { id: true, name: true } },
   createdBy: { select: { id: true, name: true } },
 };
 
@@ -46,27 +49,37 @@ function readTemplate(body, { partial }) {
   return { data };
 }
 
-// Every persona, to every authenticated user. Read access is deliberately not
-// gated: the point of a persona is that the whole team can name who they build
-// for. Alphabetical, so the list is stable between visits.
+// A board's personas, to every member of it — the point of a persona is still
+// that the whole team can name who they build for, but "the team" is now the
+// board's. `?boardId=` narrows to one board; without it you get the personas of
+// every board you can see. Alphabetical, so the list is stable between visits.
 router.get('/', authenticate, async (req, res) => {
   try {
-    const personas = await prisma.persona.findMany({ select: personaSelect });
+    const scope = await listScope(req);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const personas = await prisma.persona.findMany({ where: scope.where, select: personaSelect });
     res.json(personas.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
-// Create — admins only.
+// Create — admins only, onto one named board.
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const name = (req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'A persona needs a name' });
 
+    const target = await writeScope(req, {
+      boardId: req.body.boardId,
+      requiredMessage: 'Choose the board this persona belongs to',
+    });
+    if (target.error) return res.status(target.status).json({ error: target.error });
+
     const { data, error } = readTemplate(req.body, { partial: false });
     if (error) return res.status(400).json({ error });
 
     const persona = await prisma.persona.create({
-      data: { ...data, name, createdById: req.user.id },
+      data: { ...data, name, boardId: target.boardId, createdById: req.user.id },
       select: personaSelect,
     });
     res.json(persona);
@@ -86,6 +99,18 @@ router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
       const name = (req.body.name || '').trim();
       if (!name) return res.status(400).json({ error: 'A persona needs a name' });
       data.name = name;
+    }
+
+    // Moving a persona to another board is allowed, and is the way to undo the
+    // board-scoping migration's choice of putting every pre-existing persona on
+    // one board.
+    if (req.body.boardId !== undefined) {
+      const target = await writeScope(req, {
+        boardId: req.body.boardId,
+        requiredMessage: 'A persona has to belong to a board',
+      });
+      if (target.error) return res.status(target.status).json({ error: target.error });
+      data.boardId = target.boardId;
     }
 
     const persona = await prisma.persona.update({

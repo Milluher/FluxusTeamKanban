@@ -72,6 +72,7 @@ export default function PrdBuilderModal({
   const [draft, setDraft] = useState<Draft>(() => draftFrom(prd));
   const [personaIds, setPersonaIds] = useState<string[]>(() => prd.personas.map((p) => p.personaId));
   const [personas, setPersonas] = useState<Persona[]>([]);
+  const [personasLoaded, setPersonasLoaded] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
@@ -103,9 +104,31 @@ export default function PrdBuilderModal({
   const shortfall = approverShortfall(prd);
   const myApproval = prd.approvers.find((a) => a.userId === currentUser?.id);
 
+  // Personas belong to a board, and a PRD may only target its own board's — the
+  // API refuses a selection that reaches into another board. Selections made
+  // before board scoping are kept until the author saves a new one.
   useEffect(() => {
-    api.get<Persona[]>('/personas').then(({ data }) => setPersonas(data)).catch(() => {});
-  }, []);
+    let live = true;
+    setPersonasLoaded(false);
+    api
+      .get<Persona[]>('/personas', { params: { boardId: prd.boardId } })
+      .then(({ data }) => { if (live) setPersonas(data); })
+      .catch(() => {})
+      .finally(() => { if (live) setPersonasLoaded(true); });
+    return () => { live = false; };
+  }, [prd.boardId]);
+
+  // Still-selected personas that the board-scoped picker does not offer: joins
+  // that predate board scoping. Derived from the PRD rather than kept in state,
+  // so unticking one removes its chip on the next save like any other.
+  //
+  // Gated on the fetch having finished: until then `personas` is empty and
+  // every selection would look like it was on another board.
+  const foreignPersonas = personasLoaded
+    ? prd.personas.filter(
+        (p) => personaIds.includes(p.personaId) && !personas.some((candidate) => candidate.id === p.personaId)
+      )
+    : [];
 
   // New blocks get an entry; existing ones keep whatever is being typed.
   useEffect(() => {
@@ -463,12 +486,33 @@ export default function PrdBuilderModal({
           <div>
             <span className="block text-xs font-semibold text-gray-500 mb-1">§10 Target Personas</span>
             <p className="text-xs text-gray-500 mb-1.5">Who this is for. Pick as many as apply.</p>
-            {personas.length === 0 ? (
+            {personasLoaded && personas.length === 0 && foreignPersonas.length === 0 ? (
               <p className="text-xs text-gray-500">
-                No personas exist yet — an admin adds them from the Personas panel.
+                This board has no personas yet — an admin adds them from the Personas panel.
               </p>
             ) : (
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Target personas">
+                {/*
+                  A persona picked before board scoping may live on another
+                  board. It is not in the picker, so it is shown here instead —
+                  marked, and still untickable. Without this the chip would
+                  simply vanish while the PRD kept the selection, which looks
+                  like the save lost it.
+                */}
+                {foreignPersonas.map((persona) => (
+                  <button
+                    key={persona.personaId}
+                    type="button"
+                    disabled={!editable}
+                    aria-pressed
+                    onClick={() => togglePersona(persona.personaId)}
+                    title="On another board — picked before personas were scoped to boards"
+                    className="text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors disabled:opacity-70"
+                    style={{ background: '#fffbeb', color: '#b45309', borderColor: '#fde68a' }}
+                  >
+                    {persona.persona?.name ?? 'Persona'} ↗
+                  </button>
+                ))}
                 {personas.map((persona) => {
                   const picked = personaIds.includes(persona.id);
                   return (

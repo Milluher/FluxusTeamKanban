@@ -7,7 +7,7 @@ const patch = vi.fn();
 const del = vi.fn();
 vi.mock('@/lib/api', () => ({ default: { get, post, patch, delete: del } }));
 
-const { renderToDom, flush, typeInto } = await import('@/test/render');
+const { renderToDom, flush, typeInto, chooseOption } = await import('@/test/render');
 const PersonasPanel = (await import('./PersonasPanel')).default;
 
 const standard: User = { id: 'u1', name: 'Alice Doe', email: 'alice@fluxus.com', role: 'standard' } as User;
@@ -22,15 +22,23 @@ const persona = (overrides: Partial<Persona> = {}): Persona => ({
   painPoints: 'Cash arrives late.',
   behaviours: 'Uses a feature phone daily.',
   techComfort: 'low',
+  boardId: 'b1',
+  board: { id: 'b1', name: 'Riverly' },
   createdBy: { id: 'u2', name: 'Femi A' },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,
 });
 
-const open = async (user: User = standard) => {
+// Normally opened from inside a board, so that is the default. Pass `null` for
+// the workspace-level case, where it lists every board and has to ask which one
+// a new persona is for — `null` rather than `undefined` because a default
+// parameter is applied to `undefined` too.
+const open = async (user: User = standard, boardId: string | null = 'b1') => {
   const onClose = vi.fn();
-  const handle = renderToDom(<PersonasPanel user={user} onClose={onClose} />);
+  const handle = renderToDom(
+    <PersonasPanel user={user} boardId={boardId ?? undefined} onClose={onClose} />
+  );
   await flush();
   return { ...handle, onClose };
 };
@@ -112,7 +120,10 @@ describe('PersonasPanel', () => {
     );
     await flush();
 
-    expect(post).toHaveBeenCalledWith('/personas', expect.objectContaining({ name: 'Agent', goals: 'Earn commission.' }));
+    expect(post).toHaveBeenCalledWith(
+      '/personas',
+      expect.objectContaining({ name: 'Agent', goals: 'Earn commission.', boardId: 'b1' })
+    );
     unmount();
   });
 
@@ -166,6 +177,75 @@ describe('PersonasPanel', () => {
     const { onClose, unmount } = await open();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(onClose).toHaveBeenCalled();
+    unmount();
+  });
+
+  // --- board scoping ---
+
+  it('asks the server for one board\u2019s personas when it is opened inside a board', async () => {
+    const { unmount } = await open(standard, 'b7');
+    expect(get).toHaveBeenCalledWith('/personas', { params: { boardId: 'b7' } });
+    unmount();
+  });
+
+  it('asks for every visible board\u2019s personas when it is opened outside one', async () => {
+    const { container, unmount } = await open(standard, null);
+    expect(get).toHaveBeenCalledWith('/personas', { params: undefined });
+    expect(container.textContent).toContain('All boards');
+    unmount();
+  });
+
+  it('names the board a persona is on only when the list spans more than one', async () => {
+    get.mockResolvedValue({ data: [persona({ board: { id: 'b1', name: 'Atlas' } })] });
+
+    const spanning = await open(standard, null);
+    expect(spanning.container.textContent).toContain('Atlas');
+    spanning.unmount();
+
+    const scoped = await open(standard, 'b1');
+    expect(scoped.container.textContent).not.toContain('Atlas');
+    scoped.unmount();
+  });
+
+  it('will not create a persona outside a board until one is picked', async () => {
+    get.mockImplementation((url: string) =>
+      url === '/boards'
+        ? Promise.resolve({ data: [{ id: 'b1', name: 'Riverly' }, { id: 'b2', name: 'Atlas' }] })
+        : Promise.resolve({ data: [] })
+    );
+
+    const { container, unmount } = await open(admin, null);
+    Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('New persona'))!.click();
+    await flush();
+
+    const picker = container.querySelector('select[aria-label="Board for this persona"]') as HTMLSelectElement;
+    expect(picker).not.toBeNull();
+
+    const submit = container.querySelector('button[type="submit"]') as HTMLButtonElement;
+    typeInto(container.querySelector('input[aria-label="Name"]') as HTMLInputElement, 'Agent');
+    await flush();
+    // A name is all the template requires, so the board is the only thing left.
+    expect(submit.disabled).toBe(true);
+
+    chooseOption(picker, 'b2');
+    await flush();
+    expect(submit.disabled).toBe(false);
+
+    (container.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+    await flush();
+
+    expect(post).toHaveBeenCalledWith('/personas', expect.objectContaining({ name: 'Agent', boardId: 'b2' }));
+    unmount();
+  });
+
+  it('does not ask a non-admin to pick a board, since they cannot create one', async () => {
+    const { container, unmount } = await open(standard, null);
+    expect(
+      Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('New persona'))
+    ).toBeUndefined();
+    expect(get).not.toHaveBeenCalledWith('/boards');
     unmount();
   });
 });

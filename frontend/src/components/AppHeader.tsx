@@ -20,6 +20,16 @@ interface Props {
   breadcrumb?: ReactNode;
   /** Page-specific controls, placed before the global actions. */
   actions?: ReactNode;
+  /**
+   * The board the page is showing, if it is showing one.
+   *
+   * The dictionary and personas panels live in the header but their contents
+   * belong to a board, so the header is the only thing that knows which board
+   * to scope them to. Left undefined — on the dashboard, the changelog, the
+   * admin screens — the panels show every board the user can see and ask which
+   * board a new entry is for.
+   */
+  boardId?: string;
 }
 
 // The header every page shares. Each page used to build its own: the changelog
@@ -27,12 +37,15 @@ interface Props {
 // neither and put Logout in the nav, and the board page had an unlabelled
 // document icon. Opening the changelog meant losing your place and landing on a
 // top bar that had rearranged itself.
-export default function AppHeader({ user, current, breadcrumb, actions }: Props) {
+export default function AppHeader({ user, current, breadcrumb, actions, boardId }: Props) {
   const router = useRouter();
   const [showProfile, setShowProfile] = useState(false);
   // The dictionary and the personas both live in the header rather than on a
   // page, so each is reachable from the workspace and from inside every board
   // alike. One slot, because they would otherwise render on top of each other.
+  //
+  // What they show now depends on `boardId`: that board's entries inside a
+  // board, everything you can see outside one.
   const [panel, setPanel] = useState<'dictionary' | 'personas' | null>(null);
   const togglePanel = (next: 'dictionary' | 'personas') =>
     setPanel((open) => (open === next ? null : next));
@@ -140,11 +153,11 @@ export default function AppHeader({ user, current, breadcrumb, actions }: Props)
       )}
 
       {panel === 'dictionary' && user && (
-        <DictionarySidebar user={user} onClose={() => setPanel(null)} />
+        <DictionarySidebar user={user} boardId={boardId} onClose={() => setPanel(null)} />
       )}
 
       {panel === 'personas' && user && (
-        <PersonasPanel user={user} onClose={() => setPanel(null)} />
+        <PersonasPanel user={user} boardId={boardId} onClose={() => setPanel(null)} />
       )}
     </>
   );

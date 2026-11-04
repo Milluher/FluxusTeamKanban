@@ -94,7 +94,9 @@ export default function ChangelogPage() {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1a1f3c' }}>Changelog</h1>
-            <p className="text-sm text-gray-500 mt-1">Release notes across every project.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Release notes, project by project. This page shows every project you can see.
+            </p>
           </div>
           {isAdmin && (
             <button
@@ -152,7 +154,7 @@ export default function ChangelogPage() {
                           className="px-2 py-0.5 rounded-md font-medium"
                           style={{ background: '#f0f2f5', color: '#4b5563' }}
                         >
-                          {entry.board ? entry.board.name : 'All projects'}
+                          {entry.board?.name ?? 'Unknown project'}
                         </span>
                         <span>{formatDate(entry.publishedAt || entry.createdAt)}</span>
                         {entry.author && <span>· {entry.author.name}</span>}

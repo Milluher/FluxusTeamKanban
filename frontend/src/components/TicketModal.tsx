@@ -208,16 +208,20 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
       .catch(() => {});
   }, [boardId]);
 
-  // Initiatives are workspace-wide, so this list does not depend on the board:
-  // one initiative is fulfilled by tickets from wherever the work sits.
+  // Initiatives belong to a board, so the picker only offers this board's — the
+  // API refuses a link to one on another board anyway.
+  //
+  // A ticket linked before board scoping may still *hold* an initiative from
+  // elsewhere; that link is kept and shown, it just is not in this list, which
+  // is why the select below falls back to the ticket's own initiative.
   useEffect(() => {
-    api.get<Initiative[]>('/initiatives')
+    api.get<Initiative[]>('/initiatives', { params: { boardId } })
       .then(({ data }) => setInitiatives(data))
       .catch(() => {});
-  }, []);
+  }, [boardId]);
 
-  // PRDs, unlike initiatives, belong to a board — a document describes a
-  // feature of this product, so the list is scoped to where the ticket lives.
+  // PRDs belong to a board the same way — a document describes a feature of
+  // this product, so the list is scoped to where the ticket lives.
   useEffect(() => {
     api.get<Prd[]>('/prds', { params: { boardId } })
       .then(({ data }) => setPrds(data))
@@ -724,9 +728,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   ),
                 },
                 {
-                  // The initiative this ticket was raised to fulfil. Workspace-wide,
-                  // so the options do not depend on the board — and the ticket is
-                  // what holds the link, letting one initiative span boards.
+                  // The initiative this ticket was raised to fulfil. Scoped to
+                  // this board, with one exception: a ticket linked before board
+                  // scoping may hold an initiative from another board, and that
+                  // link is kept. It is added to the options below so the select
+                  // shows what the ticket actually points at instead of looking
+                  // empty — a blank Initiative on a ticket that has one reads as
+                  // data loss.
                   label: 'Initiative',
                   name: 'initiativeId',
                   optional: true,
@@ -740,6 +748,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       {...inputFocusHandlers}
                     >
                       <option value="">None</option>
+                      {ticket.initiative &&
+                        !initiatives.some((i) => i.id === ticket.initiative!.id) && (
+                          <option value={ticket.initiative.id}>
+                            {ticket.initiative.title} (another board)
+                          </option>
+                        )}
                       {initiatives.map((i) => (
                         <option key={i.id} value={i.id}>
                           {i.title}{i.status === 'achieved' ? ' (achieved)' : ''}

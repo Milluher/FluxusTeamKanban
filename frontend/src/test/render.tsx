@@ -55,6 +55,21 @@ export function typeInto(field: HTMLInputElement | HTMLTextAreaElement, value: s
   });
 }
 
+/**
+ * Picks an option in a controlled `<select>` the way a person would.
+ *
+ * Same trick as `typeInto` and for the same reason — React ignores a plain
+ * assignment to `value` — but a select fires `change`, not `input`, so the
+ * event has to differ too.
+ */
+export function chooseOption(field: HTMLSelectElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+  act(() => {
+    setter?.call(field, value);
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
 /** Lets pending promises resolve and React commit the result. */
 export async function flush(): Promise<void> {
   await act(async () => {

@@ -114,6 +114,9 @@ export interface Persona {
   painPoints?: string | null;
   behaviours?: string | null;
   techComfort?: TechComfort | null;
+  /** The board that owns this persona. Required since board scoping. */
+  boardId: string;
+  board?: { id: string; name: string } | null;
   createdBy: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
@@ -135,18 +138,29 @@ export interface Initiative {
   title: string;
   description: string;
   status: InitiativeStatus;
+  /** The board that owns this initiative. Required since board scoping. */
+  boardId: string;
+  board?: { id: string; name: string } | null;
   createdById: string;
   createdBy: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
+  /**
+   * The tickets raised for it. Normally all on the initiative's own board —
+   * tickets linked before board scoping may sit elsewhere, which is why each
+   * one still reports its own board.
+   */
   tickets: InitiativeTicket[];
 }
 
-/** A Riverly Dictionary entry: a workspace-wide term, defined by whoever added it. */
+/** A Riverly Dictionary entry: a term on one board, defined by whoever added it. */
 export interface DictionaryTerm {
   id: string;
   term: string;
   definition: string;
+  /** The board that owns this term. Required since board scoping. */
+  boardId: string;
+  board?: { id: string; name: string } | null;
   createdBy: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
@@ -297,7 +311,8 @@ export interface ChangelogEntry {
   title: string;
   summary?: string | null;
   items: ChangelogItem[];
-  boardId?: string | null;
+  /** The board the entry belongs to. There is no company-wide entry any more. */
+  boardId: string;
   board?: { id: string; name: string } | null;
   author?: { id: string; name: string } | null;
   publishedAt?: string | null;

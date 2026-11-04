@@ -168,6 +168,43 @@ describe('TicketModal', () => {
     unmount();
   });
 
+  it('scopes the initiative list to the board the ticket lives on', async () => {
+    const { unmount } = await open();
+    expect(get).toHaveBeenCalledWith('/initiatives', { params: { boardId: 'b1' } });
+    unmount();
+  });
+
+  it('keeps an initiative from another board in the picker rather than looking empty', async () => {
+    // The board's own initiatives, which do not include the ticket's.
+    get.mockImplementation((url: string) =>
+      url === '/initiatives'
+        ? Promise.resolve({ data: [{ id: 'i9', title: 'On this board', status: 'in_progress', tickets: [] }] })
+        : Promise.resolve({ data: [] })
+    );
+
+    // A link made before initiatives were scoped to boards: kept, not cleared.
+    const { container, unmount } = await open(
+      ticket({
+        initiativeId: 'i1',
+        initiative: { id: 'i1', title: 'Raised elsewhere', status: 'in_progress' },
+      })
+    );
+
+    const label = byText(container, 'label', 'Initiative');
+    (label?.parentElement?.querySelector('button') as HTMLButtonElement | null)?.click();
+    await flush();
+
+    const picker = Array.from(container.querySelectorAll('select')).find((el) =>
+      Array.from(el.options).some((o) => o.value === 'i1')
+    );
+    expect(picker).toBeDefined();
+    const option = Array.from(picker!.options).find((o) => o.value === 'i1')!;
+    // Marked, so it is clear why it is not in the board's own list.
+    expect(option.textContent).toContain('another board');
+    expect(picker!.value).toBe('i1');
+    unmount();
+  });
+
   it('names the initiative a ticket was raised to fulfil', async () => {
     const { container, unmount } = await open(
       ticket({
