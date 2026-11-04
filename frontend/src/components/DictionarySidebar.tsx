@@ -3,11 +3,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { DictionaryTerm, User } from '@/types';
 import { formatTimestamp } from '@/lib/formatDate';
+import { useBoards } from '@/lib/useBoards';
 import Avatar from './Avatar';
 import RowMenu from './RowMenu';
 
 interface Props {
   user: User;
+  /**
+   * The board to scope to. Inside a board this is that board, and a new term
+   * goes to it without being asked. Outside one the panel lists every board's
+   * terms and the add form asks which board the term belongs to.
+   */
+  boardId?: string;
   onClose: () => void;
 }
 
@@ -43,12 +50,16 @@ function sorted(list: DictionaryTerm[]): DictionaryTerm[] {
 // A panel, not a modal: no backdrop and nothing behind it is blocked, because
 // you look a term up *while* doing something else. Terms arrive alphabetically
 // from the server.
-export default function DictionarySidebar({ user, onClose }: Props) {
+export default function DictionarySidebar({ user, boardId, onClose }: Props) {
   const [terms, setTerms] = useState<DictionaryTerm[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ term: '', definition: '' });
+  // Only needed when the panel is open outside a board; fetching the board list
+  // on every board page would be a request for a picker nobody will see.
+  const { boards } = useBoards(!boardId);
+  const [formBoardId, setFormBoardId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -58,13 +69,14 @@ export default function DictionarySidebar({ user, onClose }: Props) {
 
   useEffect(() => {
     let live = true;
+    setLoading(true);
     api
-      .get<DictionaryTerm[]>('/dictionary')
+      .get<DictionaryTerm[]>('/dictionary', { params: boardId ? { boardId } : undefined })
       .then(({ data }) => { if (live) setTerms(sorted(data)); })
       .catch(() => { if (live) setError('Could not load the dictionary.'); })
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, []);
+  }, [boardId]);
 
   // Escape closes, as it does for the modals.
   useEffect(() => {
@@ -81,13 +93,17 @@ export default function DictionarySidebar({ user, onClose }: Props) {
     );
   }, [terms, query]);
 
+  // The board a new term goes to: the panel's own when it has one, otherwise
+  // whatever the picker is set to.
+  const targetBoardId = boardId || formBoardId;
+
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.term.trim() || !form.definition.trim()) return;
+    if (!form.term.trim() || !form.definition.trim() || !targetBoardId) return;
     setSaving(true);
     setError('');
     try {
-      const { data } = await api.post<DictionaryTerm>('/dictionary', form);
+      const { data } = await api.post<DictionaryTerm>('/dictionary', { ...form, boardId: targetBoardId });
       setTerms((prev) => sorted([...prev, data]));
       setForm({ term: '', definition: '' });
       setAdding(false);
@@ -135,6 +151,9 @@ export default function DictionarySidebar({ user, onClose }: Props) {
         <h2 className="font-bold text-base min-w-0 truncate" style={{ color: '#1a1f3c' }}>
           Riverly Dictionary
         </h2>
+        {!boardId && (
+          <span className="text-xs font-medium text-gray-500 flex-shrink-0">All boards</span>
+        )}
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">
           {terms.length}
         </span>
@@ -161,6 +180,20 @@ export default function DictionarySidebar({ user, onClose }: Props) {
 
         {adding ? (
           <form onSubmit={add} className="space-y-2 pt-0.5">
+            {!boardId && (
+              <select
+                value={formBoardId}
+                onChange={(e) => setFormBoardId(e.target.value)}
+                aria-label="Board for this term"
+                className="px-3 py-2 text-sm text-gray-900 bg-white"
+                style={inputStyle}
+              >
+                <option value="">Which board?</option>
+                {boards.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
             <input
               autoFocus
               type="text"
@@ -192,7 +225,7 @@ export default function DictionarySidebar({ user, onClose }: Props) {
               </button>
               <button
                 type="submit"
-                disabled={saving || !form.term.trim() || !form.definition.trim()}
+                disabled={saving || !form.term.trim() || !form.definition.trim() || !targetBoardId}
                 className="flex-1 py-2 min-h-[40px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
                 style={{ background: '#c73009' }}
               >
@@ -222,7 +255,11 @@ export default function DictionarySidebar({ user, onClose }: Props) {
         ) : terms.length === 0 ? (
           <div className="py-10 text-center">
             <p className="text-sm font-semibold text-gray-700 mb-1">No terms yet</p>
-            <p className="text-sm text-gray-600">Add the first one — anyone on the workspace can.</p>
+            <p className="text-sm text-gray-600">
+              {boardId
+                ? 'Add the first one — any member of this board can.'
+                : 'Add the first one — pick the board it belongs to.'}
+            </p>
           </div>
         ) : visible.length === 0 ? (
           <p className="text-sm text-gray-600 py-8 text-center">Nothing matches “{query.trim()}”.</p>
@@ -303,6 +340,10 @@ export default function DictionarySidebar({ user, onClose }: Props) {
                       />
                     )}
                   </div>
+
+                  {!boardId && t.board && (
+                    <p className="mt-0.5 text-xs font-medium text-gray-500 truncate">{t.board.name}</p>
+                  )}
 
                   <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{t.definition}</p>
 

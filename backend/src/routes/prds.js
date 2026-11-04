@@ -231,6 +231,36 @@ router.patch('/:id', authenticate, async (req, res) => {
     // removes it without a separate call.
     const personaIds = Array.isArray(req.body.personaIds) ? [...new Set(req.body.personaIds)] : null;
 
+    // A persona belongs to one board since 20261104_board_scoping, so a PRD may
+    // only target personas on its own board.
+    //
+    // Only *newly added* personas are checked. A PRD written before that
+    // migration can legitimately hold a persona from another board, and every
+    // save sends the whole selection — so validating the selection as a whole
+    // would make such a PRD unsaveable until the author removed a persona they
+    // cannot see in the picker. Already-joined personas are therefore allowed
+    // through unchanged; reaching for a *new* foreign one is refused.
+    if (personaIds && personaIds.length) {
+      const alreadyJoined = new Set(prd.personas.map((p) => p.personaId));
+      const added = personaIds.filter((id) => !alreadyJoined.has(id));
+
+      if (added.length) {
+        const chosen = await prisma.persona.findMany({
+          where: { id: { in: added } },
+          select: { id: true, name: true, boardId: true },
+        });
+        if (chosen.length !== added.length) {
+          return res.status(400).json({ error: 'One of those personas no longer exists' });
+        }
+        const foreign = chosen.filter((c) => c.boardId !== prd.boardId);
+        if (foreign.length) {
+          return res.status(422).json({
+            error: `${foreign.map((f) => f.name).join(', ')} ${foreign.length > 1 ? 'belong' : 'belongs'} to another board`,
+          });
+        }
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       if (personaIds) {
         await tx.prdPersona.deleteMany({ where: { prdId: prd.id } });

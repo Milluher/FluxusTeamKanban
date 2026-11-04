@@ -1,9 +1,11 @@
 // Shaping rules for changelog entries.
 //
-// Every user can see every published entry, across every project. Detail is
-// what's scoped: an entry attached to a board is listed for everyone, but its
-// items are only spelled out for that board's members. Admins see everything,
-// drafts included.
+// Every entry belongs to a board, and the route only returns entries from
+// boards the viewer can see. Detail is scoped one step tighter than listing:
+// an entry is listed for anyone who can see its board, but its items are only
+// spelled out for that board's *members*. That distinction still matters for a
+// system admin's view, which lists every board's entries. Admins see
+// everything, drafts included.
 
 const ITEM_KINDS = ['added', 'changed', 'fixed', 'removed'];
 
@@ -33,7 +35,10 @@ function presentEntry(entry, { isAdmin, memberBoardIds }) {
   };
 
   const items = normalizeItems(entry.items);
-  const detailed = isAdmin || !entry.boardId || memberBoardIds.has(entry.boardId);
+  // No `!entry.boardId` case: boardId is NOT NULL since 20261104_board_scoping,
+  // so an entry with no board can no longer exist and treating one as
+  // company-wide would be a hole rather than a fallback.
+  const detailed = isAdmin || memberBoardIds.has(entry.boardId);
 
   if (detailed) {
     return { ...base, summary: entry.summary, items, restricted: false, itemCount: items.length };

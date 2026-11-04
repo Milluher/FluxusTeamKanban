@@ -42,6 +42,9 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
 
   const save = async (draft: boolean) => {
     if (!title.trim()) { setError('Title is required'); return; }
+    // A board is required now — there is no company-wide entry. Checked here as
+    // well as disabling the buttons, so a saved draft can never be boardless.
+    if (!boardId) { setError('Choose the project this entry is for'); return; }
     setSaving(true);
     setError('');
     const payload = {
@@ -49,7 +52,7 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
       title: title.trim(),
       summary: summary.trim() || null,
       items: items.filter((i) => i.text.trim()),
-      boardId: boardId || null,
+      boardId,
       draft,
     };
     try {
@@ -107,13 +110,14 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
               onChange={(e) => setBoardId(e.target.value)}
               className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-gray-400 transition-colors"
             >
-              <option value="">All projects (company-wide)</option>
+              <option value="">Choose a project…</option>
               {boards.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
             <p className="text-[11px] text-gray-500 mt-1.5">
-              Everyone sees the entry. Items on a project-scoped entry are detailed only to that project&apos;s members.
+              Every entry belongs to one project. Anyone who can see that project sees the entry listed; its items
+              are detailed only to the project&apos;s members.
             </p>
           </div>
 
@@ -145,7 +149,7 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
                   <input
                     value={item.text}
                     onChange={(e) => updateItem(i, { text: e.target.value })}
-                    placeholder="CSV export on all boards"
+                    placeholder="CSV export on the tickets list"
                     className="flex-1 min-w-0 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 transition-colors"
                   />
                   <button
@@ -179,7 +183,7 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
           {isDraft && (
             <button
               onClick={() => save(true)}
-              disabled={saving}
+              disabled={saving || !boardId}
               className="text-sm px-4 py-2 rounded-lg font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
               Save draft
@@ -187,7 +191,7 @@ export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }:
           )}
           <button
             onClick={() => save(false)}
-            disabled={saving}
+            disabled={saving || !boardId}
             className="text-sm px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50 transition-colors"
             style={{ background: '#c73009' }}
           >

@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { listScope, writeScope } = require('../lib/boardScope');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,9 +10,12 @@ const STATUSES = ['in_progress', 'achieved'];
 
 // The tickets opened to fulfil an initiative, by title and status — enough to
 // see whether the work is moving without leaving the page. Deliberately not the
-// whole ticket: an initiative spans boards, and a member of the workspace is
-// not necessarily a member of every board whose tickets appear here.
+// whole ticket, and the board is still reported per ticket: an initiative now
+// belongs to one board, but tickets linked before the board-scoping migration
+// may sit on another, and hiding which board a ticket is on would make that
+// list unreadable.
 const initiativeInclude = {
+  board: { select: { id: true, name: true } },
   createdBy: { select: { id: true, name: true } },
   tickets: {
     select: {
@@ -29,11 +33,17 @@ function canEdit(initiative, user) {
   return initiative.createdById === user.id || user.role === 'admin';
 }
 
-// Every initiative, to every member. Live work first, newest within that —
-// descending, because "in_progress" sorts after "achieved" alphabetically.
+// A board's initiatives. `?boardId=` narrows to one board; without it you get
+// the initiatives of every board you can see. Live work first, newest within
+// that — descending, because "in_progress" sorts after "achieved"
+// alphabetically.
 router.get('/', authenticate, async (req, res) => {
   try {
+    const scope = await listScope(req);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
     const initiatives = await prisma.initiative.findMany({
+      where: scope.where,
       include: initiativeInclude,
       orderBy: [{ status: 'desc' }, { createdAt: 'desc' }],
     });
@@ -41,7 +51,7 @@ router.get('/', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
-// Create one. Open to any member of the workspace.
+// Create one on a board. Open to any member of that board.
 router.post('/', authenticate, async (req, res) => {
   try {
     const title = (req.body.title || '').trim();
@@ -49,12 +59,18 @@ router.post('/', authenticate, async (req, res) => {
     if (!title) return res.status(400).json({ error: 'Say what the initiative is' });
     if (!description) return res.status(400).json({ error: 'Add a bit more about it' });
 
+    const target = await writeScope(req, {
+      boardId: req.body.boardId,
+      requiredMessage: 'Choose the board this initiative belongs to',
+    });
+    if (target.error) return res.status(target.status).json({ error: target.error });
+
     const status = req.body.status && STATUSES.includes(req.body.status)
       ? req.body.status
       : 'in_progress';
 
     const initiative = await prisma.initiative.create({
-      data: { title, description, status, createdById: req.user.id },
+      data: { title, description, status, boardId: target.boardId, createdById: req.user.id },
       include: initiativeInclude,
     });
     res.json(initiative);
@@ -86,6 +102,14 @@ router.patch('/:id', authenticate, async (req, res) => {
       const description = (req.body.description || '').trim();
       if (!description) return res.status(400).json({ error: 'Add a bit more about it' });
       data.description = description;
+    }
+    if (req.body.boardId !== undefined) {
+      const target = await writeScope(req, {
+        boardId: req.body.boardId,
+        requiredMessage: 'An initiative has to belong to a board',
+      });
+      if (target.error) return res.status(target.status).json({ error: target.error });
+      data.boardId = target.boardId;
     }
 
     const initiative = await prisma.initiative.update({

@@ -3,10 +3,17 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Persona, TechComfort, User } from '@/types';
 import { formatTimestamp } from '@/lib/formatDate';
+import { useBoards } from '@/lib/useBoards';
 import RowMenu from './RowMenu';
 
 interface Props {
   user: User;
+  /**
+   * The board to scope to. Inside a board this is that board, and a new persona
+   * goes to it without being asked. Outside one the panel lists every board's
+   * personas and the form asks which board the persona belongs to.
+   */
+  boardId?: string;
   onClose: () => void;
 }
 
@@ -45,6 +52,8 @@ const inputFocus = {
 
 type Draft = {
   name: string;
+  /** Empty when the panel already knows the board, or until the picker is set. */
+  boardId: string;
   segment: string;
   description: string;
   goals: string;
@@ -54,11 +63,12 @@ type Draft = {
 };
 
 const emptyDraft: Draft = {
-  name: '', segment: '', description: '', goals: '', painPoints: '', behaviours: '', techComfort: '',
+  name: '', boardId: '', segment: '', description: '', goals: '', painPoints: '', behaviours: '', techComfort: '',
 };
 
 const draftFrom = (p: Persona): Draft => ({
   name: p.name,
+  boardId: p.boardId,
   segment: p.segment ?? '',
   description: p.description ?? '',
   goals: p.goals ?? '',
@@ -70,7 +80,7 @@ const draftFrom = (p: Persona): Draft => ({
 // Who we build for, reachable from the workspace and from inside every board.
 // Collapsed to a list of names and expanded only when one is clicked: the panel
 // is for checking a persona mid-task, not for reading all of them at once.
-export default function PersonasPanel({ user, onClose }: Props) {
+export default function PersonasPanel({ user, boardId, onClose }: Props) {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -81,16 +91,20 @@ export default function PersonasPanel({ user, onClose }: Props) {
   const [removing, setRemoving] = useState<string | null>(null);
 
   const isAdmin = user.role === 'admin';
+  // Only an admin can create a persona, and only outside a board is there a
+  // board to choose — so this is the one case that needs the board list.
+  const { boards } = useBoards(isAdmin && !boardId);
 
   useEffect(() => {
     let live = true;
+    setLoading(true);
     api
-      .get<Persona[]>('/personas')
+      .get<Persona[]>('/personas', { params: boardId ? { boardId } : undefined })
       .then(({ data }) => { if (live) setPersonas(data); })
       .catch(() => { if (live) setError('Could not load personas.'); })
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, []);
+  }, [boardId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -101,14 +115,19 @@ export default function PersonasPanel({ user, onClose }: Props) {
   const sorted = (list: Persona[]) =>
     [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
+  const targetBoardId = boardId || draft.boardId;
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.name.trim()) return;
+    // A new persona needs a board; an edit already has one and the draft keeps
+    // it, so the board is only ever *required* on create.
+    if (editing === 'new' && !targetBoardId) return;
     setSaving(true);
     setError('');
     try {
       if (editing === 'new') {
-        const { data } = await api.post<Persona>('/personas', draft);
+        const { data } = await api.post<Persona>('/personas', { ...draft, boardId: targetBoardId });
         setPersonas((prev) => sorted([...prev, data]));
       } else if (editing) {
         const { data } = await api.patch<Persona>(`/personas/${editing}`, draft);
@@ -136,6 +155,21 @@ export default function PersonasPanel({ user, onClose }: Props) {
 
   const form = (
     <form onSubmit={save} className="space-y-2.5 rounded-xl border border-gray-200 p-3">
+      {!boardId && editing === 'new' && (
+        <select
+          value={draft.boardId}
+          onChange={(e) => setDraft({ ...draft, boardId: e.target.value })}
+          aria-label="Board for this persona"
+          className="px-3 py-2 text-sm text-gray-900 bg-white"
+          style={inputStyle}
+          {...inputFocus}
+        >
+          <option value="">Which board?</option>
+          {boards.map((b) => (
+            <option key={b.id} value={b.id}>{b.name}</option>
+          ))}
+        </select>
+      )}
       <input
         autoFocus
         type="text"
@@ -198,7 +232,7 @@ export default function PersonasPanel({ user, onClose }: Props) {
         </button>
         <button
           type="submit"
-          disabled={saving || !draft.name.trim()}
+          disabled={saving || !draft.name.trim() || (editing === 'new' && !targetBoardId)}
           className="flex-1 py-2 min-h-[40px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
           style={{ background: '#c73009' }}
         >
@@ -218,6 +252,9 @@ export default function PersonasPanel({ user, onClose }: Props) {
         <h2 className="font-bold text-base min-w-0 truncate" style={{ color: '#1a1f3c' }}>
           Personas
         </h2>
+        {!boardId && (
+          <span className="text-xs font-medium text-gray-500 flex-shrink-0">All boards</span>
+        )}
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">
           {personas.length}
         </span>
@@ -257,7 +294,9 @@ export default function PersonasPanel({ user, onClose }: Props) {
             <p className="text-sm font-semibold text-gray-700 mb-1">No personas yet</p>
             <p className="text-sm text-gray-600">
               {isAdmin
-                ? 'Add the categories of user you build for.'
+                ? boardId
+                  ? 'Add the categories of user this board builds for.'
+                  : 'Add the categories of user you build for, board by board.'
                 : 'An admin adds the categories of user you build for.'}
             </p>
           </div>
@@ -296,6 +335,11 @@ export default function PersonasPanel({ user, onClose }: Props) {
                       <span className="text-sm font-bold min-w-0 truncate" style={{ color: '#1a1f3c' }}>
                         {persona.name}
                       </span>
+                      {!boardId && persona.board && (
+                        <span className="text-xs font-medium text-gray-400 truncate flex-shrink-0">
+                          {persona.board.name}
+                        </span>
+                      )}
                       {persona.segment && (
                         <span className="text-xs text-gray-500 truncate flex-shrink min-w-0">{persona.segment}</span>
                       )}

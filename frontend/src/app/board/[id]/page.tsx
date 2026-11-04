@@ -613,6 +613,7 @@ export default function BoardPage() {
       {/* Shared global header; the board name and board-only controls are passed in. */}
       <AppHeader
         user={currentUser}
+        boardId={boardId}
         breadcrumb={
           <h1 className="font-semibold text-sm truncate max-w-[120px] sm:max-w-none" style={{ color: '#1a1f3c' }}>
             {board.name}

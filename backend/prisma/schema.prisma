@@ -49,6 +49,9 @@ model Board {
   productFiles   ProductFile[]
   changelogEntries ChangelogEntry[]
   prds           Prd[]
+  personas        Persona[]
+  dictionaryTerms DictionaryTerm[]
+  initiatives     Initiative[]
 }
 
 model BoardMember {
@@ -252,23 +255,24 @@ model ProductFile {
 }
 
 // --- Changelog ---
-// Curated, admin-authored release notes readable by every user, across every
-// project. An entry with boardId = null is company-wide; an entry scoped to a
-// board is listed for everyone but its items are only detailed to that board's
-// members (admins always see full detail). publishedAt = null means draft.
+// Curated, admin-authored release notes. Every entry belongs to exactly one
+// board: an entry is listed for everyone, but its items are only detailed to
+// that board's members (admins always see full detail). There is no
+// company-wide entry any more — see the 20261104_board_scoping migration.
+// publishedAt = null means draft.
 model ChangelogEntry {
   id          String    @id @default(uuid())
   version     String?
   title       String
   summary     String?
   items       Json      @default("[]") // [{ kind: "added"|"changed"|"fixed"|"removed", text: string }]
-  boardId     String?
+  boardId     String
   authorId    String
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  board  Board? @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  board  Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
   author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([publishedAt])
@@ -276,48 +280,63 @@ model ChangelogEntry {
 }
 
 // --- Riverly Dictionary ---
-// The workspace's shared vocabulary. Anyone can add a term, everyone can read
-// one, and the creator stays attached so a definition can be queried at source.
-// Terms are unique case-insensitively, enforced by an index on LOWER("term")
-// that the migration adds — Prisma's schema language cannot express it.
+// A board's own vocabulary. Any member of the board can add a term, every
+// member can read one, and the creator stays attached so a definition can be
+// queried at source.
+//
+// Terms are unique case-insensitively *within a board*, enforced by an index on
+// ("boardId", LOWER("term")) that the migration adds — Prisma's schema language
+// cannot express a functional index. Two boards may define the same term
+// differently, which is the point of localising it.
 model DictionaryTerm {
   id          String   @id @default(uuid())
   term        String
   definition  String
+  boardId     String
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  board     Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([term])
+  @@index([boardId])
 }
 
 // --- Initiatives ---
 // "A large, coordinated body of work aimed at a specific strategic goal."
 //
-// Workspace-wide, like the dictionary: any member can create one and every
-// member can see them all, along with the tickets opened to fulfil them.
-// Tickets point at an initiative rather than the other way round, so one
-// initiative spans as many boards as the work needs.
+// Owned by one board: any member of it can create an initiative and every
+// member can see the board's own, along with the tickets opened to fulfil them.
+//
+// Tickets still point at an initiative rather than the other way round, and
+// `Ticket.initiativeId` is deliberately NOT constrained to the ticket's own
+// board in SQL: rows predating the 20261104_board_scoping migration legitimately
+// cross boards, and dropping them would silently discard real associations. New
+// links are matched board-for-board on the tickets route instead, so the rule is
+// enforced going forward without rewriting history.
 model Initiative {
   id          String   @id @default(uuid())
   title       String
   description String
   status      String   @default("in_progress") // "in_progress" | "achieved"
+  boardId     String
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   createdBy User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
   tickets   Ticket[]
 
   @@index([status])
+  @@index([boardId])
 }
 
 // --- Personas ---
 // The attributes of a user category, so a product decision can name who it is
-// for. Admins curate them; everyone reads them.
+// for. Owned by one board: admins curate them; the board's members read them.
 //
 // A fixed research template rather than free text or admin-defined attributes:
 // every persona then answers the same questions, which is what makes two of
@@ -331,14 +350,17 @@ model Persona {
   painPoints  String?
   behaviours  String?
   techComfort String?  // "low" | "medium" | "high"
+  boardId     String
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  board     Board        @relation(fields: [boardId], references: [id], onDelete: Cascade)
   createdBy User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
   prds      PrdPersona[]
 
   @@index([name])
+  @@index([boardId])
 }
 
 // --- PRD Builder ---
@@ -395,6 +417,9 @@ model Prd {
 
 // §10 Target Personas, multi-select. A join rather than a list of ids, so a
 // deleted persona disappears from every PRD that named it.
+// A PRD's target personas. Like Ticket.initiativeId, rows created before
+// 20261104_board_scoping may join a PRD to a persona on another board; the PRD
+// route refuses to create new ones that do.
 model PrdPersona {
   id        String @id @default(uuid())
   prdId     String

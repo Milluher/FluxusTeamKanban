@@ -220,10 +220,10 @@ describe('PrdBuilderModal', () => {
     unmount();
   });
 
-  it('says so when there are no personas to target yet', async () => {
+  it('says so when the board has no personas to target yet', async () => {
     const { container, unmount } = open();
     await flush();
-    expect(container.textContent).toContain('No personas exist yet');
+    expect(container.textContent).toContain('This board has no personas yet');
     unmount();
   });
 

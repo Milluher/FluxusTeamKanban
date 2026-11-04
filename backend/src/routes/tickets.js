@@ -6,6 +6,36 @@ const { ticketInclude } = require('../lib/ticketInclude');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+/**
+ * An initiative belongs to one board since 20261104_board_scoping, so a ticket
+ * may only be linked to one on its own board.
+ *
+ * Enforced here rather than as a database constraint on purpose: links made
+ * before that migration legitimately cross boards, and a constraint would
+ * either reject them or require deleting them. This guards *new* links only,
+ * which is the agreed behaviour — existing ones are left exactly as they are.
+ *
+ * `boardId` may be undefined if the ticket's column could not be resolved; that
+ * is treated as "cannot prove it fits", and refused, rather than waved through.
+ */
+async function initiativeFitsBoard(initiativeId, boardId) {
+  if (!initiativeId) return { ok: true };
+
+  const initiative = await prisma.initiative.findUnique({
+    where: { id: initiativeId },
+    select: { boardId: true, board: { select: { name: true } } },
+  });
+  if (!initiative) return { ok: false, status: 404, error: 'That initiative no longer exists' };
+
+  if (!boardId || initiative.boardId !== boardId) {
+    return {
+      ok: false,
+      status: 422,
+      error: `That initiative belongs to another board${initiative.board ? ` (${initiative.board.name})` : ''}`,
+    };
+  }
+  return { ok: true };
+}
 
 // Create ticket
 router.post('/', authenticate, async (req, res) => {
@@ -14,6 +44,10 @@ router.post('/', authenticate, async (req, res) => {
     if (!title || !columnId) return res.status(400).json({ error: 'Title and columnId required' });
     const column = await prisma.column.findUnique({ where: { id: columnId } });
     if (!column) return res.status(404).json({ error: 'Column not found' });
+
+    const fit = await initiativeFitsBoard(initiativeId, column.boardId);
+    if (!fit.ok) return res.status(fit.status).json({ error: fit.error });
+
     const ticket = await prisma.ticket.create({
       data: {
         title,
@@ -134,6 +168,22 @@ router.patch('/:id', authenticate, async (req, res) => {
       const col = await prisma.column.findUnique({ where: { id: columnId } });
       if (col) { data.columnId = columnId; data.status = col.name; }
     }
+
+    // Checked against the board the ticket will be on *after* this patch, which
+    // is the new column's when the patch moves it. Clearing the link (null) is
+    // always allowed.
+    if (initiativeId) {
+      const target = data.columnId
+        ? await prisma.column.findUnique({ where: { id: data.columnId }, select: { boardId: true } })
+        : (await prisma.ticket.findUnique({
+            where: { id: req.params.id },
+            select: { column: { select: { boardId: true } } },
+          }))?.column;
+
+      const fit = await initiativeFitsBoard(initiativeId, target?.boardId);
+      if (!fit.ok) return res.status(fit.status).json({ error: fit.error });
+    }
+
     const prevTicket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { assigneeId: true, sprintId: true } });
     // Record sprint history if ticket is being moved from one sprint to another
     if (sprintId !== undefined && prevTicket?.sprintId && prevTicket.sprintId !== (sprintId || null)) {
@@ -187,6 +237,12 @@ router.patch('/:id/move', authenticate, async (req, res) => {
 //
 // The copy is created by whoever duplicated it, not by the original's author,
 // so "created by" stays true.
+//
+// One thing the copy may lose: an initiative on another board. A handful of
+// tickets linked across boards before 20261104_board_scoping, and those links
+// are kept — but copying one would mint a *new* link the rules now forbid. So
+// the copy drops it rather than the duplicate failing, which would make legacy
+// tickets unduplicable for a reason nobody could act on.
 router.post('/:id/duplicate', authenticate, async (req, res) => {
   try {
     const original = await prisma.ticket.findUnique({
@@ -197,6 +253,8 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
     if (original.createdById !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Only the person who created a ticket can duplicate it' });
     }
+
+    const carriedInitiative = await initiativeFitsBoard(original.initiativeId, original.column.boardId);
 
     const copy = await prisma.ticket.create({
       data: {
@@ -215,7 +273,7 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
         flow: original.flow,
         sprintId: original.sprintId,
         productDocId: original.productDocId,
-        initiativeId: original.initiativeId,
+        initiativeId: carriedInitiative.ok ? original.initiativeId : null,
         prdId: original.prdId,
       },
       include: ticketInclude,
