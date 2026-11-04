@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const { canViewBoard, canEditBoard } = require('../lib/boardAccess');
 const { ticketInclude } = require('../lib/ticketInclude');
+const { emailNotification } = require('../lib/email');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -497,6 +498,7 @@ router.post('/approvers/:approverId/decision', authenticate, async (req, res) =>
         },
       });
       req.io.to(`user:${approver.prd.createdById}`).emit('notification', notification);
+      emailNotification(notification);
     }
 
     const updated = await loadPrd(approver.prd.id);
@@ -634,6 +636,7 @@ router.post('/:id/publish', authenticate, async (req, res) => {
     // then rolled back.
     for (const notification of notifications) {
       req.io.to(`user:${notification.userId}`).emit('notification', notification);
+      emailNotification(notification);
     }
     // Fetched in full rather than emitted from the block's narrow selection:
     // the board renders fields a partial ticket would not carry.

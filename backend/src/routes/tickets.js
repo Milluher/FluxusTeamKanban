@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const { ticketInclude } = require('../lib/ticketInclude');
+const { emailNotification } = require('../lib/email');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -86,6 +87,7 @@ router.post('/', authenticate, async (req, res) => {
         },
       });
       req.io.to(`user:${assigneeId}`).emit('notification', notification);
+      emailNotification(notification);
     }
 
     res.json(ticket);
@@ -206,6 +208,7 @@ router.patch('/:id', authenticate, async (req, res) => {
         },
       });
       req.io.to(`user:${newAssigneeId}`).emit('notification', notification);
+      emailNotification(notification);
     }
 
     res.json(ticket);
@@ -296,6 +299,7 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
         },
       });
       req.io.to(`user:${copy.assigneeId}`).emit('notification', notification);
+      emailNotification(notification);
     }
 
     res.json(copy);

@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { emailNotification } = require('../lib/email');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -89,6 +90,7 @@ router.post('/', authenticate, async (req, res) => {
           },
         });
         req.io.to(`user:${user.id}`).emit('notification', notification);
+        emailNotification(notification);
       }
     }
 
