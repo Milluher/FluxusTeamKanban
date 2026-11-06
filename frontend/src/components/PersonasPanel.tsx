@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { Persona, TechComfort, User } from '@/types';
-import { formatTimestamp } from '@/lib/formatDate';
+import { Persona, User } from '@/types';
 import { useBoards } from '@/lib/useBoards';
 import RowMenu from './RowMenu';
+import PersonaDetails, { PERSONA_ATTRIBUTES, TECH_COMFORT } from './PersonaDetails';
 
 interface Props {
   user: User;
@@ -17,20 +17,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** The template, in the order a persona reads best. */
-const ATTRIBUTES: { key: keyof Persona; label: string; rows: number }[] = [
-  { key: 'segment', label: 'Segment', rows: 1 },
-  { key: 'description', label: 'Description', rows: 3 },
-  { key: 'goals', label: 'Goals', rows: 3 },
-  { key: 'painPoints', label: 'Pain points', rows: 3 },
-  { key: 'behaviours', label: 'Behaviours', rows: 3 },
-];
-
-const TECH_COMFORT: { value: TechComfort; label: string; color: string; bg: string }[] = [
-  { value: 'low', label: 'Low tech comfort', color: '#b45309', bg: '#fffbeb' },
-  { value: 'medium', label: 'Medium tech comfort', color: '#1d4ed8', bg: '#eff6ff' },
-  { value: 'high', label: 'High tech comfort', color: '#047857', bg: '#ecfdf5' },
-];
+const ATTRIBUTES = PERSONA_ATTRIBUTES;
 
 const inputStyle: React.CSSProperties = {
   border: '1px solid #e5e7eb',
@@ -305,9 +292,6 @@ export default function PersonasPanel({ user, boardId, onClose }: Props) {
             if (editing === persona.id) return <div key={persona.id}>{form}</div>;
 
             const isOpen = expanded === persona.id;
-            const comfort = TECH_COMFORT.find((t) => t.value === persona.techComfort);
-            const filled = ATTRIBUTES.filter(({ key }) => persona[key]);
-            const added = formatTimestamp(persona.createdAt);
 
             return (
               <div key={persona.id} className="rounded-xl border border-gray-200 overflow-hidden">
@@ -366,32 +350,8 @@ export default function PersonasPanel({ user, boardId, onClose }: Props) {
                 </div>
 
                 {isOpen && (
-                  <div className="px-3 pb-3 pt-1 border-t border-gray-100 space-y-2.5">
-                    {comfort && (
-                      <span
-                        className="inline-flex text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: comfort.bg, color: comfort.color }}
-                      >
-                        {comfort.label}
-                      </span>
-                    )}
-                    {filled.length === 0 && !comfort ? (
-                      <p className="text-xs text-gray-500">
-                        Nothing recorded yet beyond the name.
-                      </p>
-                    ) : (
-                      filled.map(({ key, label }) => (
-                        <div key={key}>
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-0.5">
-                            {label}
-                          </h4>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{persona[key] as string}</p>
-                        </div>
-                      ))
-                    )}
-                    <p className="text-xs text-gray-500 pt-0.5">
-                      Added by {persona.createdBy.name}{added ? ` · ${added}` : ''}
-                    </p>
+                  <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+                    <PersonaDetails persona={persona} />
                   </div>
                 )}
 

@@ -220,6 +220,47 @@ describe('PrdBuilderModal', () => {
     unmount();
   });
 
+  it('shows a persona\'s details from the info button, without changing the selection', async () => {
+    get.mockResolvedValue({
+      data: [
+        {
+          id: 'pe2', name: 'Agent', boardId: 'b1', segment: 'Field sales', goals: 'Close loans fast',
+          techComfort: 'low', createdBy: { id: 'u1', name: 'A' }, createdAt: '', updatedAt: '',
+        },
+      ],
+    });
+    const { container, unmount } = open();
+    await flush();
+
+    const info = container.querySelector('button[aria-label="View Agent"]') as HTMLButtonElement;
+    info.click();
+    await flush();
+    const region = container.querySelector('[aria-label="About Agent"]');
+    expect(region?.textContent).toContain('Field sales');
+    expect(region?.textContent).toContain('Close loans fast');
+    expect(region?.textContent).toContain('Low tech comfort');
+    expect(button(container, 'Agent').getAttribute('aria-pressed')).toBe('false');
+
+    (container.querySelector('button[aria-label="Close persona details"]') as HTMLButtonElement).click();
+    await flush();
+    expect(container.querySelector('[aria-label="About Agent"]')).toBeNull();
+    unmount();
+  });
+
+  it('lets a reader open a persona by clicking its chip', async () => {
+    get.mockResolvedValue({
+      data: [{ id: 'pe2', name: 'Agent', boardId: 'b1', goals: 'Close loans fast', createdBy: { id: 'u1', name: 'A' }, createdAt: '', updatedAt: '' }],
+    });
+    const { container, unmount } = open(prd({ personas: [{ id: 'l1', personaId: 'pe2', persona: { id: 'pe2', name: 'Agent' } }] }), false);
+    await flush();
+
+    button(container, 'Agent').click();
+    await flush();
+    expect(container.querySelector('[aria-label="About Agent"]')?.textContent).toContain('Close loans fast');
+    expect(patch).not.toHaveBeenCalled();
+    unmount();
+  });
+
   it('says so when the board has no personas to target yet', async () => {
     const { container, unmount } = open();
     await flush();

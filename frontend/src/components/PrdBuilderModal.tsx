@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
+import PersonaDetails from './PersonaDetails';
 import { Persona, Prd, PrdAdminBlock, PrdClassification, User } from '@/types';
 import { PRD_CLASSIFICATIONS, PRD_SECTIONS, missingBeforePublish, sectionsFilled } from '@/lib/prdSections';
 import {
@@ -79,6 +80,12 @@ export default function PrdBuilderModal({
   const [personaIds, setPersonaIds] = useState<string[]>(() => prd.personas.map((p) => p.personaId));
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [personasLoaded, setPersonasLoaded] = useState(false);
+  // §10: the persona whose details are open under the chips, if any.
+  const [viewingPersonaId, setViewingPersonaId] = useState<string | null>(null);
+  // A persona picked before board scoping is not in the board's list, so its
+  // details are fetched on demand from everything the reader can see.
+  const [offBoardPersona, setOffBoardPersona] = useState<Persona | null>(null);
+  const [personaLookup, setPersonaLookup] = useState<'idle' | 'loading' | 'missing'>('idle');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
@@ -192,6 +199,26 @@ export default function PrdBuilderModal({
   const filled = sectionsFilled(draft as unknown as Partial<Prd>);
 
   const set = (field: string, value: string) => setDraft((d) => ({ ...d, [field]: value }));
+
+  const viewPersona = (id: string) => {
+    if (viewingPersonaId === id) { setViewingPersonaId(null); return; }
+    setViewingPersonaId(id);
+    if (personas.some((p) => p.id === id) || offBoardPersona?.id === id) return;
+    setPersonaLookup('loading');
+    api
+      .get<Persona[]>('/personas')
+      .then(({ data }) => {
+        const found = data.find((p) => p.id === id) ?? null;
+        setOffBoardPersona(found);
+        setPersonaLookup(found ? 'idle' : 'missing');
+      })
+      .catch(() => setPersonaLookup('missing'));
+  };
+  const viewedPersona =
+    personas.find((p) => p.id === viewingPersonaId) ??
+    (offBoardPersona?.id === viewingPersonaId ? offBoardPersona : null);
+  const viewedName =
+    viewedPersona?.name ?? prd.personas.find((p) => p.personaId === viewingPersonaId)?.persona?.name ?? 'Persona';
 
   const togglePersona = (id: string) =>
     setPersonaIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
@@ -512,28 +539,32 @@ export default function PrdBuilderModal({
                   like the save lost it.
                 */}
                 {foreignPersonas.map((persona) => (
+                  <span key={persona.personaId} className="inline-flex items-center gap-0.5">
                   <button
-                    key={persona.personaId}
                     type="button"
-                    disabled={!editable}
                     aria-pressed
-                    onClick={() => togglePersona(persona.personaId)}
+                    onClick={() => (editable ? togglePersona(persona.personaId) : viewPersona(persona.personaId))}
                     title="On another board — picked before personas were scoped to boards"
                     className="text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors disabled:opacity-70"
                     style={{ background: '#fffbeb', color: '#b45309', borderColor: '#fde68a' }}
                   >
                     {persona.persona?.name ?? 'Persona'} ↗
                   </button>
+                  <PersonaInfoButton
+                    name={persona.persona?.name ?? 'Persona'}
+                    open={viewingPersonaId === persona.personaId}
+                    onClick={() => viewPersona(persona.personaId)}
+                  />
+                  </span>
                 ))}
                 {personas.map((persona) => {
                   const picked = personaIds.includes(persona.id);
                   return (
+                    <span key={persona.id} className="inline-flex items-center gap-0.5">
                     <button
-                      key={persona.id}
                       type="button"
-                      disabled={!editable}
                       aria-pressed={picked}
-                      onClick={() => togglePersona(persona.id)}
+                      onClick={() => (editable ? togglePersona(persona.id) : viewPersona(persona.id))}
                       className="text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors disabled:opacity-70"
                       style={picked
                         ? { background: '#fff7f5', color: '#c73009', borderColor: '#fbd5c8' }
@@ -541,8 +572,47 @@ export default function PrdBuilderModal({
                     >
                       {persona.name}
                     </button>
+                    <PersonaInfoButton
+                      name={persona.name}
+                      open={viewingPersonaId === persona.id}
+                      onClick={() => viewPersona(persona.id)}
+                    />
+                    </span>
                   );
                 })}
+              </div>
+            )}
+            {viewingPersonaId && (
+              <div
+                className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5"
+                role="region"
+                aria-label={`About ${viewedName}`}
+              >
+                <div className="flex items-start gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate" style={{ color: '#1a1f3c' }}>{viewedName}</p>
+                    {viewedPersona?.board && viewedPersona.boardId !== prd.boardId && (
+                      <p className="text-xs text-gray-500">On {viewedPersona.board.name}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingPersonaId(null)}
+                    aria-label="Close persona details"
+                    className="text-gray-400 hover:text-gray-700 text-lg leading-none px-1"
+                  >
+                    ×
+                  </button>
+                </div>
+                {viewedPersona ? (
+                  <PersonaDetails persona={viewedPersona} />
+                ) : personaLookup === 'loading' ? (
+                  <p className="text-xs text-gray-500">Loading…</p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    This persona's details aren't available to you — it may have been removed, or it lives on a board you can't see.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -938,5 +1008,25 @@ export default function PrdBuilderModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/** The small "i" beside a §10 chip that opens that persona's details. */
+function PersonaInfoButton({ name, open, onClick }: { name: string; open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`View ${name}`}
+      aria-expanded={open}
+      title={`View ${name}`}
+      className="w-5 h-5 inline-flex items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+      style={{ color: open ? '#c73009' : '#9ca3af' }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5" />
+        <path d="M12 11v6M12 7.5v.01" strokeLinecap="round" />
+      </svg>
+    </button>
   );
 }
