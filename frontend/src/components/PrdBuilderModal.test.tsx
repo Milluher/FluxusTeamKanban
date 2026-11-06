@@ -474,4 +474,107 @@ describe('PrdBuilderModal', () => {
     expect(onClose).toHaveBeenCalled();
     unmount();
   });
+
+  // --- §16 gates approval ---
+
+  it('refuses approval while an administrative block is unanswered, but still allows request changes', async () => {
+    const live = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      adminBlocks: [block({ role: 'Compliance', dataNeeded: null, actionsNeeded: null })],
+      approvers: twoApprovers,
+    });
+    // Rendered as the approver, since the decision controls are theirs.
+    const { container, unmount } = open(live, false, reviewer);
+    await flush();
+
+    const approve = button(container, 'Approve');
+    expect(approve.disabled).toBe(true);
+    // The reason, not just a dead button.
+    expect(container.textContent).toContain('Compliance');
+    expect(container.textContent).toContain('has not been filled in');
+
+    // Unanswered blocks are exactly what an approver chases, so this stays live.
+    expect(button(container, 'Request changes').disabled).toBe(false);
+    unmount();
+  });
+
+  it('allows approval once every block is answered', async () => {
+    const live = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      adminBlocks: [
+        block({ role: 'Compliance', dataNeeded: 'Vendor list', actionsNeeded: 'Sign it off' }),
+      ],
+      approvers: twoApprovers,
+    });
+    const { container, unmount } = open(live, false, reviewer);
+    await flush();
+
+    expect(button(container, 'Approve').disabled).toBe(false);
+    expect(container.textContent).not.toContain('has not been filled in');
+    unmount();
+  });
+
+  it('allows approval when the PRD has no administrative blocks at all', async () => {
+    // Blocks are optional — §16 is only reached if the author assigns one.
+    const live = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      adminBlocks: [],
+      approvers: twoApprovers,
+    });
+    const { container, unmount } = open(live, false, reviewer);
+    await flush();
+    expect(button(container, 'Approve').disabled).toBe(false);
+    unmount();
+  });
+
+  it('lets the assignee answer their own block while the rest of the document stays read-only', async () => {
+    const live = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      adminBlocks: [block({ role: 'Compliance', dataNeeded: null, actionsNeeded: null })],
+      approvers: twoApprovers,
+    });
+    // canEdit=false: an assignee is not the author, which is exactly how the
+    // ticket opens it for them.
+    const { container, unmount } = open(live, false, assignee);
+    await flush();
+
+    // The document itself is closed to them.
+    expect(field(container, 'overview').disabled).toBe(true);
+
+    // Their own two answers are. Targeted by id rather than counting enabled
+    // textareas: in this fixture the assignee is also an approver, so the
+    // decision note would pad a loose count and the test would pass for the
+    // wrong reason.
+    const data = container.querySelector<HTMLTextAreaElement>('#block-ab1-data');
+    const actions = container.querySelector<HTMLTextAreaElement>('#block-ab1-actions');
+    expect(data).not.toBeNull();
+    expect(actions).not.toBeNull();
+    expect(data!.disabled).toBe(false);
+    expect(actions!.disabled).toBe(false);
+    unmount();
+  });
+
+  it('shows another assignee their block read-only', async () => {
+    const live = prd({
+      ...complete,
+      status: 'published',
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      adminBlocks: [block({ role: 'Compliance', dataNeeded: null, actionsNeeded: null })],
+      approvers: twoApprovers,
+    });
+    // reviewer is not the block's assignee, so the answers are not theirs.
+    const { container, unmount } = open(live, false, reviewer);
+    await flush();
+    expect(container.querySelector<HTMLTextAreaElement>('#block-ab1-data')!.disabled).toBe(true);
+    expect(container.querySelector<HTMLTextAreaElement>('#block-ab1-actions')!.disabled).toBe(true);
+    unmount();
+  });
 });
