@@ -218,6 +218,78 @@ describe('TicketModal', () => {
     unmount();
   });
 
+  it('offers no way into a PRD when the ticket serves none', async () => {
+    const { container, unmount } = await open();
+    expect(byText(container, 'button', 'Open PRD')).toBeUndefined();
+    unmount();
+  });
+
+  it('opens the whole PRD from the ticket that asked you to act on it', async () => {
+    // Publishing a PRD raises a ticket per admin block and per approver. The
+    // ticket carries only { id, title, status }, so the document is fetched
+    // when it is opened.
+    const full = {
+      id: 'pr1',
+      title: 'Self-serve onboarding',
+      version: '0.1',
+      status: 'published',
+      boardId: 'b1',
+      canvasFeatureId: null,
+      createdById: 'u9',
+      createdBy: { id: 'u9', name: 'Alice Doe' },
+      board: { id: 'b1', name: 'Roadmap' },
+      canvasFeature: null,
+      overview: 'Why now.',
+      personas: [],
+      adminBlocks: [],
+      approvers: [],
+      publishedAt: '2026-10-02T00:00:00.000Z',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    };
+    get.mockImplementation((url: string) =>
+      url === '/prds/pr1' ? Promise.resolve({ data: full }) : Promise.resolve({ data: [] })
+    );
+
+    const { container, unmount } = await open(
+      ticket({ prdId: 'pr1', prd: { id: 'pr1', title: 'Self-serve onboarding', status: 'published' } })
+    );
+
+    const openButton = byText(container, 'button', 'Open PRD') as HTMLButtonElement;
+    expect(openButton).toBeDefined();
+
+    openButton.click();
+    await flush();
+
+    expect(get).toHaveBeenCalledWith('/prds/pr1');
+    // The builder is on screen, above this modal.
+    expect(container.querySelector('[aria-label="PRD builder"], [role="dialog"]')).not.toBeNull();
+    expect(container.textContent).toContain('Self-serve onboarding');
+    unmount();
+  });
+
+  it('does not open an empty builder when the PRD cannot be fetched', async () => {
+    get.mockImplementation((url: string) =>
+      url === '/prds/pr1'
+        ? Promise.reject({ response: { data: { error: 'Access denied' } } })
+        : Promise.resolve({ data: [] })
+    );
+
+    const { container, unmount } = await open(
+      ticket({ prdId: 'pr1', prd: { id: 'pr1', title: 'Self-serve onboarding', status: 'published' } })
+    );
+    (byText(container, 'button', 'Open PRD') as HTMLButtonElement).click();
+    await flush();
+    await flush();
+
+    // It tried.
+    expect(get).toHaveBeenCalledWith('/prds/pr1');
+    // And the builder stayed shut rather than opening with nothing in it — the
+    // §16 heading only exists inside the builder, so its absence is the proof.
+    expect(container.textContent).not.toContain('Target Personas');
+    unmount();
+  });
+
   it('keeps Initiative behind "Add field" when the ticket serves none', async () => {
     const { container, unmount } = await open();
     expect(byText(container, 'label', 'Initiative')).toBeUndefined();

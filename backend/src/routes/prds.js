@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const { canViewBoard, canEditBoard } = require('../lib/boardAccess');
 const { ticketInclude } = require('../lib/ticketInclude');
+const { approvalBlockedReason } = require('../lib/prdAdminBlocks');
 const { emailNotification } = require('../lib/email');
 
 const router = express.Router();
@@ -480,6 +481,20 @@ router.post('/approvers/:approverId/decision', authenticate, async (req, res) =>
       return res.status(400).json({ error: 'Decision must be approved or changes_requested' });
     }
 
+    // §16 has to be complete before anyone signs the document off: approving
+    // while a block is unanswered is signing off on a section nobody wrote.
+    // Only approval is gated — unanswered blocks are a good reason to send a
+    // PRD back, so "request changes" stays open.
+    if (status === 'approved') {
+      const blocks = await prisma.prdAdminBlock.findMany({
+        where: { prdId: approver.prd.id },
+        select: { role: true, dataNeeded: true, actionsNeeded: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      const blocked = approvalBlockedReason(blocks);
+      if (blocked) return res.status(409).json({ error: blocked });
+    }
+
     await prisma.prdApprover.update({
       where: { id: approver.id },
       data: { status, note: section(req.body.note), decidedAt: new Date() },
@@ -562,7 +577,10 @@ router.post('/:id/publish', authenticate, async (req, res) => {
             description:
               `<p>Your <strong>${escapeHtml(block.role)}</strong> section of the PRD ` +
               `“${escapeHtml(prd.title)}” is ready to fill in: the data you need, and the ` +
-              `actions you need to take with this product.</p>`,
+              `actions you need to take with this product.</p>` +
+              `<p>Use <strong>Open PRD</strong> on this ticket to read the whole document. ` +
+              `Everything else is read-only to you — your two answers are the only part ` +
+              `you can change.</p>`,
             status: column.name,
             columnId: column.id,
             assigneeId: block.assigneeId,
@@ -598,8 +616,12 @@ router.post('/:id/publish', authenticate, async (req, res) => {
             title: `Approve: ${prd.title}`,
             description:
               `<p>You have been asked to approve the PRD ` +
-              `“${escapeHtml(prd.title)}”. Open it to read every section, including the ` +
-              `administrative blocks and whatever has been filled in so far.</p>`,
+              `“${escapeHtml(prd.title)}”. Use <strong>Open PRD</strong> on this ticket to read ` +
+              `every section, including the administrative blocks and whatever has been ` +
+              `filled in so far.</p>` +
+              `<p>Approving is only possible once every administrative block has been ` +
+              `answered. Until then you can still request changes, which is how you chase ` +
+              `an outstanding one.</p>`,
             status: column.name,
             columnId: column.id,
             assigneeId: approver.userId,

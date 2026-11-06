@@ -59,3 +59,35 @@ export function approverShortfall(prd: Pick<Prd, 'approvers'>): string | null {
   const needed = MIN_APPROVERS - total;
   return `Name ${needed} more approver${needed === 1 ? '' : 's'} — a PRD needs at least ${MIN_APPROVERS}.`;
 }
+
+/**
+ * §16 blocks still missing either answer.
+ *
+ * Mirrors `backend/src/lib/prdAdminBlocks.js`, which is what actually enforces
+ * it — this exists so the Approve button can be disabled with a reason instead
+ * of offering a click that comes back 409.
+ */
+export function unansweredBlocks(prd: Pick<Prd, 'adminBlocks'>) {
+  return (prd.adminBlocks ?? []).filter(
+    (b) => !(b.dataNeeded || '').trim() || !(b.actionsNeeded || '').trim()
+  );
+}
+
+/**
+ * Why this PRD cannot be approved yet, or null when it can.
+ *
+ * Approval only. Unanswered blocks are a perfectly good reason to send a PRD
+ * back, so "request changes" is never gated — an approver who could neither
+ * approve nor object would be stuck. A PRD with no blocks is approvable:
+ * blocks are optional, and treating "none" as "incomplete" would make such a
+ * PRD unapprovable.
+ */
+export function approvalBlockedReason(prd: Pick<Prd, 'adminBlocks'>): string | null {
+  const outstanding = unansweredBlocks(prd);
+  if (outstanding.length === 0) return null;
+
+  const roles = outstanding.map((b) => b.role).join(', ');
+  return outstanding.length === 1
+    ? `The administrative block “${roles}” has not been filled in yet.`
+    : `${outstanding.length} administrative blocks have not been filled in yet: ${roles}.`;
+}

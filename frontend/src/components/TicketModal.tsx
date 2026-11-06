@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Ticket, Board, User, Comment, Sprint, ProductFile, Initiative, Prd } from '@/types';
 import ProductFileViewer from './ProductFileViewer';
+import PrdBuilderModal from './PrdBuilderModal';
 import RichTextView from './RichTextView';
 import { formatDay, formatTimestamp } from '@/lib/formatDate';
 import RowMenu from './RowMenu';
@@ -124,6 +125,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
       ).filter((el) => el.offsetParent !== null);
 
     const onKeyDown = (e: KeyboardEvent) => {
+      // The PRD opens on top of this modal and has its own Escape and its own
+      // focusable content. Closing the ticket from under it, or dragging focus
+      // back into a dialog the reader is no longer looking at, would both be
+      // wrong — so this handler does nothing while the PRD is up.
+      if (openPrdRef.current) return;
+
       if (e.key === 'Escape') {
         // A field being edited swallows Escape first; this closes the modal.
         onClose();
@@ -161,6 +168,35 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
   const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [prds, setPrds] = useState<Prd[]>([]);
   const [viewingFile, setViewingFile] = useState<ProductFile | null>(null);
+  // The PRD behind this ticket, opened on demand.
+  //
+  // Publishing a PRD raises a ticket for every admin block and every approver,
+  // and until now that ticket only named the document — there was no way to
+  // reach it, so the people being asked to act on a PRD could not read it. The
+  // ticket carries only { id, title, status }, so the full document is fetched
+  // when it is opened rather than on every ticket.
+  const [openPrd, setOpenPrd] = useState<Prd | null>(null);
+  const [prdLoading, setPrdLoading] = useState(false);
+  const [prdError, setPrdError] = useState('');
+  // Read by the focus trap and the Escape handler below, which must stand down
+  // while the PRD is on top. A ref, not state, so toggling it does not re-run
+  // that effect and steal focus back from the PRD.
+  const openPrdRef = useRef<Prd | null>(null);
+  openPrdRef.current = openPrd;
+
+  const openTicketPrd = async () => {
+    if (!ticket.prd) return;
+    setPrdLoading(true);
+    setPrdError('');
+    try {
+      const { data } = await api.get<Prd>(`/prds/${ticket.prd.id}`);
+      setOpenPrd(data);
+    } catch (err: any) {
+      setPrdError(err.response?.data?.error || 'Could not open that PRD.');
+    } finally {
+      setPrdLoading(false);
+    }
+  };
   const [projectOptions, setProjectOptions] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [epicOptions, setEpicOptions] = useState<string[]>([]);
@@ -797,12 +833,31 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                     </select>
                   ),
                   viewEl: ticket.prd ? (
-                    <div className="mt-1.5 flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-medium text-gray-800 truncate">{ticket.prd.title}</span>
-                      {ticket.prd.status === 'draft' && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 bg-amber-50 text-amber-800">
-                          Draft
-                        </span>
+                    <div className="mt-1.5 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-medium text-gray-800 truncate">{ticket.prd.title}</span>
+                        {ticket.prd.status === 'draft' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 bg-amber-50 text-amber-800">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                      {/* The whole document, from the ticket that asked you to
+                          act on it. What you may change once it is open depends
+                          on who you are: its author writes the sections, an
+                          assignee answers only their own §16 block, an approver
+                          reads and decides. */}
+                      <button
+                        type="button"
+                        onClick={openTicketPrd}
+                        disabled={prdLoading}
+                        className="mt-1.5 text-xs font-semibold px-2.5 py-1.5 min-h-[32px] rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                        style={{ color: '#c73009', borderColor: '#fbd5c8' }}
+                      >
+                        {prdLoading ? 'Opening…' : 'Open PRD'}
+                      </button>
+                      {prdError && (
+                        <p role="alert" className="mt-1.5 text-xs text-red-700">{prdError}</p>
                       )}
                     </div>
                   ) : <p className="mt-1.5 text-sm text-gray-500">—</p>,
@@ -1467,6 +1522,25 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
         </div>
       </div>
       {viewingFile && <ProductFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />}
+
+      {/* Above this modal, the same way ProductFileViewer is. The wrapper is
+          what lifts it: the builder sets its own z-50, which alone would tie
+          with this dialog, and a positioned wrapper with a higher z-index gives
+          it a stacking context to sit inside. */}
+      {openPrd && (
+        <div className="relative z-[60]">
+          <PrdBuilderModal
+            prd={openPrd}
+            currentUser={currentUser ?? null}
+            members={board.members}
+            canEdit={Boolean(
+              currentUser && (openPrd.createdById === currentUser.id || currentUser.role === 'admin')
+            )}
+            onClose={() => setOpenPrd(null)}
+            onSaved={(saved) => setOpenPrd(saved)}
+          />
+        </div>
+      )}
     </div>
 
     {confirmDelete && (

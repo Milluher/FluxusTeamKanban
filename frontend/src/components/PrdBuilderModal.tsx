@@ -3,7 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '@/lib/api';
 import { Persona, Prd, PrdAdminBlock, PrdClassification, User } from '@/types';
 import { PRD_CLASSIFICATIONS, PRD_SECTIONS, missingBeforePublish, sectionsFilled } from '@/lib/prdSections';
-import { approvalCount, approvalState, approverShortfall, isWritable } from '@/lib/prdApproval';
+import {
+  approvalBlockedReason,
+  approvalCount,
+  approvalState,
+  approverShortfall,
+  isWritable,
+} from '@/lib/prdApproval';
 import { canExportPrd, downloadPrdPdf } from '@/lib/prdPdf';
 import { formatTimestamp } from '@/lib/formatDate';
 
@@ -103,6 +109,12 @@ export default function PrdBuilderModal({
   const counts = approvalCount(prd);
   const shortfall = approverShortfall(prd);
   const myApproval = prd.approvers.find((a) => a.userId === currentUser?.id);
+  // §16 must be complete before anyone signs the document off. The server
+  // refuses an `approved` while a block is unanswered, so the button is
+  // disabled with the reason rather than offering a click that 409s. Only
+  // approval is gated — "request changes" is exactly how an approver chases an
+  // outstanding block.
+  const approvalBlocked = approvalBlockedReason(prd);
 
   // Personas belong to a board, and a PRD may only target its own board's — the
   // API refuses a selection that reaches into another board. Selections made
@@ -816,13 +828,19 @@ export default function PrdBuilderModal({
                     <button
                       type="button"
                       onClick={() => decide('approved')}
-                      disabled={deciding}
+                      disabled={deciding || Boolean(approvalBlocked)}
+                      title={approvalBlocked ?? undefined}
                       className="flex-1 py-2 min-h-[40px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
                       style={{ background: '#047857' }}
                     >
                       Approve
                     </button>
                   </div>
+                  {approvalBlocked && (
+                    <p className="text-xs text-amber-800 mt-2">
+                      {approvalBlocked} You can still request changes to chase it.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
