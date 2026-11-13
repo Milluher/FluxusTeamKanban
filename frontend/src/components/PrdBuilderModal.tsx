@@ -108,8 +108,8 @@ export default function PrdBuilderModal({
   // re-render and from the server's own echo.
   const savedRef = useRef<string>(JSON.stringify({ draft: draftFrom(prd), personaIds: prd.personas.map((p) => p.personaId) }));
   const published = prd.status === 'published';
-  // A published PRD reopens when an approver asks for changes, so the author
-  // can actually act on the feedback. Mirrors the server.
+  // A published PRD stays writable until every approver has approved it, so the
+  // author can act on feedback where they are. Mirrors the server.
   const writable = isWritable(prd);
   const editable = canEdit && writable;
   const state = approvalState(prd);
