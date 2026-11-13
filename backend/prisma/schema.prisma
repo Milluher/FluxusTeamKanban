@@ -37,7 +37,11 @@ model User {
 model Board {
   id        String   @id @default(uuid())
   name      String
-  type      String   @default("sprint") // "sprint" | "kanban"
+  // Legacy. Boards are no longer created as one kind or the other — every board
+  // now has a project overview, project files, a backlog and sprints. Kept so
+  // rows written before that keep their value rather than being rewritten; no
+  // route or screen branches on it any more.
+  type      String   @default("sprint")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -231,6 +235,12 @@ model CanvasFeature {
   blockId   String
   text      String
   active    Boolean  @default(true)
+  // Whether this feature is worth a PRD. The creator answers that when they add
+  // it: a "mini feature" is listed on the canvas and that is the whole of it,
+  // while anything larger opens the builder there and then. Stored rather than
+  // inferred from "has no PRD", which cannot tell a mini feature from one whose
+  // document nobody has started yet.
+  requiresPrd Boolean @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
 

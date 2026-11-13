@@ -43,13 +43,19 @@ export function approvalCount(prd: Pick<Prd, 'approvers'>): { approved: number; 
 /**
  * Whether the author may still write to it. Mirrors the server.
  *
- * A published PRD reopens when an approver asks for changes, because feedback
- * nobody can act on is not feedback — and unpublishing would mean unpicking
- * the tasks publishing already raised.
+ * A draft, obviously — and a published PRD too, right up until it is approved.
+ * Publishing circulates a document for sign-off; it is not the moment the
+ * document stops being written. The author and a workspace admin keep editing
+ * it — the §16 administrative blocks included — while approvers are reading,
+ * because that is exactly when the gaps they point out need filling.
+ *
+ * Approval is what closes it. Once every named approver has approved, the
+ * document they approved is the document that stands; editing it afterwards
+ * would turn their sign-off into a signature on something else.
  */
 export function isWritable(prd: Pick<Prd, 'status' | 'approvers'>): boolean {
   if (prd.status !== 'published') return true;
-  return (prd.approvers ?? []).some((a) => a.status === 'changes_requested');
+  return approvalState(prd) !== 'approved';
 }
 
 /** Why publishing is refused, or null when it is allowed. */

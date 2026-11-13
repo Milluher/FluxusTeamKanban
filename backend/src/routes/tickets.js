@@ -3,9 +3,44 @@ const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const { ticketInclude } = require('../lib/ticketInclude');
 const { emailNotification } = require('../lib/email');
+const { sprintRejectionReason } = require('../lib/sprintWindow');
+const { canEditBoard } = require('../lib/boardAccess');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+/**
+ * A ticket with no sprint is in the backlog, and the backlog is a list of work
+ * nobody has been asked to do yet.
+ *
+ * Giving a backlog ticket an owner is how work gets silently committed to: it
+ * sits in somebody's "My tickets" with no sprint to say when it is due and no
+ * sprint board to show it against anything else. Scheduling comes first —
+ * putting a ticket in a sprint is the act of deciding it is being done — and
+ * only then is there anything to assign.
+ */
+const BACKLOG_UNASSIGNABLE =
+  'A ticket in the backlog cannot be assigned to anyone. Put it in a sprint first.';
+
+/**
+ * Whether a ticket may join this sprint: it has to exist, belong to the same
+ * board, and still be open — see `lib/sprintWindow.js` for what closes one.
+ *
+ * `boardId` may be undefined if the ticket's column could not be resolved. Like
+ * the initiative check below, that counts as "cannot prove it fits" and is
+ * refused rather than waved through.
+ */
+async function sprintFitsBoard(sprintId, boardId) {
+  if (!sprintId) return { ok: true };
+
+  const sprint = await prisma.sprint.findUnique({
+    where: { id: sprintId },
+    select: { id: true, title: true, boardId: true, status: true, endDate: true },
+  });
+  const reason = sprintRejectionReason(sprint, boardId);
+  if (!reason) return { ok: true };
+  return { ok: false, status: sprint ? 422 : 404, error: reason };
+}
 
 /**
  * An initiative belongs to one board since 20261104_board_scoping, so a ticket
@@ -48,6 +83,16 @@ router.post('/', authenticate, async (req, res) => {
 
     const fit = await initiativeFitsBoard(initiativeId, column.boardId);
     if (!fit.ok) return res.status(fit.status).json({ error: fit.error });
+
+    const sprintFit = await sprintFitsBoard(sprintId, column.boardId);
+    if (!sprintFit.ok) return res.status(sprintFit.status).json({ error: sprintFit.error });
+
+    // Raised straight into a sprint, or raised into the backlog — and a backlog
+    // ticket has no owner yet. The form hides the field in that case; this is
+    // what makes it true rather than merely unoffered.
+    if (!sprintId && assigneeId) {
+      return res.status(422).json({ error: BACKLOG_UNASSIGNABLE });
+    }
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -171,24 +216,51 @@ router.patch('/:id', authenticate, async (req, res) => {
       if (col) { data.columnId = columnId; data.status = col.name; }
     }
 
-    // Checked against the board the ticket will be on *after* this patch, which
-    // is the new column's when the patch moves it. Clearing the link (null) is
-    // always allowed.
-    if (initiativeId) {
-      const target = data.columnId
-        ? await prisma.column.findUnique({ where: { id: data.columnId }, select: { boardId: true } })
-        : (await prisma.ticket.findUnique({
-            where: { id: req.params.id },
-            select: { column: { select: { boardId: true } } },
-          }))?.column;
+    const prevTicket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { assigneeId: true, sprintId: true, column: { select: { boardId: true } } },
+    });
+    if (!prevTicket) return res.status(404).json({ error: 'Not found' });
 
-      const fit = await initiativeFitsBoard(initiativeId, target?.boardId);
+    // The board the ticket will be on *after* this patch, which is the new
+    // column's when the patch moves it.
+    const targetBoardId = data.columnId
+      ? (await prisma.column.findUnique({ where: { id: data.columnId }, select: { boardId: true } }))?.boardId
+      : prevTicket.column?.boardId;
+
+    // Clearing an initiative link (null) is always allowed.
+    if (initiativeId) {
+      const fit = await initiativeFitsBoard(initiativeId, targetBoardId);
       if (!fit.ok) return res.status(fit.status).json({ error: fit.error });
     }
 
-    const prevTicket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { assigneeId: true, sprintId: true } });
+    const movingSprint = sprintId !== undefined && (sprintId || null) !== prevTicket.sprintId;
+    if (movingSprint) {
+      // Scheduling is an admin's call: deciding which sprint a piece of work
+      // lands in is deciding what the team does next. Everyone else can still
+      // raise tickets and work them — they just cannot schedule them.
+      if (!(await canEditBoard(req, targetBoardId))) {
+        return res.status(403).json({ error: 'Only an admin can move a ticket in or out of a sprint' });
+      }
+      const sprintFit = await sprintFitsBoard(sprintId || null, targetBoardId);
+      if (!sprintFit.ok) return res.status(sprintFit.status).json({ error: sprintFit.error });
+    }
+
+    const resultingSprintId = sprintId !== undefined ? (sprintId || null) : prevTicket.sprintId;
+    if (!resultingSprintId) {
+      if (movingSprint) {
+        // Pulled back out of a sprint: it is in the backlog again, and nothing
+        // in the backlog is assigned. Clearing is deliberate rather than a
+        // refusal — the alternative is a ticket nobody scheduled that somebody
+        // is still nominally on the hook for.
+        data.assigneeId = null;
+      } else if (data.assigneeId && data.assigneeId !== prevTicket.assigneeId) {
+        return res.status(422).json({ error: BACKLOG_UNASSIGNABLE });
+      }
+    }
+
     // Record sprint history if ticket is being moved from one sprint to another
-    if (sprintId !== undefined && prevTicket?.sprintId && prevTicket.sprintId !== (sprintId || null)) {
+    if (sprintId !== undefined && prevTicket.sprintId && prevTicket.sprintId !== (sprintId || null)) {
       await prisma.sprintHistory.create({ data: { ticketId: req.params.id, sprintId: prevTicket.sprintId } });
     }
     const ticket = await prisma.ticket.update({ where: { id: req.params.id }, data, include: ticketInclude });
@@ -196,7 +268,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     // Notify new assignee if assignee changed
     const newAssigneeId = ticket.assigneeId;
-    if (newAssigneeId && newAssigneeId !== prevTicket?.assigneeId && newAssigneeId !== req.user.id) {
+    if (newAssigneeId && newAssigneeId !== prevTicket.assigneeId && newAssigneeId !== req.user.id) {
       const notification = await prisma.notification.create({
         data: {
           userId: newAssigneeId,
@@ -259,13 +331,23 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
 
     const carriedInitiative = await initiativeFitsBoard(original.initiativeId, original.column.boardId);
 
+    // The copy drops a sprint that has since closed, for the same reason the
+    // duplicate drops a cross-board initiative: a copy should not mint a link
+    // the rules now forbid, and failing the duplicate outright would make an
+    // old ticket uncopyable for a reason nobody can act on.
+    //
+    // And with no sprint it is a backlog ticket, which carries no assignee.
+    const carriedSprint = await sprintFitsBoard(original.sprintId, original.column.boardId);
+    const sprintId = carriedSprint.ok ? original.sprintId : null;
+    const assigneeId = sprintId ? original.assigneeId : null;
+
     const copy = await prisma.ticket.create({
       data: {
         title: `${original.title} (copy)`,
         description: original.description,
         status: original.status,
         columnId: original.columnId,
-        assigneeId: original.assigneeId,
+        assigneeId,
         productManagerId: original.productManagerId,
         assignedDate: original.assignedDate,
         createdById: req.user.id,
@@ -274,7 +356,7 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
         project: original.project,
         epic: original.epic,
         flow: original.flow,
-        sprintId: original.sprintId,
+        sprintId,
         productDocId: original.productDocId,
         initiativeId: carriedInitiative.ok ? original.initiativeId : null,
         prdId: original.prdId,

@@ -85,14 +85,27 @@ function isOwner(prd, user) {
 /**
  * Whether the author may still write to it.
  *
- * A draft, obviously — but also a published PRD an approver has asked to
- * change. Feedback nobody can act on is not feedback, and the alternative
- * (unpublishing) would have to unpick the tasks publishing already raised.
+ * A draft, obviously — and a published PRD too, right up until it is approved.
+ *
+ * Publishing circulates a document for sign-off; it is not the moment the
+ * document stops being written. The author and a workspace admin keep editing
+ * it — the §16 administrative blocks included — while approvers are reading,
+ * because that is exactly when the gaps they point out need filling, and
+ * waiting for a formal change request to fix a typo helps nobody.
+ *
+ * Approval is what closes it. Once every named approver has approved, the
+ * document they approved is the document that stands; editing it afterwards
+ * would turn their sign-off into a signature on something else. That is the
+ * one state this refuses.
  */
 function isWritable(prd) {
   if (prd.status !== 'published') return true;
-  return (prd.approvers ?? []).some((a) => a.status === 'changes_requested');
+  const approvers = prd.approvers ?? [];
+  return !(approvers.length > 0 && approvers.every((a) => a.status === 'approved'));
 }
+
+/** The wording used whenever a write is refused because it is signed off. */
+const APPROVED_AND_CLOSED = 'This PRD has been approved, so it can no longer be changed';
 
 /** Trims a section, turning a blank into null so "required" means something. */
 function section(value) {
@@ -136,6 +149,132 @@ async function isBoardMember(userId, boardId) {
     where: { userId_boardId: { userId, boardId } },
   });
   return !!membership;
+}
+
+/**
+ * Raise the task a §16 block's assignee gets, and tell them about it.
+ *
+ * Publishing is normally the moment this happens, but a block can also be added
+ * to a PRD that is already published and still waiting on its approvers — and
+ * an assignee nobody tells has no way of knowing they owe an answer. So the
+ * same work happens whenever a block first becomes visible to the person who
+ * owns it, rather than only inside the publish route.
+ *
+ * Nobody is notified about their own doing, so an author assigning themselves a
+ * block gets the task without the notification.
+ *
+ * These tasks are assigned with no sprint, which the ticket routes would refuse
+ * — nothing in the backlog can be given an owner. Deliberately so: a PRD block
+ * is handed to a named person because the document names them, not queued for
+ * somebody to schedule. They show up in the board's backlog list, which names
+ * their assignee for exactly this reason.
+ */
+async function raiseAdminBlockTask(tx, prd, block, actor, column) {
+  const ticket = await tx.ticket.create({
+    data: {
+      title: `${prd.title} — ${block.role}`,
+      description:
+        `<p>Your <strong>${escapeHtml(block.role)}</strong> section of the PRD ` +
+        `“${escapeHtml(prd.title)}” is ready to fill in: the data you need, and the ` +
+        `actions you need to take with this product.</p>` +
+        `<p>Use <strong>Open PRD</strong> on this ticket to read the whole document. ` +
+        `Everything else is read-only to you — your two answers are the only part ` +
+        `you can change.</p>`,
+      status: column.name,
+      columnId: column.id,
+      assigneeId: block.assigneeId,
+      createdById: actor.id,
+      prdId: prd.id,
+    },
+  });
+  await tx.prdAdminBlock.update({ where: { id: block.id }, data: { ticketId: ticket.id } });
+
+  if (block.assigneeId === actor.id) return { ticket, notification: null };
+  const notification = await tx.notification.create({
+    data: {
+      userId: block.assigneeId,
+      type: 'prd_admin_block',
+      title: 'You have a PRD section to complete',
+      body: `"${prd.title}" — ${block.role}`,
+      ticketId: ticket.id,
+      boardId: prd.boardId,
+    },
+  });
+  return { ticket, notification };
+}
+
+/** The same, for §17: the task and notification that ask someone to approve. */
+async function raiseApproverTask(tx, prd, approver, actor, column) {
+  const ticket = await tx.ticket.create({
+    data: {
+      title: `Approve: ${prd.title}`,
+      description:
+        `<p>You have been asked to approve the PRD ` +
+        `“${escapeHtml(prd.title)}”. Use <strong>Open PRD</strong> on this ticket to read ` +
+        `every section, including the administrative blocks and whatever has been ` +
+        `filled in so far.</p>` +
+        `<p>Approving is only possible once every administrative block has been ` +
+        `answered. Until then you can still request changes, which is how you chase ` +
+        `an outstanding one.</p>`,
+      status: column.name,
+      columnId: column.id,
+      assigneeId: approver.userId,
+      createdById: actor.id,
+      prdId: prd.id,
+    },
+  });
+  await tx.prdApprover.update({ where: { id: approver.id }, data: { ticketId: ticket.id } });
+
+  if (approver.userId === actor.id) return { ticket, notification: null };
+  const notification = await tx.notification.create({
+    data: {
+      userId: approver.userId,
+      type: 'prd_approval_requested',
+      title: 'You were asked to approve a PRD',
+      body: `"${prd.title}"`,
+      ticketId: ticket.id,
+      boardId: prd.boardId,
+    },
+  });
+  return { ticket, notification };
+}
+
+/**
+ * Tell everyone about tasks and notifications a transaction has just committed.
+ *
+ * Always after the commit, never inside it: a notification emitted from a
+ * transaction that then rolls back tells somebody about work that does not
+ * exist. Tickets are re-read in full rather than echoed from the narrow row
+ * that created them, because the board renders fields a partial ticket would
+ * reach it missing.
+ */
+async function announceRaised(req, boardId, ticketIds, notifications) {
+  for (const notification of notifications) {
+    req.io.to(`user:${notification.userId}`).emit('notification', notification);
+    emailNotification(notification);
+  }
+  const ids = ticketIds.filter(Boolean);
+  if (!ids.length) return;
+  const raised = await prisma.ticket.findMany({ where: { id: { in: ids } }, include: ticketInclude });
+  for (const ticket of raised) req.io.to(`board:${boardId}`).emit('ticket-created', ticket);
+}
+
+/**
+ * Drop the task a block or approver row raised, when that row is removed.
+ *
+ * A published PRD stays editable until it is approved, so a block can be taken
+ * off one after its task already exists. Leaving the task behind would leave
+ * somebody holding a to-do for a section of the document that is gone.
+ */
+async function dropRaisedTask(req, boardId, ticketId) {
+  if (!ticketId) return;
+  try {
+    await prisma.ticket.delete({ where: { id: ticketId } });
+    req.io.to(`board:${boardId}`).emit('ticket-deleted', ticketId);
+  } catch (e) {
+    // Already gone — somebody deleted it from the board. Nothing to undo.
+    if (e.code !== 'P2025') throw e;
+  }
 }
 
 // Every PRD on a board, to anyone who can see that board. Drafts included:
@@ -208,7 +347,7 @@ router.patch('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only the author of a PRD can change it' });
     }
     if (!isWritable(prd)) {
-      return res.status(409).json({ error: 'A published PRD can only be changed once an approver asks for changes' });
+      return res.status(409).json({ error: APPROVED_AND_CLOSED });
     }
 
     const data = {};
@@ -289,9 +428,14 @@ router.patch('/:id', authenticate, async (req, res) => {
 
 // --- §16 Administrative blocks ---
 
-// Add a block: a role, and the board member who owns it. Only while the PRD is
-// a draft — the brief ties notification to publishing, so a block appearing
-// afterwards would have nobody to tell.
+// Add a block: a role, and the board member who owns it.
+//
+// Open for as long as the PRD is writable, which now includes a published one
+// still waiting on its approvers — a missing administrative section is one of
+// the commonest things an approver points out, and the author has to be able to
+// fix it where they are. A block added after publishing raises its task and
+// notifies its assignee straight away, since publishing is no longer the moment
+// that happens for every block.
 router.post('/:id/admin-blocks', authenticate, async (req, res) => {
   try {
     const prd = await loadPrd(req.params.id);
@@ -299,8 +443,8 @@ router.post('/:id/admin-blocks', authenticate, async (req, res) => {
     if (!isOwner(prd, req.user)) {
       return res.status(403).json({ error: 'Only the author of a PRD can assign its admin blocks' });
     }
-    if (prd.status === 'published') {
-      return res.status(409).json({ error: 'A published PRD cannot take new admin blocks' });
+    if (!isWritable(prd)) {
+      return res.status(409).json({ error: `${APPROVED_AND_CLOSED}, including its admin blocks` });
     }
 
     const role = (req.body.role || '').trim();
@@ -311,7 +455,25 @@ router.post('/:id/admin-blocks', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'That person is not a member of this board' });
     }
 
-    await prisma.prdAdminBlock.create({ data: { prdId: prd.id, role, assigneeId } });
+    const live = prd.status === 'published';
+    const column = live ? await todoColumnFor(prd.boardId) : null;
+    if (live && !column) {
+      return res.status(400).json({ error: 'This board has no columns, so the block\'s task cannot be raised' });
+    }
+
+    const raised = await prisma.$transaction(async (tx) => {
+      const block = await tx.prdAdminBlock.create({ data: { prdId: prd.id, role, assigneeId } });
+      if (!live) return { ticket: null, notification: null };
+      return raiseAdminBlockTask(tx, prd, block, req.user, column);
+    });
+
+    await announceRaised(
+      req,
+      prd.boardId,
+      [raised.ticket?.id],
+      raised.notification ? [raised.notification] : []
+    );
+
     const updated = await loadPrd(prd.id);
     req.io.to(`board:${prd.boardId}`).emit('prd-changed', { boardId: prd.boardId, prdId: prd.id });
     res.json(updated);
@@ -330,7 +492,7 @@ router.patch('/admin-blocks/:blockId', authenticate, async (req, res) => {
   try {
     const block = await prisma.prdAdminBlock.findUnique({
       where: { id: req.params.blockId },
-      include: { prd: { select: { id: true, boardId: true, status: true, createdById: true } } },
+      include: { prd: { select: { id: true, boardId: true, status: true, createdById: true, approvers: { select: { status: true } } } } },
     });
     if (!block) return res.status(404).json({ error: 'Not found' });
 
@@ -350,8 +512,8 @@ router.patch('/admin-blocks/:blockId', authenticate, async (req, res) => {
 
     if (req.body.role !== undefined || req.body.assigneeId !== undefined) {
       if (!owner) return res.status(403).json({ error: 'Only the author of a PRD can retarget a block' });
-      if (block.prd.status === 'published') {
-        return res.status(409).json({ error: 'A published block cannot be retargeted' });
+      if (!isWritable(block.prd)) {
+        return res.status(409).json({ error: `${APPROVED_AND_CLOSED}, including its admin blocks` });
       }
       if (req.body.role !== undefined) {
         const role = (req.body.role || '').trim();
@@ -377,17 +539,20 @@ router.delete('/admin-blocks/:blockId', authenticate, async (req, res) => {
   try {
     const block = await prisma.prdAdminBlock.findUnique({
       where: { id: req.params.blockId },
-      include: { prd: { select: { id: true, boardId: true, status: true, createdById: true } } },
+      include: { prd: { select: { id: true, boardId: true, status: true, createdById: true, approvers: { select: { status: true } } } } },
     });
     if (!block) return res.status(404).json({ error: 'Not found' });
     if (!isOwner(block.prd, req.user)) {
       return res.status(403).json({ error: 'Only the author of a PRD can remove its admin blocks' });
     }
-    if (block.prd.status === 'published') {
-      return res.status(409).json({ error: 'A published block cannot be removed' });
+    if (!isWritable(block.prd)) {
+      return res.status(409).json({ error: `${APPROVED_AND_CLOSED}, including its admin blocks` });
     }
 
     await prisma.prdAdminBlock.delete({ where: { id: block.id } });
+    // A block removed after publishing takes its task with it: a to-do for a
+    // section that no longer exists is work nobody can finish.
+    await dropRaisedTask(req, block.prd.boardId, block.ticketId);
     const updated = await loadPrd(block.prd.id);
     req.io.to(`board:${block.prd.boardId}`).emit('prd-changed', { boardId: block.prd.boardId, prdId: block.prd.id });
     res.json(updated);
@@ -396,8 +561,10 @@ router.delete('/admin-blocks/:blockId', authenticate, async (req, res) => {
 
 // --- §17 Approvers ---
 
-// Name an approver. Draft only: publishing is when they are told, so one added
-// afterwards would never hear about it.
+// Name an approver. Allowed for as long as the PRD is writable, a published one
+// awaiting sign-off included — somebody whose opinion turns out to be needed is
+// asked there and then, and is told the same way they would have been at
+// publishing time.
 router.post('/:id/approvers', authenticate, async (req, res) => {
   try {
     const prd = await loadPrd(req.params.id);
@@ -405,8 +572,8 @@ router.post('/:id/approvers', authenticate, async (req, res) => {
     if (!isOwner(prd, req.user)) {
       return res.status(403).json({ error: 'Only the author of a PRD can choose its approvers' });
     }
-    if (prd.status === 'published') {
-      return res.status(409).json({ error: 'A published PRD cannot take new approvers' });
+    if (!isWritable(prd)) {
+      return res.status(409).json({ error: `${APPROVED_AND_CLOSED}, including its approvers` });
     }
 
     const { userId } = req.body;
@@ -415,12 +582,30 @@ router.post('/:id/approvers', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'That person is not a member of this board' });
     }
 
+    const live = prd.status === 'published';
+    const column = live ? await todoColumnFor(prd.boardId) : null;
+    if (live && !column) {
+      return res.status(400).json({ error: 'This board has no columns, so the approval task cannot be raised' });
+    }
+
+    let raised = { ticket: null, notification: null };
     try {
-      await prisma.prdApprover.create({ data: { prdId: prd.id, userId } });
+      raised = await prisma.$transaction(async (tx) => {
+        const approver = await tx.prdApprover.create({ data: { prdId: prd.id, userId } });
+        if (!live) return { ticket: null, notification: null };
+        return raiseApproverTask(tx, prd, approver, req.user, column);
+      });
     } catch (e) {
       if (e.code === 'P2002') return res.status(409).json({ error: 'They are already an approver' });
       throw e;
     }
+
+    await announceRaised(
+      req,
+      prd.boardId,
+      [raised.ticket?.id],
+      raised.notification ? [raised.notification] : []
+    );
 
     const updated = await loadPrd(prd.id);
     req.io.to(`board:${prd.boardId}`).emit('prd-changed', { boardId: prd.boardId, prdId: prd.id });
@@ -432,17 +617,18 @@ router.delete('/approvers/:approverId', authenticate, async (req, res) => {
   try {
     const approver = await prisma.prdApprover.findUnique({
       where: { id: req.params.approverId },
-      include: { prd: { select: { id: true, boardId: true, status: true, createdById: true } } },
+      include: { prd: { select: { id: true, boardId: true, status: true, createdById: true, approvers: { select: { status: true } } } } },
     });
     if (!approver) return res.status(404).json({ error: 'Not found' });
     if (!isOwner(approver.prd, req.user)) {
       return res.status(403).json({ error: 'Only the author of a PRD can change its approvers' });
     }
-    if (approver.prd.status === 'published') {
-      return res.status(409).json({ error: 'A published PRD cannot drop an approver' });
+    if (!isWritable(approver.prd)) {
+      return res.status(409).json({ error: `${APPROVED_AND_CLOSED}, including its approvers` });
     }
 
     await prisma.prdApprover.delete({ where: { id: approver.id } });
+    await dropRaisedTask(req, approver.prd.boardId, approver.ticketId);
     const updated = await loadPrd(approver.prd.id);
     req.io.to(`board:${approver.prd.boardId}`).emit('prd-changed', {
       boardId: approver.prd.boardId,
@@ -570,81 +756,16 @@ router.post('/:id/publish', authenticate, async (req, res) => {
       for (const block of prd.adminBlocks) {
         // Idempotent by construction: a block that already has a task keeps it.
         if (block.ticketId) continue;
-
-        const ticket = await tx.ticket.create({
-          data: {
-            title: `${prd.title} — ${block.role}`,
-            description:
-              `<p>Your <strong>${escapeHtml(block.role)}</strong> section of the PRD ` +
-              `“${escapeHtml(prd.title)}” is ready to fill in: the data you need, and the ` +
-              `actions you need to take with this product.</p>` +
-              `<p>Use <strong>Open PRD</strong> on this ticket to read the whole document. ` +
-              `Everything else is read-only to you — your two answers are the only part ` +
-              `you can change.</p>`,
-            status: column.name,
-            columnId: column.id,
-            assigneeId: block.assigneeId,
-            createdById: req.user.id,
-            prdId: prd.id,
-          },
-        });
-        await tx.prdAdminBlock.update({ where: { id: block.id }, data: { ticketId: ticket.id } });
-
-        if (block.assigneeId !== req.user.id) {
-          notifications.push(
-            await tx.notification.create({
-              data: {
-                userId: block.assigneeId,
-                type: 'prd_admin_block',
-                title: 'You have a PRD section to complete',
-                body: `"${prd.title}" — ${block.role}`,
-                ticketId: ticket.id,
-                boardId: prd.boardId,
-              },
-            })
-          );
-        }
+        const { notification } = await raiseAdminBlockTask(tx, prd, block, req.user, column);
+        if (notification) notifications.push(notification);
       }
 
       // §17: the approvers are told at the same moment, and for the same
       // reason — the PRD only reaches their board when it is published.
       for (const approver of prd.approvers) {
         if (approver.ticketId) continue;
-
-        const ticket = await tx.ticket.create({
-          data: {
-            title: `Approve: ${prd.title}`,
-            description:
-              `<p>You have been asked to approve the PRD ` +
-              `“${escapeHtml(prd.title)}”. Use <strong>Open PRD</strong> on this ticket to read ` +
-              `every section, including the administrative blocks and whatever has been ` +
-              `filled in so far.</p>` +
-              `<p>Approving is only possible once every administrative block has been ` +
-              `answered. Until then you can still request changes, which is how you chase ` +
-              `an outstanding one.</p>`,
-            status: column.name,
-            columnId: column.id,
-            assigneeId: approver.userId,
-            createdById: req.user.id,
-            prdId: prd.id,
-          },
-        });
-        await tx.prdApprover.update({ where: { id: approver.id }, data: { ticketId: ticket.id } });
-
-        if (approver.userId !== req.user.id) {
-          notifications.push(
-            await tx.notification.create({
-              data: {
-                userId: approver.userId,
-                type: 'prd_approval_requested',
-                title: 'You were asked to approve a PRD',
-                body: `"${prd.title}"`,
-                ticketId: ticket.id,
-                boardId: prd.boardId,
-              },
-            })
-          );
-        }
+        const { notification } = await raiseApproverTask(tx, prd, approver, req.user, column);
+        if (notification) notifications.push(notification);
       }
 
       return tx.prd.update({
@@ -654,27 +775,12 @@ router.post('/:id/publish', authenticate, async (req, res) => {
       });
     });
 
-    // Emitted after the transaction commits, so nobody is told about work that
-    // then rolled back.
-    for (const notification of notifications) {
-      req.io.to(`user:${notification.userId}`).emit('notification', notification);
-      emailNotification(notification);
-    }
-    // Fetched in full rather than emitted from the block's narrow selection:
-    // the board renders fields a partial ticket would not carry.
-    const raisedIds = [
-      ...published.adminBlocks.map((b) => b.ticketId),
-      ...published.approvers.map((a) => a.ticketId),
-    ].filter(Boolean);
-    if (raisedIds.length) {
-      const raised = await prisma.ticket.findMany({
-        where: { id: { in: raisedIds } },
-        include: ticketInclude,
-      });
-      for (const ticket of raised) {
-        req.io.to(`board:${prd.boardId}`).emit('ticket-created', ticket);
-      }
-    }
+    await announceRaised(
+      req,
+      prd.boardId,
+      [...published.adminBlocks.map((b) => b.ticketId), ...published.approvers.map((a) => a.ticketId)],
+      notifications
+    );
     req.io.to(`board:${prd.boardId}`).emit('prd-changed', { boardId: prd.boardId, prdId: prd.id });
     res.json(published);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }

@@ -123,7 +123,7 @@ export default function ProductFiles({ boardId, isAdmin, onCountChange }: Props)
           onClick={toggleCollapsed}
           className="flex items-center gap-1.5 text-sm font-bold transition-colors"
           style={{ color: NAVY }}
-          aria-label={collapsed ? 'Expand product files' : 'Collapse product files'}
+          aria-label={collapsed ? 'Expand project files' : 'Collapse project files'}
         >
           <svg
             width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -131,7 +131,7 @@ export default function ProductFiles({ boardId, isAdmin, onCountChange }: Props)
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
-          Product Files
+          Project Files
           {files.length > 0 && (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-gray-500 bg-gray-100">
               {files.length}
@@ -158,11 +158,11 @@ export default function ProductFiles({ boardId, isAdmin, onCountChange }: Props)
         <div className="px-4 sm:px-6 pb-4">
           {files.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
-              <p className="text-sm font-semibold text-gray-500 mb-1">No product files yet</p>
+              <p className="text-sm font-semibold text-gray-500 mb-1">No project files yet</p>
               <p className="text-xs text-gray-500">
                 {isAdmin
                   ? 'Add a Google Drive (or other) link so the team can read the product info.'
-                  : 'An admin needs to add product files.'}
+                  : 'An admin needs to add project files.'}
               </p>
             </div>
           ) : (
@@ -233,7 +233,7 @@ export default function ProductFiles({ boardId, isAdmin, onCountChange }: Props)
               <h3 className="font-semibold text-base" style={{ color: NAVY }}>
                 {modal.kind === 'add' ? 'Add Product File' : modal.kind === 'edit' ? 'Edit Product File' : 'Remove Product File'}
               </h3>
-              <button onClick={closeModal} aria-label="Close product file dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
+              <button onClick={closeModal} aria-label="Close project file dialog" className="text-gray-500 text-xl w-8 h-8 flex items-center justify-center">×</button>
             </div>
 
             {isDelete ? (

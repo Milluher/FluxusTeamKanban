@@ -30,6 +30,7 @@ import CreateTicketModal from '@/components/CreateTicketModal';
 import InviteMemberModal from '@/components/InviteMemberModal';
 import PresenceTracker, { PresentUser } from '@/components/PresenceTracker';
 import BoardInfo from '@/components/BoardInfo';
+import BacklogSection from '@/components/BacklogSection';
 import AppHeader from '@/components/AppHeader';
 import BoardToolbar from '@/components/BoardToolbar';
 import Avatar from '@/components/Avatar';
@@ -421,6 +422,35 @@ export default function BoardPage() {
     } finally { setUpdatingDates(false); }
   };
 
+  /**
+   * Moves a backlog ticket into a sprint.
+   *
+   * Scheduling is the act of deciding a piece of work is being done, which is
+   * why it is an admin's call and why nothing in the backlog can be assigned
+   * until it has happened. The server refuses a sprint that has ended or been
+   * completed, so the error it returns is the one worth showing.
+   *
+   * The sprints are refetched rather than adjusted by hand: their ticket and
+   * member tallies are computed server-side, and guessing at them here would
+   * leave the cards disagreeing with the board.
+   */
+  const scheduleTicket = async (ticket: Ticket, sprintId: string) => {
+    const { data } = await api.patch(`/tickets/${ticket.id}`, { sprintId, boardId });
+    setBoard((prev) => updateTicketInBoard(prev, data));
+    try {
+      const { data: sprintData } = await api.get(`/boards/${boardId}/sprints`);
+      setSprints(sprintData);
+    } catch {
+      // The ticket moved, which is the part that matters; the tallies catch up
+      // on the next load.
+    }
+  };
+
+  const openCreateTicket = (columnId: string) => {
+    setCreateColumnId(columnId);
+    setShowCreateModal(true);
+  };
+
   // Mine/All is remembered per user per board. localStorage keeps it out of the
   // schema; a missing or unreadable value just leaves the All default in place.
   const filterStorageKey = currentUser ? `fluxus:boardFilter:${currentUser.id}:${boardId}` : null;
@@ -499,6 +529,13 @@ export default function BoardPage() {
       matchesSearch(t)
     );
 
+  // A ticket with no sprint is in the backlog. That is the whole definition —
+  // there is no backlog column and no backlog flag, so the two can never
+  // disagree about where a ticket is.
+  const backlogTickets = allBoardTickets
+    .filter((t) => !t.sprintId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
   const sprintColumns = activeSprint
     ? board.columns.map((col) => ({
         ...col,
@@ -520,36 +557,20 @@ export default function BoardPage() {
     tickets: applyTicketFilters(col.tickets),
   }));
 
-  // Kanban board defaults to the user's own work (tickets they're assigned to or created).
-  // The "Mine / All" toggle in the filter bar flips filterMyTickets to reveal every ticket.
-  const filteredKanbanColumns = board.columns.map((col) => ({
-    ...col,
-    tickets: applyTicketFilters(
-      filterMyTickets
-        ? col.tickets.filter(
-            (t) => t.assigneeId === currentUser?.id || t.createdById === currentUser?.id
-          )
-        : col.tickets
-    ),
-  }));
-
   // Counts behind the Mine/All toggle, and the "everything is hidden" case.
-  // Sprint view counts mentions as yours; kanban counts what you created.
+  // Only the sprint board has a toolbar, so these are all sprint-scoped.
   const countTickets = (cols: { tickets: Ticket[] }[]) =>
     cols.reduce((n, col) => n + col.tickets.length, 0);
 
   const isMyTicket = (t: Ticket) =>
-    activeSprint
-      ? t.assigneeId === currentUser?.id || mentionedTicketIds.has(t.id)
-      : t.assigneeId === currentUser?.id || t.createdById === currentUser?.id;
+    t.assigneeId === currentUser?.id || mentionedTicketIds.has(t.id);
 
-  const scopeColumns = activeSprint ? sprintColumns : board.columns;
-  const scopeTotal = countTickets(scopeColumns);
-  const allCount = countTickets(scopeColumns.map((c) => ({ tickets: applyTicketFilters(c.tickets) })));
+  const scopeTotal = countTickets(sprintColumns);
+  const allCount = countTickets(sprintColumns.map((c) => ({ tickets: applyTicketFilters(c.tickets) })));
   const mineCount = countTickets(
-    scopeColumns.map((c) => ({ tickets: applyTicketFilters(c.tickets.filter(isMyTicket)) }))
+    sprintColumns.map((c) => ({ tickets: applyTicketFilters(c.tickets.filter(isMyTicket)) }))
   );
-  const visibleCount = countTickets(activeSprint ? visibleColumns : filteredKanbanColumns);
+  const visibleCount = countTickets(visibleColumns);
 
   // One click back to everything: drop the Mine filter and any attribute filters.
   const clearFilters = () => {
@@ -584,7 +605,7 @@ export default function BoardPage() {
       options={{ types: uniqueTypes, projects: uniqueProjects, epics: uniqueEpics, flows: uniqueFlows, priorities: uniquePriorities }}
       activeFilterCount={activeFilterCount}
       onClearFilters={clearFilters}
-      onNewTicket={() => { setCreateColumnId(board.columns[0]?.id ?? ''); setShowCreateModal(true); }}
+      onNewTicket={() => openCreateTicket(board.columns[0]?.id ?? '')}
     />
   );
 
@@ -715,7 +736,7 @@ export default function BoardPage() {
       />
 
       {/* Sprint ticket view banner */}
-      {activeSprint && board.type !== 'kanban' && (
+      {activeSprint && (
         <div
           className="flex-shrink-0 flex items-center gap-3 px-4 sm:px-6 py-2.5 border-b border-gray-200"
           style={{ background: '#1a1f3c' }}
@@ -770,42 +791,30 @@ export default function BoardPage() {
         </div>
       )}
 
-      {/* One toolbar for both board types, in the same place with the same styling. */}
-      {(board.type === 'kanban' || activeSprint) && toolbar}
+      {/* The filter bar belongs to the sprint board: it filters columns of
+          tickets, which is the only place there are any. The backlog has its own
+          search, since "Mine" means nothing in a list where nothing is assigned. */}
+      {activeSprint && toolbar}
 
-      {/* Project Overview canvas — sits above the board on kanban + sprint overview.
+      {/* Project overview and project files, above the backlog and the sprints.
           Hidden once a sprint is opened so the sprint board takes the full page. */}
       {!activeSprint && <BoardInfo boardId={boardId} isAdmin={isAdmin} currentUser={currentUser} members={board.members} />}
 
-      {/* Main content: Direct Kanban (kanban board), Sprint Overview, or Sprint Ticket View */}
-      {board.type === 'kanban' ? (
-        /* Direct Kanban Board */
-        <div className="flex-1 overflow-x-auto pb-4 board-scroll">
-          {filterNotice}
-          <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-            <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 120px)' }}>
-              {(() => {
-                const activeMemberIds = new Set(board.members.map((m) => m.user.id));
-                return filteredKanbanColumns.map((col) => (
-                  <KanbanColumn
-                    key={col.id}
-                    column={col}
-                    onTicketClick={(ticket) => setSelectedTicket(ticket)}
-                    onAddTicket={(columnId) => { setCreateColumnId(columnId); setShowCreateModal(true); }}
-                    boardId={boardId}
-                    activeMemberIds={activeMemberIds}
-                  />
-                ));
-              })()}
-            </div>
-            <DragOverlay>
-              {activeTicket && <TicketCard ticket={activeTicket} onClick={() => {}} isDragging />}
-            </DragOverlay>
-          </DndContext>
-        </div>
-      ) : !activeSprint ? (
-        /* Sprint Overview */
+      {/* Main content: the board's own page — backlog, then sprints — or the
+          ticket board of whichever sprint has been opened. */}
+      {!activeSprint ? (
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8">
+          {/* The backlog comes first: it is where every ticket starts, and
+              scheduling out of it is the decision the sprints below record. */}
+          <BacklogSection
+            tickets={backlogTickets}
+            sprints={sprints}
+            isAdmin={isAdmin}
+            onTicketClick={(ticket) => setSelectedTicket(ticket)}
+            onNewTicket={() => openCreateTicket(board.columns[0]?.id ?? '')}
+            onSchedule={scheduleTicket}
+          />
+
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -1037,7 +1046,7 @@ export default function BoardPage() {
           )}
         </div>
       ) : (
-        /* Sprint Ticket View (filtered kanban — sprint boards only) */
+        /* The ticket board of one sprint */
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
           {filterNotice}
           <DndContext
@@ -1055,7 +1064,7 @@ export default function BoardPage() {
                     key={col.id}
                     column={col}
                     onTicketClick={(ticket) => setSelectedTicket(ticket)}
-                    onAddTicket={(columnId) => { setCreateColumnId(columnId); setShowCreateModal(true); }}
+                    onAddTicket={openCreateTicket}
                     boardId={boardId}
                     activeMemberIds={activeMemberIds}
                   />
@@ -1078,7 +1087,6 @@ export default function BoardPage() {
           currentUser={currentUser!}
           sprints={sprints}
           isAdmin={isAdmin}
-          boardType={board.type}
           onClose={() => setSelectedTicket(null)}
           onUpdate={(updated) => {
             setBoard((prev) => updateTicketInBoard(prev, updated));
@@ -1111,7 +1119,6 @@ export default function BoardPage() {
             setShowCreateModal(false);
           }}
           sprintId={activeSprint?.id}
-          boardType={board.type}
         />
       )}
 
