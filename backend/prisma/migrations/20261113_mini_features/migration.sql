@@ -1,0 +1,11 @@
+-- Mini features.
+--
+-- Adding a feature to a project block used to start a PRD unconditionally. Not
+-- every feature is worth one: a mini feature is listed on the canvas and that
+-- is the whole of it. The creator decides at the moment they add it, so the
+-- flag lives on the feature rather than being inferred from "has no PRD yet" —
+-- which cannot tell a mini feature from one whose document nobody has started.
+--
+-- Defaults to true so every feature that predates this keeps the old meaning:
+-- it was created expecting a PRD, and most of them already have one.
+ALTER TABLE "CanvasFeature" ADD COLUMN IF NOT EXISTS "requiresPrd" BOOLEAN NOT NULL DEFAULT true;

@@ -150,8 +150,12 @@ router.post('/:id/canvas/blocks/:blockId/features', authenticate, async (req, re
     const { text } = req.body;
     if (!text || !text.trim()) return res.status(400).json({ error: 'Feature text is required' });
     const count = await prisma.canvasFeature.count({ where: { blockId: req.params.blockId } });
+    // Whether this one is worth a PRD is the creator's call, made as they add
+    // it. Absent, it defaults to true: a caller that does not know about mini
+    // features is one written before them, and it expected a PRD.
+    const requiresPrd = req.body.requiresPrd === undefined ? true : !!req.body.requiresPrd;
     const feature = await prisma.canvasFeature.create({
-      data: { blockId: req.params.blockId, text: text.trim(), order: count },
+      data: { blockId: req.params.blockId, text: text.trim(), order: count, requiresPrd },
     });
     emitCanvasChanged(req, boardId);
     res.json(feature);
@@ -165,13 +169,16 @@ router.patch('/:id/canvas/features/:featureId', authenticate, async (req, res) =
     if (!boardId) return res.status(404).json({ error: 'Feature not found' });
     if (!(await canEditBoard(req, boardId)))
       return res.status(403).json({ error: 'Only admins can edit the canvas' });
-    const { text, active } = req.body;
+    const { text, active, requiresPrd } = req.body;
     const data = {};
     if (text !== undefined) {
       if (!text.trim()) return res.status(400).json({ error: 'Feature text is required' });
       data.text = text.trim();
     }
     if (active !== undefined) data.active = !!active;
+    // A mini feature can turn out to deserve a document after all, so the
+    // decision is editable rather than fixed at creation.
+    if (requiresPrd !== undefined) data.requiresPrd = !!requiresPrd;
     if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Nothing to update.' });
     const feature = await prisma.canvasFeature.update({
       where: { id: req.params.featureId },

@@ -27,8 +27,14 @@ interface Props {
   board: Board;
   onClose: () => void;
   onCreate: (ticket: Ticket) => void;
+  /**
+   * The sprint this ticket is being raised into, if any.
+   *
+   * Absent means it is being raised into the backlog — and a backlog ticket has
+   * no owner yet, so the Assignee field is not offered. Scheduling comes first:
+   * an admin puts it in a sprint, and only then is there anything to assign.
+   */
   sprintId?: string;
-  boardType?: string;
 }
 
 const EMPTY_FORM = {
@@ -45,7 +51,8 @@ const EMPTY_FORM = {
   productDocId: '',
 };
 
-export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId, boardType = 'sprint' }: Props) {
+export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId }: Props) {
+  const inBacklog = !sprintId;
   // The draft is read once, as the initial state, rather than in an effect:
   // restoring after the first render would race the effect below, which would
   // have already written the empty form over the stored draft.
@@ -123,7 +130,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     try {
       const { data } = await api.post('/tickets', {
         ...form,
-        assigneeId: form.assigneeId || undefined,
+        assigneeId: inBacklog ? undefined : form.assigneeId || undefined,
         productManagerId: form.productManagerId || undefined,
         assignedDate: form.assignedDate || undefined,
         columnId,
@@ -255,38 +262,49 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                Assignee
-              </label>
-              <select
-                value={form.assigneeId}
-                onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}
-                className="px-3 py-2.5 text-sm transition-all duration-150"
-                style={inputStyle}
-                {...focusHandlers}
-              >
-                <option value="">Unassigned</option>
-                {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
-            {boardType !== 'kanban' && (
+            {/* Only a ticket that is already in a sprint has an owner. Said
+                rather than silently dropped, so nobody fills in a field whose
+                value would be thrown away. */}
+            {inBacklog ? (
+              <div className="sm:col-span-2">
+                <span className="block text-xs font-semibold text-gray-500 mb-1.5">Assignee</span>
+                <p className="px-3 py-2.5 text-sm rounded-lg bg-gray-50 border border-gray-200 text-gray-600">
+                  This ticket goes to the backlog, where nothing is assigned yet. An admin
+                  schedules it into a sprint, and it can be assigned from there.
+                </p>
+              </div>
+            ) : (
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                  Product Manager
+                  Assignee
                 </label>
                 <select
-                  value={form.productManagerId}
-                  onChange={(e) => setForm({ ...form, productManagerId: e.target.value })}
+                  value={form.assigneeId}
+                  onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}
                   className="px-3 py-2.5 text-sm transition-all duration-150"
                   style={inputStyle}
                   {...focusHandlers}
                 >
-                  <option value="">None</option>
+                  <option value="">Unassigned</option>
                   {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
             )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                Product Manager
+              </label>
+              <select
+                value={form.productManagerId}
+                onChange={(e) => setForm({ ...form, productManagerId: e.target.value })}
+                className="px-3 py-2.5 text-sm transition-all duration-150"
+                style={inputStyle}
+                {...focusHandlers}
+              >
+                <option value="">None</option>
+                {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
           </div>
 
           <div>
@@ -377,44 +395,42 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
             </div>
           </div>
 
-          {boardType !== 'kanban' && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                Epic
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={form.epic}
-                  onChange={(e) => setForm({ ...form, epic: e.target.value })}
-                  onFocus={(e) => { setShowEpicDropdown(true); focusHandlers.onFocus(e); }}
-                  onBlur={(e) => { setTimeout(() => setShowEpicDropdown(false), 150); focusHandlers.onBlur(e); }}
-                  className="px-3 py-2.5 text-sm transition-all duration-150"
-                  style={inputStyle}
-                  placeholder="Type or select an epic..."
-                  autoComplete="off"
-                />
-                {showEpicDropdown && epicOptions.filter((p) =>
-                  !form.epic || p.toLowerCase().includes(form.epic.toLowerCase())
-                ).length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
-                    {epicOptions
-                      .filter((p) => !form.epic || p.toLowerCase().includes(form.epic.toLowerCase()))
-                      .map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, epic: p }); setShowEpicDropdown(false); }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
-                        >
-                          {p}
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Epic
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={form.epic}
+                onChange={(e) => setForm({ ...form, epic: e.target.value })}
+                onFocus={(e) => { setShowEpicDropdown(true); focusHandlers.onFocus(e); }}
+                onBlur={(e) => { setTimeout(() => setShowEpicDropdown(false), 150); focusHandlers.onBlur(e); }}
+                className="px-3 py-2.5 text-sm transition-all duration-150"
+                style={inputStyle}
+                placeholder="Type or select an epic..."
+                autoComplete="off"
+              />
+              {showEpicDropdown && epicOptions.filter((p) =>
+                !form.epic || p.toLowerCase().includes(form.epic.toLowerCase())
+              ).length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto">
+                  {epicOptions
+                    .filter((p) => !form.epic || p.toLowerCase().includes(form.epic.toLowerCase()))
+                    .map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, epic: p }); setShowEpicDropdown(false); }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 first:rounded-t-lg last:rounded-b-lg"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1.5">

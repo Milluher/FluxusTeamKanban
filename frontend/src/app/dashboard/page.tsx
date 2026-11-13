@@ -15,7 +15,6 @@ export default function DashboardPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [newBoardName, setNewBoardName] = useState('');
-  const [newBoardType, setNewBoardType] = useState<'sprint' | 'kanban'>('sprint');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [deleteBoard, setDeleteBoard] = useState<Board | null>(null);
@@ -101,10 +100,9 @@ export default function DashboardPage() {
     if (!newBoardName.trim()) return;
     setCreating(true);
     try {
-      const { data } = await api.post('/boards', { name: newBoardName, type: newBoardType });
+      const { data } = await api.post('/boards', { name: newBoardName });
       setBoards((prev) => [...prev, data]);
       setNewBoardName('');
-      setNewBoardType('sprint');
       setShowCreate(false);
     } finally { setCreating(false); }
   };
@@ -217,52 +215,14 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-2">Board Type</label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {([
-                      {
-                        value: 'sprint',
-                        label: 'Sprint Board',
-                        desc: 'Manage tickets in sprints with full lifecycle tracking.',
-                        icon: (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                          </svg>
-                        ),
-                      },
-                      {
-                        value: 'kanban',
-                        label: 'Kanban Board',
-                        desc: 'Simple To Do → In Progress → Done flow, no sprints.',
-                        icon: (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                            <rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="10" y="3" width="5" height="12" rx="1.5"/><rect x="17" y="3" width="5" height="8" rx="1.5"/>
-                          </svg>
-                        ),
-                      },
-                    ] as const).map((opt) => {
-                      const active = newBoardType === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setNewBoardType(opt.value)}
-                          className="flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all duration-150"
-                          style={{
-                            borderColor: active ? '#e8390e' : '#e5e7eb',
-                            background: active ? '#fff7f5' : 'white',
-                            boxShadow: active ? '0 0 0 2px rgba(232,57,14,0.15)' : 'none',
-                          }}
-                        >
-                          <span style={{ color: active ? '#c73009' : '#6b7280' }}>{opt.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: active ? '#c73009' : '#1a1f3c' }}>{opt.label}</span>
-                          <span className="text-xs leading-snug" style={{ color: '#6b7280' }}>{opt.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Boards are no longer created as one kind or the other: every
+                    board gets a project overview, project files, a backlog and
+                    sprints. Saying so beats leaving people hunting for a choice
+                    that used to be here. */}
+                <p className="text-xs leading-relaxed text-gray-600">
+                  Every board comes with a project overview, project files, a backlog and sprints.
+                  Tickets start in the backlog and are assigned once an admin schedules them into a sprint.
+                </p>
               </div>
               <div className="px-5 pb-5 flex gap-2.5">
                 <button
@@ -324,9 +284,6 @@ export default function DashboardPage() {
                     </Link>
                   </h3>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${board.type === 'kanban' ? 'bg-purple-50 text-purple-700' : 'bg-orange-50 text-orange-700'}`}>
-                      {board.type === 'kanban' ? 'Kanban' : 'Sprint'}
-                    </span>
                     {(board as any).userRole !== 'admin' && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">Shared</span>
                     )}

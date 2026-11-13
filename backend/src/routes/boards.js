@@ -61,33 +61,44 @@ router.get('/:id', authenticate, async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 });
 
-// Create board
+/**
+ * The columns every new board gets.
+ *
+ * There is no "Backlog" column any more. The backlog is not a stage of work: it
+ * is everything that has not been scheduled yet, and it is now its own section
+ * of the board, holding exactly the tickets with no sprint. A column of the
+ * same name would be a second, contradictory answer to "is this in the
+ * backlog?" — so these are the stages a ticket actually moves through once a
+ * sprint has picked it up.
+ *
+ * Boards created before this keep whatever columns they have, their own
+ * "Backlog" column included; nothing is rewritten under them.
+ */
+const DEFAULT_COLUMNS = [
+  { name: 'To Do', order: 0 },
+  { name: 'In Progress', order: 1 },
+  { name: 'Review', order: 2 },
+  { name: 'Done', order: 3 },
+];
+
+// Create board.
+//
+// A board is no longer created as a sprint board or a kanban board. Every board
+// has the same shape — project overview, project files, a backlog, and sprints —
+// so there is nothing to choose and `type` is no longer read from the request.
+// The column keeps its default for the sake of rows that predate the change.
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { name, type = 'sprint' } = req.body;
+    const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
-    if (!['sprint', 'kanban'].includes(type)) return res.status(400).json({ error: 'type must be sprint or kanban' });
     const requestingUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { role: true } });
     if (!requestingUser || requestingUser.role !== 'admin')
       return res.status(403).json({ error: 'Only admins can create boards' });
-    const sprintColumns = [
-      { name: 'Backlog', order: 0 },
-      { name: 'To Do', order: 1 },
-      { name: 'In Progress', order: 2 },
-      { name: 'Review', order: 3 },
-      { name: 'Done', order: 4 },
-    ];
-    const kanbanColumns = [
-      { name: 'To Do', order: 0 },
-      { name: 'In Progress', order: 1 },
-      { name: 'Done', order: 2 },
-    ];
     const board = await prisma.board.create({
       data: {
         name,
-        type,
         members: { create: { userId: req.user.id, role: 'admin' } },
-        columns: { create: type === 'kanban' ? kanbanColumns : sprintColumns },
+        columns: { create: DEFAULT_COLUMNS },
       },
       include: { columns: { orderBy: { order: 'asc' } } },
     });

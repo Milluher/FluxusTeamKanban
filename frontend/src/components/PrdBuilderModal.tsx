@@ -106,6 +106,7 @@ export default function PrdBuilderModal({
   const writable = isWritable(prd);
   const editable = canEdit && writable;
   const state = approvalState(prd);
+  const changesRequested = state === 'changes_requested';
   const counts = approvalCount(prd);
   const shortfall = approverShortfall(prd);
   const myApproval = prd.approvers.find((a) => a.userId === currentUser?.id);
@@ -415,14 +416,15 @@ export default function PrdBuilderModal({
 
           {published && canEdit && !writable && (
             <p className="px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-600 border border-gray-200">
-              This PRD is published, so its sections are no longer editable.
+              Every approver has approved this PRD, so it is no longer editable.
             </p>
           )}
 
           {published && canEdit && writable && (
             <p className="px-3 py-2 rounded-lg text-sm bg-amber-50 text-amber-800 border border-amber-200">
-              An approver asked for changes, so the sections are editable again. The tasks already
-              raised stay where they are.
+              {changesRequested
+                ? 'An approver asked for changes. Keep editing — the tasks already raised stay where they are.'
+                : 'Published and out for approval. You can still edit every section, including the administrative blocks, until all approvers have approved.'}
             </p>
           )}
 
@@ -574,7 +576,8 @@ export default function PrdBuilderModal({
             <span className="block text-xs font-semibold text-gray-500 mb-1">§16 Administrative</span>
             <p className="text-xs text-gray-500 mb-2.5">
               Blocks of the PRD owned by individual board members. You set the role and the person;
-              they answer the two questions. Each becomes a task on their board when this PRD is published.
+              they answer the two questions. Each becomes a task on their board when this PRD is
+              published — or straight away if you add one after that.
             </p>
 
             <div className="space-y-2.5">
@@ -712,7 +715,7 @@ export default function PrdBuilderModal({
             <span className="block text-xs font-semibold text-gray-500 mb-1">§17 Approval</span>
             <p className="text-xs text-gray-500 mb-2.5">
               At least two people must sign this off. They are asked, and see it on their board,
-              when the PRD is published — not before.
+              the moment the PRD is published — or straight away if you add them after that.
             </p>
 
             <div className="space-y-2">
@@ -744,7 +747,7 @@ export default function PrdBuilderModal({
                           {formatTimestamp(approver.decidedAt)}
                         </span>
                       )}
-                      {canEdit && !published && (
+                      {editable && (
                         <button
                           type="button"
                           onClick={() => removeApprover(approver.id)}
@@ -763,7 +766,7 @@ export default function PrdBuilderModal({
                 );
               })}
 
-              {canEdit && !published && (
+              {editable && (
                 <div className="rounded-lg border border-dashed border-gray-300 p-3 flex flex-col sm:flex-row gap-2">
                   <select
                     value={newApproverId}
@@ -792,7 +795,7 @@ export default function PrdBuilderModal({
                 </div>
               )}
 
-              {shortfall && !published && (
+              {shortfall && editable && (
                 <p className="text-xs text-amber-800">{shortfall}</p>
               )}
 
@@ -900,16 +903,20 @@ export default function PrdBuilderModal({
                 >
                   Close
                 </button>
-                <button
-                  type="button"
-                  onClick={publish}
-                  disabled={publishing}
-                  title={missing.length ? `${missing.length} required section(s) still blank` : 'Publish this PRD'}
-                  className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
-                  style={{ background: '#c73009' }}
-                >
-                  {publishing ? 'Publishing…' : 'Publish'}
-                </button>
+                {/* A published PRD stays editable until it is approved, but it
+                    is published already — there is nothing left to publish. */}
+                {!published && (
+                  <button
+                    type="button"
+                    onClick={publish}
+                    disabled={publishing}
+                    title={missing.length ? `${missing.length} required section(s) still blank` : 'Publish this PRD'}
+                    className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-bold text-white disabled:opacity-50"
+                    style={{ background: '#c73009' }}
+                  >
+                    {publishing ? 'Publishing…' : 'Publish'}
+                  </button>
+                )}
               </>
             )
           )}

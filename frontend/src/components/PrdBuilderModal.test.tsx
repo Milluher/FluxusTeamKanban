@@ -178,9 +178,27 @@ describe('PrdBuilderModal', () => {
     unmount();
   });
 
-  it('shows a published PRD read-only, even to its author', async () => {
+  it('keeps a published PRD editable for its author while approval is outstanding', async () => {
+    // Publishing circulates a document for sign-off; it does not finish it.
+    // Everything an approver asks for has to be fixable where the author is.
     const { container, unmount } = open(
       prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: twoApprovers })
+    );
+    await flush();
+    expect(field(container, 'overview').disabled).toBe(false);
+    // Already published — there is nothing left to publish.
+    expect(button(container, 'Publish')).toBeUndefined();
+    expect(container.textContent).toContain('out for approval');
+    unmount();
+  });
+
+  it('closes a published PRD once every approver has approved', async () => {
+    const approved = [
+      approver({ status: 'approved' }),
+      approver({ id: 'ap2', userId: assignee.id, user: { id: assignee.id, name: assignee.name }, status: 'approved' }),
+    ];
+    const { container, unmount } = open(
+      prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', approvers: approved })
     );
     await flush();
     expect(field(container, 'overview').disabled).toBe(true);
@@ -307,9 +325,37 @@ describe('PrdBuilderModal', () => {
     unmount();
   });
 
-  it('stops offering new blocks once the PRD is published', async () => {
+  it('still offers new blocks on a published PRD that is awaiting approval', async () => {
+    // A missing administrative section is one of the commonest things an
+    // approver points out, so the author has to be able to add one in place.
     const { container, unmount } = open(
-      prd({ ...complete, status: 'published', publishedAt: '2026-10-02T00:00:00.000Z', adminBlocks: [block()] })
+      prd({
+        ...complete,
+        status: 'published',
+        publishedAt: '2026-10-02T00:00:00.000Z',
+        approvers: twoApprovers,
+        adminBlocks: [block()],
+      })
+    );
+    await flush();
+    expect(container.querySelector('input[aria-label="Block role"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Remove the Compliance block"]')).not.toBeNull();
+    unmount();
+  });
+
+  it('stops offering new blocks once the PRD is approved', async () => {
+    const approved = [
+      approver({ status: 'approved' }),
+      approver({ id: 'ap2', userId: assignee.id, user: { id: assignee.id, name: assignee.name }, status: 'approved' }),
+    ];
+    const { container, unmount } = open(
+      prd({
+        ...complete,
+        status: 'published',
+        publishedAt: '2026-10-02T00:00:00.000Z',
+        approvers: approved,
+        adminBlocks: [block()],
+      })
     );
     await flush();
     expect(container.querySelector('input[aria-label="Block role"]')).toBeNull();
@@ -390,7 +436,7 @@ describe('PrdBuilderModal', () => {
     unmount();
   });
 
-  it('reopens the sections for the author once changes are requested', async () => {
+  it('says so plainly when an approver has asked for changes', async () => {
     const changed = prd({
       ...complete,
       status: 'published',
@@ -401,12 +447,12 @@ describe('PrdBuilderModal', () => {
     await flush();
 
     expect(field(container, 'overview').disabled).toBe(false);
-    expect(container.textContent).toContain('asked for changes, so the sections are editable again');
+    expect(container.textContent).toContain('An approver asked for changes');
     expect(container.textContent).toContain('Tighten the scope.');
     unmount();
   });
 
-  it('keeps a published PRD closed while every decision is approval or pending', async () => {
+  it('stays open while one approver has approved and another has yet to decide', async () => {
     const live = prd({
       ...complete,
       status: 'published',
@@ -415,8 +461,8 @@ describe('PrdBuilderModal', () => {
     });
     const { container, unmount } = open(live, true, author);
     await flush();
-    expect(field(container, 'overview').disabled).toBe(true);
-    expect(container.textContent).toContain('no longer editable');
+    expect(field(container, 'overview').disabled).toBe(false);
+    expect(container.textContent).toContain('out for approval');
     unmount();
   });
 

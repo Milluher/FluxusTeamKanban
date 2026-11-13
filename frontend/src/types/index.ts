@@ -271,6 +271,14 @@ export interface CanvasFeature {
   blockId: string;
   text: string;
   active: boolean;
+  /**
+   * Whether this feature is worth a PRD, answered by whoever added it.
+   *
+   * False is a "mini feature": it is listed on the canvas and that is the whole
+   * of it. Stored rather than inferred from "has no PRD yet", which cannot tell
+   * a mini feature from one whose document nobody has started.
+   */
+  requiresPrd: boolean;
   order: number;
 }
 

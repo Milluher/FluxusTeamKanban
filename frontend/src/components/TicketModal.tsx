@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { Ticket, Board, User, Comment, Sprint, ProductFile, Initiative, Prd } from '@/types';
+import { assignableSprints } from '@/lib/sprintWindow';
 import ProductFileViewer from './ProductFileViewer';
 import PrdBuilderModal from './PrdBuilderModal';
 import RichTextView from './RichTextView';
@@ -67,7 +68,6 @@ interface Props {
   currentUser: User;
   sprints?: Sprint[];
   isAdmin?: boolean;
-  boardType?: string;
   onClose: () => void;
   onUpdate: (ticket: Ticket) => void;
   onDelete: (id: string) => void;
@@ -81,7 +81,15 @@ interface MentionOption {
   group?: boolean;
 }
 
-export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, boardType = 'sprint', onClose, onUpdate, onDelete, onDuplicate }: Props) {
+export default function TicketModal({ ticket, boardId, board, currentUser, sprints = [], isAdmin = false, onClose, onUpdate, onDelete, onDuplicate }: Props) {
+  /**
+   * A ticket with no sprint is in the backlog, and nothing in the backlog is
+   * assigned: scheduling is the act of deciding the work is being done, and
+   * only then is there anything to give somebody. The server refuses such an
+   * assignment, so the field explains itself rather than offering a choice that
+   * comes back rejected.
+   */
+  const inBacklog = !ticket.sprintId;
   const [form, setForm] = useState(() => formFromTicket(ticket));
   // Inline editing: one field at a time, saved on blur or Enter, abandoned on
   // Escape. Replaces an Edit mode that made changing one value a three-click job.
@@ -654,7 +662,9 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   name: 'assigneeId',
                   optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>,
-                  editEl: (
+                  // Not editable while the ticket is in the backlog: there is
+                  // nobody to assign it to until a sprint has picked it up.
+                  editEl: inBacklog ? null : (
                     <select
                       value={form.assigneeId}
                       onChange={(e) => setForm({ ...form, assigneeId: e.target.value })}
@@ -678,21 +688,13 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                         <span className="text-sm font-medium text-gray-800">{ticket.assignee.name}{inactive ? <span className="text-xs text-gray-500 ml-1">(inactive)</span> : ''}</span>
                       </div>
                     );
-                  })() : <p className="mt-1.5 text-sm text-gray-500">Unassigned</p>,
+                  })() : inBacklog ? (
+                    <p className="mt-1.5 text-sm text-gray-500">
+                      In the backlog — assignable once it is in a sprint
+                    </p>
+                  ) : <p className="mt-1.5 text-sm text-gray-500">Unassigned</p>,
                 },
-                boardType === 'kanban' ? {
-                  label: 'Creator',
-                  name: '',
-                  optional: false,
-                  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
-                  editEl: null,
-                  viewEl: (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <Avatar name={ticket.createdBy.name} className="w-7 h-7 text-[10px]" />
-                      <span className="text-sm font-medium text-gray-800">{ticket.createdBy.name}</span>
-                    </div>
-                  ),
-                } : {
+                {
                   label: 'Product Manager',
                   name: 'productManagerId',
                   optional: false,
@@ -753,13 +755,11 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   viewEl: (
                     <div className="mt-1.5 flex items-center gap-2 min-w-0">
                       <span className="text-sm font-medium text-gray-800 truncate">{board.name}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 ${
-                          board.type === 'kanban' ? 'bg-purple-50 text-purple-700' : 'bg-orange-50 text-orange-700'
-                        }`}
-                      >
-                        {board.type === 'kanban' ? 'Kanban' : 'Sprint'}
-                      </span>
+                      {inBacklog && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0 bg-gray-100 text-gray-600">
+                          Backlog
+                        </span>
+                      )}
                     </div>
                   ),
                 },
@@ -991,7 +991,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   ),
                   viewEl: <p className="mt-1.5 text-sm text-gray-700">{ticket.project || <span className="text-gray-500">—</span>}</p>,
                 },
-                ...(boardType !== 'kanban' ? [{
+                {
                   label: 'Epic',
                   name: 'epic',
                   optional: true,
@@ -1032,7 +1032,7 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   viewEl: ticket.epic
                     ? <span className="mt-1.5 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{ticket.epic}</span>
                     : <p className="mt-1.5 text-sm text-gray-500">—</p>,
-                }] : []),
+                },
                 {
                   label: 'Flow',
                   name: 'flow',
@@ -1115,6 +1115,12 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   name: 'sprintId',
                   optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>,
+                  // Scheduling is an admin's call, and only into a sprint that
+                  // has not ended — the server refuses a closed one, so offering
+                  // it would be offering a click that comes back rejected. The
+                  // sprint the ticket is already in stays listed whatever its
+                  // dates, or the field would read as empty on a ticket that
+                  // plainly has one.
                   editEl: isAdmin ? (
                     <select
                       value={form.sprintId}
@@ -1123,8 +1129,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                       style={inputStyle}
                       {...inputFocusHandlers}
                     >
-                      <option value="">No sprint</option>
-                      {sprints.map((s) => (
+                      <option value="">No sprint (back to the backlog)</option>
+                      {assignableSprints(sprints, ticket.sprintId).map((s) => (
                         <option key={s.id} value={s.id}>{s.title}</option>
                       ))}
                     </select>
@@ -1230,8 +1236,8 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
             )}
 
 
-            {/* Sprint History (sprint boards only) */}
-            {boardType !== 'kanban' && ticket.sprintId && (
+            {/* Sprint History */}
+            {ticket.sprintId && (
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">

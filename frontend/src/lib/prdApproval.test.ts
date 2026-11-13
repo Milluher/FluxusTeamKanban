@@ -53,13 +53,19 @@ describe('isWritable', () => {
     expect(isWritable(prd('draft', []))).toBe(true);
   });
 
-  it('closes a published PRD', () => {
-    expect(isWritable(prd('published', [approver('pending')]))).toBe(false);
-    expect(isWritable(prd('published', [approver('approved')]))).toBe(false);
+  it('keeps a published PRD open while anyone has still to decide', () => {
+    // Publishing circulates a document for sign-off; it does not finish it.
+    expect(isWritable(prd('published', [approver('pending')]))).toBe(true);
+    expect(isWritable(prd('published', [approver('approved'), approver('pending', 'a2')]))).toBe(true);
   });
 
-  it('reopens it once an approver asks for changes', () => {
+  it('keeps it open when an approver asks for changes', () => {
     expect(isWritable(prd('published', [approver('approved'), approver('changes_requested', 'a2')]))).toBe(true);
+  });
+
+  it('closes it once every approver has approved', () => {
+    expect(isWritable(prd('published', [approver('approved')]))).toBe(false);
+    expect(isWritable(prd('published', [approver('approved'), approver('approved', 'a2')]))).toBe(false);
   });
 });
 

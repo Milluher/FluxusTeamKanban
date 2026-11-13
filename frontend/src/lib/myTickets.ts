@@ -2,8 +2,12 @@ import { AssignedTicket, Board } from '@/types';
 
 // "My tickets" is one board built out of many. The tickets on it come from
 // every board the viewer belongs to, so the columns cannot be any single
-// board's columns — they are the column *names*, which the two board types
-// share: sprint boards run Backlog → Done, kanban boards a subset of it.
+// board's columns — they are the column *names*, in flow order.
+//
+// "Backlog" is kept in that order for boards created before the backlog became
+// its own section rather than a column. New boards run To Do → Done; a board
+// that still has a Backlog column keeps it, and its tickets still need
+// somewhere to land here.
 export const CANONICAL_COLUMNS = ['Backlog', 'To Do', 'In Progress', 'Review', 'Done'];
 
 export interface MyTicketsColumn {
@@ -51,8 +55,8 @@ export function myTicketsColumns(tickets: AssignedTicket[], boards: Board[]): My
  * The real column a drop lands on: same name, but on the ticket's *own* board,
  * since that is the only column its columnId can point at.
  *
- * Null when that board has no such column — a kanban board has no "Review", so
- * a ticket living on one cannot be dropped there.
+ * Null when that board has no such column — not every board has a "Backlog"
+ * column, so a ticket living on one that does not cannot be dropped there.
  */
 export function targetColumnFor(
   ticket: AssignedTicket,
