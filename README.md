@@ -138,6 +138,32 @@ straight away; removing one takes its task with it.
 Once **every** named approver has approved, the PRD is closed to editing: the
 document they approved is the document that stands.
 
+## Deploys and that "crash" in the Railway log
+
+Both the frontend (Vercel) and the backend (Railway) deploy automatically from
+`main`, so merging is the deploy. Nothing needs triggering by hand.
+
+Railway sends `SIGTERM` to the outgoing container every time a new deployment
+takes over. The backend installs a handler for it (`backend/src/index.js`):
+it stops accepting connections, lets in-flight requests finish, closes the
+sockets and the database, and exits 0. The start command ends with
+`exec node src/index.js` so the signal reaches node directly instead of dying in
+the shell npm spawned — without both halves, a perfectly healthy handover
+printed four lines of
+
+```
+npm error command failed
+npm error signal SIGTERM
+```
+
+against the *previous* container, which is indistinguishable from a crash in the
+log view and was reported as one.
+
+So: a green deploy badge is still not evidence the app runs — read the boot log
+and check it ends with `Backend running on port 8080`. But `npm error … SIGTERM`
+on a superseded deployment no longer happens at all; if you see it, something is
+genuinely wrong.
+
 ## Email notifications (Resend)
 
 Every in-app notification (ticket assigned, @mention, PRD approval requested,
