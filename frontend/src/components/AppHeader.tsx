@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { User } from '@/types';
+import ChangelogSidebar from './ChangelogSidebar';
 import DictionarySidebar from './DictionarySidebar';
 import InitiativesSidebar from './InitiativesSidebar';
 import PersonasPanel from './PersonasPanel';
@@ -11,10 +12,10 @@ import NotificationBell from './NotificationBell';
 import ProfileModal from './ProfileModal';
 import Avatar from './Avatar';
 
-type Section = 'boards' | 'changelog' | 'admin';
+type Section = 'boards' | 'admin';
 
 /** The panels that open beside the page rather than replacing it. */
-type Panel = 'dictionary' | 'personas' | 'initiatives';
+type Panel = 'dictionary' | 'personas' | 'initiatives' | 'changelog';
 
 interface Props {
   user: User | null;
@@ -27,11 +28,10 @@ interface Props {
   /**
    * The board the page is showing, if it is showing one.
    *
-   * The dictionary, personas and initiatives panels live in the header but
-   * their contents belong to a board, so the header is the only thing that
-   * knows which board to scope them to. Left undefined — on the dashboard, the
-   * changelog, the admin screens — the panels show every board the user can see
-   * and ask which board a new entry is for.
+   * The panels live in the header but their contents belong to a board, so the
+   * header is the only thing that knows which board to scope them to. Left
+   * undefined — on the dashboard, the admin screens — the panels show every
+   * board the user can see and ask which board a new entry is for.
    */
   boardId?: string;
 }
@@ -44,17 +44,18 @@ interface Props {
 export default function AppHeader({ user, current, breadcrumb, actions, boardId }: Props) {
   const router = useRouter();
   const [showProfile, setShowProfile] = useState(false);
-  // The dictionary, the personas and the initiatives all live in the header
-  // rather than on a page, so each is reachable from the workspace and from
-  // inside every board alike. One slot, because they would otherwise render on
-  // top of each other.
+  // The personas, the initiatives, the dictionary and the changelog all live in
+  // the header rather than on a page, so each is reachable from the workspace
+  // and from inside every board alike. One slot, because they would otherwise
+  // render on top of each other.
   //
   // What they show depends on `boardId`: that board's entries inside a board,
   // everything you can see outside one.
   //
-  // Initiatives joined them because an initiative is the "why" behind the
-  // tickets in front of you — reading one used to mean navigating away from the
-  // board you were trying to connect it to.
+  // They are panels for the same reason: each answers a question you ask *while*
+  // looking at the work. "Who is this for", "what goal does this serve", "what
+  // does that word mean", "did that already ship" — reading any of them used to
+  // cost you the board or the sprint you had open.
   const [panel, setPanel] = useState<Panel | null>(null);
   const togglePanel = (next: Panel) => setPanel((open) => (open === next ? null : next));
 
@@ -142,10 +143,24 @@ export default function AppHeader({ user, current, breadcrumb, actions, boardId 
                 </svg>
                 <span className="hidden lg:inline">Dictionary</span>
               </button>
+              <button
+                onClick={() => togglePanel('changelog')}
+                aria-expanded={panel === 'changelog'}
+                aria-label="Changelog"
+                className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                  panel === 'changelog' ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M12 8v4l3 2" />
+                  <path d="M3.05 11a9 9 0 1 1 .5 4" />
+                  <polyline points="3 20 3 15 8 15" />
+                </svg>
+                <span className="hidden lg:inline">Changelog</span>
+              </button>
             </>
           )}
           {navLink('boards', '/dashboard', 'Boards')}
-          {navLink('changelog', '/changelog', 'Changelog')}
           {user?.role === 'admin' && (
             <Link
               href="/admin"
@@ -184,6 +199,10 @@ export default function AppHeader({ user, current, breadcrumb, actions, boardId 
 
       {panel === 'initiatives' && user && (
         <InitiativesSidebar user={user} boardId={boardId} onClose={() => setPanel(null)} />
+      )}
+
+      {panel === 'changelog' && user && (
+        <ChangelogSidebar user={user} boardId={boardId} onClose={() => setPanel(null)} />
       )}
     </>
   );

@@ -13,15 +13,22 @@ const KINDS: { value: ChangelogItemKind; label: string }[] = [
 interface Props {
   entry: ChangelogEntry | null;
   boards: Board[];
+  /**
+   * The project a new entry should start on — the board the changelog panel was
+   * opened from. Only a default: the picker still shows and can be changed, so
+   * an admin writing up the wrong project is a correction rather than a
+   * re-creation.
+   */
+  defaultBoardId?: string;
   onClose: () => void;
   onSaved: (entry: ChangelogEntry) => void;
 }
 
-export default function ChangelogEntryModal({ entry, boards, onClose, onSaved }: Props) {
+export default function ChangelogEntryModal({ entry, boards, defaultBoardId, onClose, onSaved }: Props) {
   const [version, setVersion] = useState(entry?.version || '');
   const [title, setTitle] = useState(entry?.title || '');
   const [summary, setSummary] = useState(entry?.summary || '');
-  const [boardId, setBoardId] = useState(entry?.boardId || '');
+  const [boardId, setBoardId] = useState(entry?.boardId || defaultBoardId || '');
   const [items, setItems] = useState<ChangelogItem[]>(
     entry?.items?.length ? entry.items : [{ kind: 'added', text: '' }]
   );
