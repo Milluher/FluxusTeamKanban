@@ -161,9 +161,15 @@ export default function BoardToolbar({
         </button>
       )}
 
+      {/* First on a phone, last on a desktop.
+          This row scrolls sideways when it does not fit, and `ml-auto` pushed
+          the one button people came for to the far end of that scroll — the
+          primary action, reachable only by swiping past every filter. Ordering
+          it first on narrow screens puts it under the thumb instead, while a
+          wide screen keeps it in the right-hand corner where it belongs. */}
       <button
         onClick={onNewTicket}
-        className="ml-auto flex-shrink-0 flex items-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 min-h-[32px] rounded-lg transition-all duration-150"
+        className="order-first sm:order-none sm:ml-auto flex-shrink-0 flex items-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 min-h-[32px] rounded-lg transition-all duration-150"
         style={{ background: '#c73009' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = '#a82607'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = '#c73009'; }}

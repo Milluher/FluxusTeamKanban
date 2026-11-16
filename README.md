@@ -106,6 +106,27 @@ swipe. How that is resolved:
 Dragging is never the only way to move a ticket: the **Status** field on an open
 ticket changes its column, which is the faster route on a phone regardless.
 
+### The header
+
+A phone bar holds about four controls. The header had eight of its own plus
+whatever the page added, all `flex-shrink-0`, so they did not wrap or compress —
+they ran off the right edge, taking Admin and the account menu with them.
+
+Below `sm`, the four panel toggles and the nav collapse behind one **More**
+button, as labelled rows. What stays visible at every width is the logo, the
+breadcrumb, notifications and the account menu: a notification you cannot see is
+one you do not get, and the account menu is the way out.
+
+A page with its own overflow passes it to `AppHeader`'s `menuExtras` and hides
+it from `actions` below `sm` — which is how a board's member list and Invite
+reach the same menu, instead of each page inventing its own answer. The board
+also drops the presence avatars on a phone, as the most ambient thing in the bar.
+
+One related fix: the board toolbar scrolls sideways when it does not fit, and
+`ml-auto` had pushed **New ticket** to the far end of that scroll — the primary
+action, reachable only by swiping past every filter. It is ordered first on
+narrow screens and stays in the right-hand corner on wide ones.
+
 ## Panels, not pages
 
 Four things are consulted *while* you work rather than read on their own, so
