@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { Board, Ticket, ProductFile } from '@/types';
+import { Board, Ticket, ProductFile, Initiative } from '@/types';
 import { clearDraft, currentUserId, draftKey, readDraft, writeDraft } from '@/lib/ticketDraft';
 import dynamic from 'next/dynamic';
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false });
@@ -49,6 +49,7 @@ const EMPTY_FORM = {
   epic: '',
   flow: '',
   productDocId: '',
+  initiativeId: '',
 };
 
 export default function CreateTicketModal({ columnId, boardId, board, onClose, onCreate, sprintId }: Props) {
@@ -75,6 +76,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
     setRestoredDraft(false);
   };
   const [productFiles, setProductFiles] = useState<ProductFile[]>([]);
+  const [initiatives, setInitiatives] = useState<Initiative[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -114,6 +116,17 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
       .catch(() => {});
   }, [boardId]);
 
+  // The strategic goal this ticket serves, pickable as the ticket is written.
+  //
+  // An initiative belongs to a board and the API refuses a link to one on
+  // another board, so the picker offers this board's — which is also the list
+  // the initiatives panel shows while you are on this board.
+  useEffect(() => {
+    api.get<Initiative[]>('/initiatives', { params: { boardId } })
+      .then(({ data }) => setInitiatives(data))
+      .catch(() => {});
+  }, [boardId]);
+
   const members = board.members.map((m) => m.user);
 
   const searchDeps = async (q: string) => {
@@ -131,6 +144,7 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
       const { data } = await api.post('/tickets', {
         ...form,
         assigneeId: inBacklog ? undefined : form.assigneeId || undefined,
+        initiativeId: form.initiativeId || undefined,
         productManagerId: form.productManagerId || undefined,
         assignedDate: form.assignedDate || undefined,
         columnId,
@@ -467,6 +481,34 @@ export default function CreateTicketModal({ columnId, boardId, board, onClose, o
                 </div>
               )}
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="new-ticket-initiative" className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Initiative
+            </label>
+            <select
+              id="new-ticket-initiative"
+              value={form.initiativeId}
+              onChange={(e) => setForm({ ...form, initiativeId: e.target.value })}
+              className="px-3 py-2.5 text-sm transition-all duration-150"
+              style={inputStyle}
+              {...focusHandlers}
+            >
+              <option value="">None</option>
+              {initiatives.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.title}{i.status === 'achieved' ? ' (achieved)' : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1.5">
+              {/* A picker holding only "None" reads as broken rather than
+                  empty, so an empty board says what to do about it. */}
+              {initiatives.length === 0
+                ? 'This board has no initiatives yet. Open Initiatives in the header to add one.'
+                : 'The strategic goal this ticket serves.'}
+            </p>
           </div>
 
           {productFiles.length > 0 && (
