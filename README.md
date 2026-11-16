@@ -82,22 +82,27 @@ with their owner shown.
 
 ## Panels, not pages
 
-Three things are consulted *while* you work rather than read on their own, so
+Four things are consulted *while* you work rather than read on their own, so
 each opens as a panel beside the page from a button in the header:
 
 - **Personas** — who we build for.
-- **Initiatives** — the strategic goals. An initiative is the "why" behind the
-  tickets in front of you, so reading one must not cost you the board or the
-  sprint you had open.
+- **Initiatives** — the strategic goals. The "why" behind the tickets in front
+  of you.
 - **Riverly Dictionary** — the board's vocabulary.
+- **Changelog** — release notes. "Did that already ship?" is a question you ask
+  while looking at the work.
 
-All three are scoped the same way: inside a board they show that board's
-entries, and a new one goes to that board without asking. Outside one they show
-every board you can see and the form asks which board the entry is for. Only one
-is open at a time, since they share the same space.
+Reading any of them used to cost you the board or the sprint you had open, which
+is the whole reason they are panels.
 
-`/initiatives` was a page and is now a redirect to the dashboard, so an old
-bookmark still lands somewhere useful.
+All four are scoped the same way: inside a board they show that board's entries,
+and a new one starts on that board. Outside one they show every board you can
+see and the form asks which board the entry is for. Only one is open at a time,
+since they share the same space. Escape closes a panel — but not while its
+create/edit form is open over it, which would discard what was typed.
+
+`/initiatives` and `/changelog` were pages and are now redirects to the
+dashboard, so an old bookmark still lands somewhere useful.
 
 A ticket's **Initiative** field is offered in both places a ticket is written:
 on the New Ticket form, and on every open ticket rather than hidden behind

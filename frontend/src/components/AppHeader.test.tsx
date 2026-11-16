@@ -32,7 +32,7 @@ describe('AppHeader', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('offers the same controls in the same order on every page', () => {
-    const seen = (['boards', 'changelog', 'admin'] as const).map((current) => {
+    const seen = (['boards', 'admin'] as const).map((current) => {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
       const names = controls(container);
       unmount();
@@ -40,38 +40,39 @@ describe('AppHeader', () => {
     });
 
     expect(seen[0]).toEqual(seen[1]);
-    expect(seen[1]).toEqual(seen[2]);
     expect(seen[0]).toEqual([
       'FluxusTeam home',
       'Personas',
       'Initiatives',
       'Riverly Dictionary',
-      'Boards',
       'Changelog',
+      'Boards',
       'Admin',
       'Notifications, no unread',
       'Account menu for Femi A',
     ]);
   });
 
-  it('reaches all three panels from every page, since each is consulted mid-task', () => {
-    for (const current of ['boards', 'changelog', 'admin'] as const) {
+  it('reaches every panel from every page, since each is consulted mid-task', () => {
+    for (const current of ['boards', 'admin'] as const) {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
-      expect(controls(container)).toContain('Riverly Dictionary');
-      expect(controls(container)).toContain('Personas');
-      expect(controls(container)).toContain('Initiatives');
+      for (const panel of ['Personas', 'Initiatives', 'Riverly Dictionary', 'Changelog']) {
+        expect(controls(container)).toContain(panel);
+      }
       unmount();
     }
   });
 
-  it('opens initiatives beside the page rather than navigating to one', () => {
-    // An initiative is the "why" behind the tickets in front of you, so reading
-    // one must not cost you the board or the sprint you had open.
+  it('opens initiatives and the changelog beside the page rather than navigating', () => {
+    // Both answer a question you ask while looking at the work, so reading
+    // either must not cost you the board or the sprint you had open.
     const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
     expect(container.querySelector('a[href="/initiatives"]')).toBeNull();
+    expect(container.querySelector('a[href="/changelog"]')).toBeNull();
 
-    const toggle = container.querySelector('button[aria-label="Initiatives"]') as HTMLButtonElement;
-    expect(toggle).not.toBeNull();
+    for (const label of ['Initiatives', 'Changelog']) {
+      expect(container.querySelector(`button[aria-label="${label}"]`)).not.toBeNull();
+    }
     unmount();
   });
 
@@ -92,17 +93,21 @@ describe('AppHeader', () => {
     expect(container.querySelector('aside[aria-label="Initiatives"]')).not.toBeNull();
     expect(container.querySelector('aside[aria-label="Riverly Dictionary"]')).toBeNull();
 
+    await act(async () => { byLabel('Changelog').click(); });
+    expect(container.querySelector('aside[aria-label="Changelog"]')).not.toBeNull();
+    expect(container.querySelector('aside[aria-label="Initiatives"]')).toBeNull();
+
     // Clicking the open one again closes it.
-    await act(async () => { byLabel('Initiatives').click(); });
+    await act(async () => { byLabel('Changelog').click(); });
     expect(container.querySelector('aside')).toBeNull();
     unmount();
   });
 
   it('marks only the current page', () => {
-    const { container, unmount } = renderToDom(<AppHeader user={admin} current="changelog" />);
+    const { container, unmount } = renderToDom(<AppHeader user={admin} current="boards" />);
     const current = Array.from(container.querySelectorAll('[aria-current="page"]'));
     expect(current).toHaveLength(1);
-    expect(current[0].textContent).toBe('Changelog');
+    expect(current[0].textContent).toBe('Boards');
     unmount();
   });
 
@@ -115,19 +120,23 @@ describe('AppHeader', () => {
       'Personas',
       'Initiatives',
       'Riverly Dictionary',
-      'Boards',
       'Changelog',
+      'Boards',
       'Notifications, no unread',
       'Account menu for Alice Doe',
     ]);
     unmount();
   });
 
-  it('reaches the changelog by a visible label rather than an unnamed icon', () => {
+  it('names every panel toggle, rather than leaving an unlabelled icon', () => {
+    // These are icon buttons at narrow widths, so the accessible name is the
+    // only name they have.
     const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
-    const link = container.querySelector('a[href="/changelog"]');
-    expect(link).not.toBeNull();
-    expect(link?.textContent?.trim()).toBe('Changelog');
+    for (const label of ['Personas', 'Initiatives', 'Riverly Dictionary', 'Changelog']) {
+      const toggle = container.querySelector(`button[aria-label="${label}"]`);
+      expect(toggle).not.toBeNull();
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    }
     unmount();
   });
 
@@ -141,7 +150,7 @@ describe('AppHeader', () => {
     );
     expect(container.querySelector('h1')?.textContent).toBe('Product Roadmap');
     const names = controls(container);
-    expect(names.indexOf('Invite')).toBeLessThan(names.indexOf('Boards'));
+    expect(names.indexOf('Invite')).toBeLessThan(names.indexOf('Personas'));
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
     unmount();
   });
