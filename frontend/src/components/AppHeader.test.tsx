@@ -32,7 +32,7 @@ describe('AppHeader', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('offers the same controls in the same order on every page', () => {
-    const seen = (['boards', 'initiatives', 'changelog', 'admin'] as const).map((current) => {
+    const seen = (['boards', 'changelog', 'admin'] as const).map((current) => {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
       const names = controls(container);
       unmount();
@@ -41,13 +41,12 @@ describe('AppHeader', () => {
 
     expect(seen[0]).toEqual(seen[1]);
     expect(seen[1]).toEqual(seen[2]);
-    expect(seen[2]).toEqual(seen[3]);
     expect(seen[0]).toEqual([
       'FluxusTeam home',
       'Personas',
+      'Initiatives',
       'Riverly Dictionary',
       'Boards',
-      'Initiatives',
       'Changelog',
       'Admin',
       'Notifications, no unread',
@@ -55,13 +54,25 @@ describe('AppHeader', () => {
     ]);
   });
 
-  it('reaches the dictionary and the personas from every page, since both are consulted mid-task', () => {
-    for (const current of ['boards', 'initiatives', 'changelog', 'admin'] as const) {
+  it('reaches all three panels from every page, since each is consulted mid-task', () => {
+    for (const current of ['boards', 'changelog', 'admin'] as const) {
       const { container, unmount } = renderToDom(<AppHeader user={admin} current={current} />);
       expect(controls(container)).toContain('Riverly Dictionary');
       expect(controls(container)).toContain('Personas');
+      expect(controls(container)).toContain('Initiatives');
       unmount();
     }
+  });
+
+  it('opens initiatives beside the page rather than navigating to one', () => {
+    // An initiative is the "why" behind the tickets in front of you, so reading
+    // one must not cost you the board or the sprint you had open.
+    const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
+    expect(container.querySelector('a[href="/initiatives"]')).toBeNull();
+
+    const toggle = container.querySelector('button[aria-label="Initiatives"]') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    unmount();
   });
 
   it('shows one panel at a time, since they share the same space', async () => {
@@ -77,8 +88,12 @@ describe('AppHeader', () => {
     expect(container.querySelector('aside[aria-label="Riverly Dictionary"]')).not.toBeNull();
     expect(container.querySelector('aside[aria-label="Personas"]')).toBeNull();
 
+    await act(async () => { byLabel('Initiatives').click(); });
+    expect(container.querySelector('aside[aria-label="Initiatives"]')).not.toBeNull();
+    expect(container.querySelector('aside[aria-label="Riverly Dictionary"]')).toBeNull();
+
     // Clicking the open one again closes it.
-    await act(async () => { byLabel('Riverly Dictionary').click(); });
+    await act(async () => { byLabel('Initiatives').click(); });
     expect(container.querySelector('aside')).toBeNull();
     unmount();
   });
@@ -98,9 +113,9 @@ describe('AppHeader', () => {
     expect(names).toEqual([
       'FluxusTeam home',
       'Personas',
+      'Initiatives',
       'Riverly Dictionary',
       'Boards',
-      'Initiatives',
       'Changelog',
       'Notifications, no unread',
       'Account menu for Alice Doe',

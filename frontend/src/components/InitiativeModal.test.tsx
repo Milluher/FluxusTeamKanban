@@ -4,7 +4,7 @@ import { Initiative } from '@/types';
 const post = vi.fn();
 const patch = vi.fn();
 // `get` is only reached by the board picker, which the modal shows when it is
-// opened without a board — the workspace-level /initiatives page.
+// opened without a board — the initiatives panel outside a board.
 const get = vi.fn();
 vi.mock('@/lib/api', () => ({ default: { get, post, patch } }));
 

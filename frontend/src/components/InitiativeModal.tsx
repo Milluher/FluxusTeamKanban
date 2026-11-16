@@ -9,7 +9,8 @@ interface Props {
   initiative: Initiative | null;
   /**
    * The board to create on, when the caller already knows it. Left undefined —
-   * as it is on the workspace-level `/initiatives` page — the form asks.
+   * as it is when the initiatives panel is opened outside a board — the form
+   * asks.
    */
   boardId?: string;
   onClose: () => void;
