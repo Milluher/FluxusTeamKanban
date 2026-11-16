@@ -660,18 +660,56 @@ export default function BoardPage() {
         user={currentUser}
         boardId={boardId}
         breadcrumb={
-          <h1 className="font-semibold text-sm truncate max-w-[120px] sm:max-w-none" style={{ color: '#1a1f3c' }}>
+          <h1 className="font-semibold text-sm truncate max-w-[160px] sm:max-w-none" style={{ color: '#1a1f3c' }}>
             {board.name}
           </h1>
         }
+        menuExtras={
+          <>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => setShowMembersPanel(true)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 min-h-[44px] text-sm font-medium text-gray-700 text-left hover:bg-gray-50 transition-colors"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-gray-500 flex-shrink-0" aria-hidden="true">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              </svg>
+              {board.members.length} {board.members.length === 1 ? 'member' : 'members'}
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => setShowInviteModal(true)}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 min-h-[44px] text-sm font-semibold text-left hover:bg-gray-50 transition-colors"
+                style={{ color: '#c73009' }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="flex-shrink-0" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <line x1="20" y1="8" x2="20" y2="14" />
+                  <line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+                Invite a member
+              </button>
+            )}
+          </>
+        }
         actions={
           <>
-            <PresenceTracker users={presentUsers} currentUserId={currentUser?.id} />
+            {/* Who else is here is useful but ambient — the first thing to drop
+                when a phone header runs out of room. */}
+            <div className="hidden sm:flex">
+              <PresenceTracker users={presentUsers} currentUserId={currentUser?.id} />
+            </div>
               {/* Member avatars — clickable to show member list */}
               <div className="relative" ref={membersPanelRef}>
                 <button
                   onClick={() => setShowMembersPanel((p) => !p)}
-                  className="flex -space-x-1.5 cursor-pointer"
+                  className="hidden sm:flex -space-x-1.5 cursor-pointer"
                   aria-label="View board members"
                   title="View members"
                 >
@@ -731,7 +769,7 @@ export default function BoardPage() {
               {isAdmin && (
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
+                className="hidden sm:flex items-center justify-center gap-1.5 text-sm font-semibold px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-lg border transition-all duration-150"
                 style={{
                   color: '#c73009',
                   borderColor: '#e8390e',

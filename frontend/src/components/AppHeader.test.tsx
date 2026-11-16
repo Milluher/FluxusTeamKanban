@@ -40,6 +40,8 @@ describe('AppHeader', () => {
     });
 
     expect(seen[0]).toEqual(seen[1]);
+    // jsdom applies no media queries, so both the wide-screen row and the
+    // phone menu's button are in the tree. Order is what matters here.
     expect(seen[0]).toEqual([
       'FluxusTeam home',
       'Personas',
@@ -50,6 +52,7 @@ describe('AppHeader', () => {
       'Admin',
       'Notifications, no unread',
       'Account menu for Femi A',
+      'More',
     ]);
   });
 
@@ -124,6 +127,7 @@ describe('AppHeader', () => {
       'Boards',
       'Notifications, no unread',
       'Account menu for Alice Doe',
+      'More',
     ]);
     unmount();
   });
@@ -138,6 +142,93 @@ describe('AppHeader', () => {
       expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     }
     unmount();
+  });
+
+  describe('the phone overflow menu', () => {
+    const menuRows = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('[role="menuitem"]')).map((r) => r.textContent?.trim());
+
+    const openMenu = async (container: HTMLElement) => {
+      const more = container.querySelector('button[aria-label="More"]') as HTMLButtonElement;
+      await act(async () => { more.click(); });
+      return more;
+    };
+
+    it('holds every nav item, labelled, since an icon row has to hide its labels', async () => {
+      const { container, unmount } = renderToDom(<AppHeader user={admin} current="boards" />);
+      expect(container.querySelector('[role="menu"]')).toBeNull();
+
+      await openMenu(container);
+      expect(menuRows(container)).toEqual([
+        'Personas',
+        'Initiatives',
+        'Riverly Dictionary',
+        'Changelog',
+        'Boards',
+        'Admin',
+      ]);
+      unmount();
+    });
+
+    it('leaves Admin out for a standard user, as the bar does', async () => {
+      const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
+      await openMenu(container);
+      expect(menuRows(container)).not.toContain('Admin');
+      unmount();
+    });
+
+    it('opens a panel and gets out of its way', async () => {
+      // The panel covers the corner the menu was occupying.
+      const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
+      await openMenu(container);
+      const personas = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+        (r) => r.textContent?.trim() === 'Personas'
+      ) as HTMLButtonElement;
+      await act(async () => { personas.click(); });
+
+      expect(container.querySelector('aside[aria-label="Personas"]')).not.toBeNull();
+      expect(container.querySelector('[role="menu"]')).toBeNull();
+      unmount();
+    });
+
+    it('reports whether it is open, since it is an unlabelled icon', async () => {
+      const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
+      const more = await openMenu(container);
+      expect(more.getAttribute('aria-expanded')).toBe('true');
+      expect(more.getAttribute('aria-haspopup')).toBe('menu');
+      unmount();
+    });
+
+    it('carries the page\'s own overflow above its nav', async () => {
+      // A board's members and invite do not fit in a phone bar either, so the
+      // page hands them over rather than inventing somewhere else to put them.
+      const { container, unmount } = renderToDom(
+        <AppHeader
+          user={standard}
+          current="boards"
+          menuExtras={<button role="menuitem">3 members</button>}
+        />
+      );
+      await openMenu(container);
+      expect(menuRows(container)[0]).toBe('3 members');
+      unmount();
+    });
+
+    it('closes on Escape', async () => {
+      const { container, unmount } = renderToDom(<AppHeader user={standard} current="boards" />);
+      await openMenu(container);
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      });
+      expect(container.querySelector('[role="menu"]')).toBeNull();
+      unmount();
+    });
+
+    it('is not offered to a signed-out visitor, who has no nav to reach', () => {
+      const { container, unmount } = renderToDom(<AppHeader user={null} />);
+      expect(container.querySelector('button[aria-label="More"]')).toBeNull();
+      unmount();
+    });
   });
 
   it('places page context in the breadcrumb and page controls before the global ones', () => {
