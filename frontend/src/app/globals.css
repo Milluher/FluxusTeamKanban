@@ -18,10 +18,48 @@ input, select, textarea {
 /* Smooth scrolling for board horizontal scroll */
 .board-scroll {
   -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
+  /* The board scrolls sideways; a sideways flick on it must not also drag the
+     page up and down, or the whole gesture turns into a fight. */
+  overscroll-behavior-x: contain;
 }
-.board-column-snap {
-  scroll-snap-align: start;
+
+/* Snapping is a phone affordance, not a desktop one.
+   On a narrow screen one column fills the viewport, so snapping makes the board
+   a pager: a flick lands on a column rather than halfway between two. On a wide
+   screen four columns are already visible and snapping just fights the scroll
+   wheel, so it is scoped to where it helps. */
+@media (max-width: 639px) {
+  .board-scroll {
+    scroll-snap-type: x mandatory;
+  }
+  .board-column-snap {
+    scroll-snap-align: start;
+  }
+}
+
+/* The board's own height.
+   `100vh` on mobile Safari means "viewport with the toolbars hidden", so a
+   board sized to it is always taller than what you can actually see and the
+   page scrolls vertically as well as horizontally. `100dvh` is the visible
+   height, toolbars included, and the plain `vh` rule stays as the fallback for
+   anything that does not know it. */
+.board-min-h {
+  min-height: calc(100vh - 160px);
+}
+@supports (height: 100dvh) {
+  .board-min-h {
+    min-height: calc(100dvh - 160px);
+  }
+}
+
+/* A strip that scrolls but should not show a bar over the content — the chips
+   are the affordance, and a 6px bar under them on a phone is just noise. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {

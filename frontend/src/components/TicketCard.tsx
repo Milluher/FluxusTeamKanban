@@ -57,6 +57,17 @@ export default function TicketCard({ ticket, onClick, isDragging, columnColor = 
     padding: '12px',
     cursor: 'pointer',
     position: 'relative',
+    // Not `none`, which is the usual advice for a draggable: that would hand
+    // every touch on a card to the drag sensor and leave the board unscrollable,
+    // since the board is mostly cards. `manipulation` keeps panning and lets the
+    // press-and-hold sensor claim the gesture once it fires, while still killing
+    // the double-tap zoom delay that makes a tap feel sluggish.
+    touchAction: 'manipulation',
+    // A long press on mobile otherwise raises the text-selection/callout UI on
+    // top of the drag that press is starting.
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
+    WebkitTouchCallout: 'none',
     ...(priorityCfg && !isDragging ? { borderLeft: `3px solid ${priorityCfg.border}` } : {}),
     ...(isDragging
       ? {
