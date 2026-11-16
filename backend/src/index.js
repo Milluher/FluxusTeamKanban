@@ -134,3 +134,58 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+
+/**
+ * Shut down when the platform says to, and say so.
+ *
+ * Railway sends SIGTERM to the outgoing container whenever a new deployment
+ * takes over, which happens on every single deploy. With no handler, the
+ * process died on the default signal disposition and npm — which was in the
+ * signal path — reported it as a failed command:
+ *
+ *     npm error command failed
+ *     npm error signal SIGTERM
+ *
+ * Four error-level lines per deploy, indistinguishable in the log view from a
+ * real crash. A healthy handover should not be the scariest thing in the log,
+ * so the shutdown is now deliberate: stop taking connections, close the
+ * sockets, let go of the database, and exit 0.
+ *
+ * `server.close` waits for in-flight requests, so a deploy does not cut
+ * somebody's save off mid-write. The timer is the backstop for a connection
+ * that never drains — a hung socket must not hold the old container open for
+ * ever, and Railway will SIGKILL it anyway.
+ */
+const SHUTDOWN_GRACE_MS = 10_000;
+let shuttingDown = false;
+
+async function shutdown(signal) {
+  // Platforms re-send signals; the second one must not start a second teardown.
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received — shutting down`);
+
+  const forceExit = setTimeout(() => {
+    console.log('Connections did not drain in time — exiting anyway');
+    process.exit(0);
+  }, SHUTDOWN_GRACE_MS);
+  // Nothing is waiting on this timer, so it must not keep the loop alive.
+  forceExit.unref();
+
+  try {
+    io.close();
+    await new Promise((resolve) => server.close(resolve));
+    await prisma.$disconnect();
+    console.log('Shutdown complete');
+  } catch (e) {
+    // Exiting regardless: a tidy teardown is a courtesy, and reporting a
+    // failure here as a crash is the very thing this replaces.
+    console.log(`Shutdown finished with: ${e.message}`);
+  }
+  clearTimeout(forceExit);
+  process.exit(0);
+}
+
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => void shutdown(signal));
+}
