@@ -290,16 +290,32 @@ describe('TicketModal', () => {
     unmount();
   });
 
-  it('keeps Initiative behind "Add field" when the ticket serves none', async () => {
+  it('offers Initiative on every ticket, not only on one that already has one', async () => {
+    // It used to sit behind "+ Add field", which hid it at exactly the moment it
+    // was needed — while a ticket was being described. An empty one invites the
+    // choice rather than printing a bare dash, so the row earns its place.
     const { container, unmount } = await open();
-    expect(byText(container, 'label', 'Initiative')).toBeUndefined();
+    const label = byText(container, 'label', 'Initiative');
+    expect(label).toBeDefined();
+    expect(label?.parentElement?.textContent).toContain('Not set');
 
     const addField = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.trim() === '+Add field' || b.textContent?.includes('Add field')
-    )!;
-    await act(async () => { addField.click(); });
-    const offered = Array.from(container.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent?.trim());
-    expect(offered).toContain('Initiative');
+      (b) => b.textContent?.includes('Add field')
+    );
+    if (addField) {
+      await act(async () => { addField.click(); });
+      const offered = Array.from(container.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent?.trim());
+      expect(offered).not.toContain('Initiative');
+    }
+    unmount();
+  });
+
+  it('says a board has no initiatives yet rather than offering an empty picker', async () => {
+    const { container, unmount } = await open();
+    const label = byText(container, 'label', 'Initiative');
+    const cell = label!.parentElement!;
+    await act(async () => { (cell.querySelector('button') as HTMLButtonElement).click(); });
+    expect(cell.textContent).toContain('no initiatives yet');
     unmount();
   });
 

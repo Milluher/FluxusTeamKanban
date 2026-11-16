@@ -12,9 +12,10 @@ export interface BoardChoice {
  *
  * Personas, the dictionary, initiatives and the changelog each belong to a
  * board now, so anything that *creates* one has to say which — and the places
- * that create them are not all inside a board. The header panels open on the
- * dashboard too, and `/initiatives` and `/changelog` are still workspace-level
- * pages. Those need a picker; inside a board there is nothing to pick.
+ * that create them are not all inside a board. The header panels — personas,
+ * the dictionary and initiatives — open on the dashboard too, and `/changelog`
+ * is still a workspace-level page. Those need a picker; inside a board there is
+ * nothing to pick.
  *
  * `GET /boards` is already scoped server-side — every board for a system admin,
  * your memberships otherwise — so this needs no filtering of its own.

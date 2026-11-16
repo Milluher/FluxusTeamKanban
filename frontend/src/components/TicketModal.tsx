@@ -36,7 +36,6 @@ const OPTIONAL_FIELDS = [
   { name: 'epic', label: 'Epic' },
   { name: 'flow', label: 'Flow' },
   { name: 'assignedDate', label: 'Assigned Date' },
-  { name: 'initiativeId', label: 'Initiative' },
   { name: 'prdId', label: 'PRD' },
 ] as const;
 
@@ -773,29 +772,46 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                   // data loss.
                   label: 'Initiative',
                   name: 'initiativeId',
-                  optional: true,
+                  // Shown even when unset, unlike the other optional fields.
+                  // An initiative is the strategic goal a ticket exists to serve,
+                  // and it was the one association nobody made because it sat
+                  // behind "+ Add field" — invisible precisely when it was
+                  // needed, at the moment a ticket is being described. Its empty
+                  // state invites a choice rather than printing a bare "—", so
+                  // it earns its row.
+                  optional: false,
                   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6.1 4.4 2.3 7.2L12 16.4 5.8 20.8l2.3-7.2L2 9.2h7.6z"/></svg>,
                   editEl: (
-                    <select
-                      value={form.initiativeId}
-                      onChange={(e) => setForm({ ...form, initiativeId: e.target.value })}
-                      className="mt-1.5 w-full px-2.5 py-2 text-sm"
-                      style={inputStyle}
-                      {...inputFocusHandlers}
-                    >
-                      <option value="">None</option>
-                      {ticket.initiative &&
-                        !initiatives.some((i) => i.id === ticket.initiative!.id) && (
-                          <option value={ticket.initiative.id}>
-                            {ticket.initiative.title} (another board)
+                    <>
+                      <select
+                        value={form.initiativeId}
+                        onChange={(e) => setForm({ ...form, initiativeId: e.target.value })}
+                        className="mt-1.5 w-full px-2.5 py-2 text-sm"
+                        style={inputStyle}
+                        {...inputFocusHandlers}
+                      >
+                        <option value="">None</option>
+                        {ticket.initiative &&
+                          !initiatives.some((i) => i.id === ticket.initiative!.id) && (
+                            <option value={ticket.initiative.id}>
+                              {ticket.initiative.title} (another board)
+                            </option>
+                          )}
+                        {initiatives.map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.title}{i.status === 'achieved' ? ' (achieved)' : ''}
                           </option>
-                        )}
-                      {initiatives.map((i) => (
-                        <option key={i.id} value={i.id}>
-                          {i.title}{i.status === 'achieved' ? ' (achieved)' : ''}
-                        </option>
-                      ))}
-                    </select>
+                        ))}
+                      </select>
+                      {/* A picker holding only "None" looks broken. Initiatives
+                          belong to a board, so an empty list means this board has
+                          none yet — something to go and do, not a fault. */}
+                      {initiatives.length === 0 && !ticket.initiative && (
+                        <p className="mt-1.5 text-xs text-gray-500">
+                          This board has no initiatives yet. Open Initiatives in the header to add one.
+                        </p>
+                      )}
+                    </>
                   ),
                   viewEl: ticket.initiative ? (
                     <div className="mt-1.5 flex items-center gap-2 min-w-0">
@@ -806,7 +822,11 @@ export default function TicketModal({ ticket, boardId, board, currentUser, sprin
                         </span>
                       )}
                     </div>
-                  ) : <p className="mt-1.5 text-sm text-gray-500">—</p>,
+                  ) : (
+                    <p className="mt-1.5 text-sm" style={{ color: '#c73009' }}>
+                      Not set — choose one
+                    </p>
+                  ),
                 },
                 {
                   // §4 of Ticket Modification: the PRD this ticket implements.

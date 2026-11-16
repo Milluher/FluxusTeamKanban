@@ -80,6 +80,30 @@ blocks and its approvers: those are handed straight to the person the document
 names, so they are assigned and have no sprint. They appear in the backlog list
 with their owner shown.
 
+## Panels, not pages
+
+Three things are consulted *while* you work rather than read on their own, so
+each opens as a panel beside the page from a button in the header:
+
+- **Personas** — who we build for.
+- **Initiatives** — the strategic goals. An initiative is the "why" behind the
+  tickets in front of you, so reading one must not cost you the board or the
+  sprint you had open.
+- **Riverly Dictionary** — the board's vocabulary.
+
+All three are scoped the same way: inside a board they show that board's
+entries, and a new one goes to that board without asking. Outside one they show
+every board you can see and the form asks which board the entry is for. Only one
+is open at a time, since they share the same space.
+
+`/initiatives` was a page and is now a redirect to the dashboard, so an old
+bookmark still lands somewhere useful.
+
+A ticket's **Initiative** field is shown on every ticket, not hidden behind
+"+ Add field" like the other optional fields — it was the one association nobody
+made, because it was invisible at exactly the moment a ticket was being
+described.
+
 ## Products, blocks and PRDs
 
 A project in the Project Overview holds two kinds of thing, and an admin adds
