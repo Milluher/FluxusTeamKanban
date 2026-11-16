@@ -80,6 +80,32 @@ blocks and its approvers: those are handed straight to the person the document
 names, so they are assigned and have no sprint. They appear in the backlog list
 with their owner shown.
 
+## The board on a phone
+
+A horizontally scrolling board made of draggable cards is the hardest thing in
+this app to get right on touch, because the two gestures compete for the same
+swipe. How that is resolved:
+
+- **Drag activation differs by input.** A mouse drags after 8px of movement; a
+  finger has to **press and hold for 220ms** first. With a single pointer sensor
+  and a distance threshold, every attempt to scroll the board sideways picked up
+  a ticket instead — the board is almost entirely cards, so there was nothing
+  safe to swipe. Cards are `touch-action: manipulation` rather than `none` for
+  the same reason: panning has to stay with the browser until the hold fires.
+- **A column pager** (`BoardColumnPager`) sits above the board on phones only:
+  every column, its tally, and which one you are on, with a tap to jump there.
+  One column fills a narrow screen, so without it you cannot tell how many
+  columns exist or where the work has piled up.
+- **Columns are 86vw**, not full width, so the next one is visibly cut off —
+  nobody swipes a board they think they can already see.
+- **Scroll snapping is phone-only**, which turns the board into a pager there
+  while leaving the scroll wheel alone on a wide screen.
+- **`100dvh`, not `100vh`**, for the board's height, so mobile Safari's toolbars
+  do not add a phantom vertical scroll.
+
+Dragging is never the only way to move a ticket: the **Status** field on an open
+ticket changes its column, which is the faster route on a phone regardless.
+
 ## Panels, not pages
 
 Four things are consulted *while* you work rather than read on their own, so

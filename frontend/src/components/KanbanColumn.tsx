@@ -11,15 +11,27 @@ interface Props {
   onAddTicket: (columnId: string) => void;
   boardId: string;
   activeMemberIds: Set<string>;
+  /**
+   * DOM id, so the column pager on mobile can scroll this column into view.
+   * Optional: nothing else needs to address a column from outside.
+   */
+  domId?: string;
 }
 
-export default function KanbanColumn({ column, onTicketClick, onAddTicket, activeMemberIds }: Props) {
+export default function KanbanColumn({ column, onTicketClick, onAddTicket, activeMemberIds, domId }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   const cfg = columnStyle(column.name);
 
   return (
-    <div className="flex flex-col w-72 flex-shrink-0 board-column-snap">
+    // 86vw on a phone rather than a fixed width, so the next column is visibly
+    // cut off at the edge. A column that exactly fills the screen looks like the
+    // whole board, and nobody swipes a board they think they can already see.
+    <div
+      id={domId}
+      data-column-name={column.name}
+      className="flex flex-col w-[86vw] max-w-[18rem] sm:w-72 flex-shrink-0 board-column-snap"
+    >
       {/* Column Header */}
       <div className="flex items-center justify-between mb-2.5 px-1">
         <div className="flex items-center gap-2">

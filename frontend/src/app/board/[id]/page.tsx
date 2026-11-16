@@ -8,7 +8,8 @@ import {
   DragOverEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -31,6 +32,7 @@ import InviteMemberModal from '@/components/InviteMemberModal';
 import PresenceTracker, { PresentUser } from '@/components/PresenceTracker';
 import BoardInfo from '@/components/BoardInfo';
 import BacklogSection from '@/components/BacklogSection';
+import BoardColumnPager from '@/components/BoardColumnPager';
 import AppHeader from '@/components/AppHeader';
 import BoardToolbar from '@/components/BoardToolbar';
 import Avatar from '@/components/Avatar';
@@ -86,8 +88,27 @@ export default function BoardPage() {
   // Keep boardRef always pointing at latest board so drag handlers can read current state
   useEffect(() => { boardRef.current = board; }, [board]);
 
+  /**
+   * Mouse and touch are separated on purpose, because the gesture that starts a
+   * drag cannot be the same on both.
+   *
+   * With one PointerSensor and a distance threshold, any 8px swipe that began on
+   * a card became a drag — and on a phone the board is a horizontally scrolling
+   * strip of columns made almost entirely of cards, so scrolling it sideways was
+   * nearly impossible. Every attempt picked a ticket up instead.
+   *
+   * So: a mouse drags after 8px of movement, as before. A finger has to press
+   * and hold for 220ms first, which is long enough that a flick scrolls and
+   * short enough not to feel broken. `tolerance` lets the finger wander 8px
+   * during that hold without cancelling — nobody holds perfectly still.
+   *
+   * No KeyboardSensor: it activates on Enter and Space, which is what opens a
+   * ticket from its card. Taking those keys for dragging would cost keyboard
+   * users the ability to open anything.
+   */
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
   );
 
   // Multi-container collision detection: prefer pointer-within (accurate column detection),
@@ -445,6 +466,9 @@ export default function BoardPage() {
       // on the next load.
     }
   };
+
+  /** The DOM id a column is rendered with, so the mobile pager can reach it. */
+  const columnDomId = useCallback((columnId: string) => `board-col-${columnId}`, []);
 
   const openCreateTicket = (columnId: string) => {
     setCreateColumnId(columnId);
@@ -1047,6 +1071,11 @@ export default function BoardPage() {
         </div>
       ) : (
         /* The ticket board of one sprint */
+        <>
+        <BoardColumnPager
+          columns={visibleColumns.map((c) => ({ id: c.id, name: c.name, count: c.tickets.length }))}
+          domId={columnDomId}
+        />
         <div className="flex-1 overflow-x-auto pb-4 board-scroll">
           {filterNotice}
           <DndContext
@@ -1056,13 +1085,14 @@ export default function BoardPage() {
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6" style={{ minHeight: 'calc(100vh - 160px)' }}>
+            <div className="board-min-h flex gap-3 sm:gap-4 h-full px-4 sm:px-6 pt-4 sm:pt-6 pb-6">
               {(() => {
                 const activeMemberIds = new Set(board.members.map((m) => m.user.id));
                 return visibleColumns.map((col) => (
                   <KanbanColumn
                     key={col.id}
                     column={col}
+                    domId={columnDomId(col.id)}
                     onTicketClick={(ticket) => setSelectedTicket(ticket)}
                     onAddTicket={openCreateTicket}
                     boardId={boardId}
@@ -1076,6 +1106,7 @@ export default function BoardPage() {
             </DragOverlay>
           </DndContext>
         </div>
+        </>
       )}
 
       {/* Modals */}
