@@ -6,11 +6,11 @@ import { Persona, Prd, PrdAdminBlock, PrdClassification, User } from '@/types';
 import { PRD_CLASSIFICATIONS, PRD_SECTIONS, missingBeforePublish, sectionsFilled } from '@/lib/prdSections';
 import {
   approvalBlockedReason,
-  approvalCount,
   approvalState,
   approverShortfall,
   isWritable,
 } from '@/lib/prdApproval';
+import { prdBadge } from '@/lib/prdBadge';
 import { canExportPrd, downloadPrdPdf } from '@/lib/prdPdf';
 import { formatTimestamp } from '@/lib/formatDate';
 
@@ -112,9 +112,7 @@ export default function PrdBuilderModal({
   // author can act on feedback where they are. Mirrors the server.
   const writable = isWritable(prd);
   const editable = canEdit && writable;
-  const state = approvalState(prd);
-  const changesRequested = state === 'changes_requested';
-  const counts = approvalCount(prd);
+  const changesRequested = approvalState(prd) === 'changes_requested';
   const shortfall = approverShortfall(prd);
   const myApproval = prd.approvers.find((a) => a.userId === currentUser?.id);
   // §16 must be complete before anyone signs the document off. The server
@@ -388,12 +386,7 @@ export default function PrdBuilderModal({
                 {draft.title || 'Untitled PRD'}
               </h2>
               {(() => {
-                const badge =
-                  !published ? { label: 'Draft', bg: '#fffbeb', fg: '#b45309', bd: '#fcd34d' }
-                  : state === 'approved' ? { label: 'Approved', bg: '#ecfdf5', fg: '#047857', bd: '#a7f3d0' }
-                  : state === 'changes_requested' ? { label: 'Changes requested', bg: '#fef2f2', fg: '#b91c1c', bd: '#fecaca' }
-                  : state === 'pending' ? { label: `${counts.approved} of ${counts.total} approved`, bg: '#eff6ff', fg: '#1d4ed8', bd: '#bfdbfe' }
-                  : { label: 'Published', bg: '#ecfdf5', fg: '#047857', bd: '#a7f3d0' };
+                const badge = prdBadge(prd);
                 return (
                   <span
                     className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0"
@@ -406,6 +399,9 @@ export default function PrdBuilderModal({
             </div>
             <p className="text-xs text-gray-500">
               {prd.board.name}
+              {/* Where it hangs off the canvas. A product names its project; the
+                  documents that predate products name their feature. */}
+              {prd.canvasProject ? ` · ${prd.canvasProject.name}` : ''}
               {prd.canvasFeature ? ` · ${prd.canvasFeature.text}` : ''}
               {' · '}
               {published && prd.publishedAt

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CanvasFeature, CanvasProject, User } from '@/types';
+import { CanvasFeature, CanvasProject, Prd, User } from '@/types';
 
 const get = vi.fn();
 const patch = vi.fn();
@@ -17,9 +17,8 @@ const admin: User = { id: 'u1', name: 'Alice Doe', email: 'a@f.com', role: 'admi
 const feature = (over: Partial<CanvasFeature> = {}): CanvasFeature => ({
   id: 'f1',
   blockId: 'bl1',
-  text: 'Self-serve onboarding',
+  text: 'Apple Pay at checkout',
   active: true,
-  requiresPrd: true,
   order: 0,
   ...over,
 });
@@ -32,31 +31,16 @@ const project = (features: CanvasFeature[] = []): CanvasProject => ({
   blocks: [{ id: 'bl1', projectId: 'p1', title: 'Onboarding', order: 0, features }],
 });
 
-const open = (projects: CanvasProject[] = [project()], isAdmin = true) => {
-  get.mockImplementation((url: string) =>
-    Promise.resolve({ data: url.endsWith('/canvas') ? projects : [] })
-  );
-  return renderToDom(<BoardCanvas boardId="b1" isAdmin={isAdmin} currentUser={admin} members={[{ user: admin }]} />);
-};
-
-const button = (container: HTMLElement, text: string) =>
-  Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.trim() === text);
-
-/** The two choice cards carry a description as well as a label. */
-const choice = (container: HTMLElement, label: string) =>
-  Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.startsWith(label));
-
-/**
- * Starting a PRD opens the builder, which reads every section and every list on
- * the document — so the stub has to be a whole PRD, not just an id.
- */
-const newPrd = (body: Record<string, unknown>) => ({
+/** A whole PRD: the builder reads every section and list on the document. */
+const prd = (over: Partial<Prd> = {}): Prd => ({
   id: 'prd1',
-  title: String(body.title ?? ''),
+  title: 'Checkout 2.0',
   version: null,
   status: 'draft',
   boardId: 'b1',
-  canvasFeatureId: body.canvasFeatureId ?? null,
+  canvasProjectId: null,
+  canvasProject: null,
+  canvasFeatureId: null,
   createdById: admin.id,
   createdBy: { id: admin.id, name: admin.name },
   board: { id: 'b1', name: 'Roadmap' },
@@ -66,142 +50,210 @@ const newPrd = (body: Record<string, unknown>) => ({
   approvers: [],
   createdAt: '2026-11-01T00:00:00.000Z',
   updatedAt: '2026-11-01T00:00:00.000Z',
+  ...over,
 });
 
-/** Types a feature name into a block's inline field and presses Enter. */
-const startAdding = async (container: HTMLElement, text: string) => {
-  const input = container.querySelector(
-    'input[aria-label="Add a feature to Onboarding"]'
-  ) as HTMLInputElement;
-  typeInto(input, text);
-  await act(async () => {
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  });
-  await flush();
+const open = (
+  { projects = [project()], prds = [] as Prd[], isAdmin = true } = {}
+) => {
+  get.mockImplementation((url: string) =>
+    Promise.resolve({ data: url.endsWith('/canvas') ? projects : url === '/prds' ? prds : [] })
+  );
+  return renderToDom(
+    <BoardCanvas boardId="b1" isAdmin={isAdmin} currentUser={admin} members={[{ user: admin }]} />
+  );
 };
 
-describe('BoardCanvas — adding a feature', () => {
-  beforeEach(() => {
-    get.mockReset();
-    patch.mockReset().mockResolvedValue({ data: {} });
-    post.mockReset().mockImplementation((url, body) =>
-      Promise.resolve({
-        data: url === '/prds'
-          ? newPrd(body)
-          : { id: 'new', blockId: 'bl1', order: 1, active: true, ...body },
-      })
-    );
-    del.mockReset().mockResolvedValue({ data: {} });
-  });
+const button = (container: HTMLElement, text: string) =>
+  Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.trim() === text);
 
-  it('asks whether the feature needs a PRD before creating anything', async () => {
+const featureField = (container: HTMLElement) =>
+  container.querySelector('input[aria-label="Add a feature to Onboarding"]') as HTMLInputElement;
+
+beforeEach(() => {
+  get.mockReset();
+  patch.mockReset().mockResolvedValue({ data: {} });
+  post.mockReset().mockImplementation((url, body) =>
+    Promise.resolve({
+      data: url === '/prds'
+        ? prd({ ...body, id: 'new-prd' })
+        : { id: 'new', blockId: 'bl1', order: 1, active: true, ...body },
+    })
+  );
+  del.mockReset().mockResolvedValue({ data: {} });
+});
+
+describe('BoardCanvas — adding a feature to a block', () => {
+  it('adds the feature and nothing else', async () => {
+    // A feature is one line on the canvas. It used to start a PRD, which put a
+    // long document behind a bullet point.
     const { container, unmount } = open();
     await flush();
-    await startAdding(container, 'Passkey sign-in');
 
-    expect(post).not.toHaveBeenCalled();
-    expect(container.textContent).toContain('Does this need a PRD?');
-    expect(container.textContent).toContain('Mini feature');
-    unmount();
-  });
-
-  it('creates a mini feature without starting a PRD', async () => {
-    const { container, unmount } = open();
-    await flush();
-    await startAdding(container, 'Rename the CTA');
-
-    choice(container, 'Mini feature')!.click();
-    await flush();
-    button(container, 'Add feature')!.click();
-    await flush();
-
-    expect(post).toHaveBeenCalledWith('/boards/b1/canvas/blocks/bl1/features', {
-      text: 'Rename the CTA',
-      requiresPrd: false,
+    const input = featureField(container);
+    typeInto(input, 'Apple Pay');
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     });
-    // The builder is the thing a mini feature is meant to skip.
+    await flush();
+
+    expect(post).toHaveBeenCalledWith('/boards/b1/canvas/blocks/bl1/features', { text: 'Apple Pay' });
     expect(post).not.toHaveBeenCalledWith('/prds', expect.anything());
     unmount();
   });
 
-  it('starts the PRD when the feature is said to need one', async () => {
+  it('asks nothing about PRDs on the way', async () => {
     const { container, unmount } = open();
     await flush();
-    await startAdding(container, 'Passkey sign-in');
-
-    // "Needs a PRD" is the default, so the button goes straight through.
-    button(container, 'Add & start PRD')!.click();
+    const input = featureField(container);
+    typeInto(input, 'Apple Pay');
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
     await flush();
-
-    expect(post).toHaveBeenCalledWith('/boards/b1/canvas/blocks/bl1/features', {
-      text: 'Passkey sign-in',
-      requiresPrd: true,
-    });
-    expect(post).toHaveBeenCalledWith('/prds', {
-      boardId: 'b1',
-      canvasFeatureId: 'new',
-      title: 'Passkey sign-in',
-    });
+    expect(container.textContent).not.toContain('Does this need a PRD?');
     unmount();
   });
 
-  it('creates nothing when the question is dismissed', async () => {
+  it('keeps what was typed when the field is left, rather than discarding it', async () => {
     const { container, unmount } = open();
     await flush();
-    await startAdding(container, 'Half a thought');
-
-    button(container, 'Cancel')!.click();
+    const input = featureField(container);
+    typeInto(input, 'Saved on blur');
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    });
     await flush();
-    expect(post).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith('/boards/b1/canvas/blocks/bl1/features', { text: 'Saved on blur' });
+    unmount();
+  });
+
+  it('offers no PRD on a feature that has none', async () => {
+    const { container, unmount } = open({ projects: [project([feature()])] });
+    await flush();
+    expect(button(container, '+ PRD')).toBeUndefined();
+    expect(button(container, 'PRD')).toBeUndefined();
     unmount();
   });
 });
 
-describe('BoardCanvas — how a feature reads afterwards', () => {
-  beforeEach(() => {
-    get.mockReset();
-    patch.mockReset().mockResolvedValue({ data: {} });
-    post.mockReset().mockImplementation((_url, body) => Promise.resolve({ data: newPrd(body) }));
-    del.mockReset().mockResolvedValue({ data: {} });
-  });
-
-  it('marks a mini feature as settled rather than as a missing PRD', async () => {
-    const { container, unmount } = open([project([feature({ requiresPrd: false })])]);
+describe('BoardCanvas — products', () => {
+  it('lists the products of the project being viewed, with where each stands', async () => {
+    const { container, unmount } = open({
+      prds: [
+        prd({ id: 'mine', title: 'Checkout 2.0', canvasProjectId: 'p1' }),
+        prd({ id: 'elsewhere', title: 'Other project', canvasProjectId: 'p2' }),
+      ],
+    });
     await flush();
-    expect(button(container, 'Mini')).toBeDefined();
-    expect(button(container, '+ PRD')).toBeUndefined();
+    expect(container.textContent).toContain('Checkout 2.0');
+    expect(container.textContent).toContain('Draft');
+    expect(container.textContent).not.toContain('Other project');
     unmount();
   });
 
-  it('still invites a PRD on a feature that was said to need one', async () => {
-    const { container, unmount } = open([project([feature()])]);
-    await flush();
-    expect(button(container, '+ PRD')).toBeDefined();
-    unmount();
-  });
-
-  it('records the change of mind when a mini feature gets a PRD after all', async () => {
-    // Otherwise the feature would still claim it needs nothing while a document
-    // hangs off it.
-    const { container, unmount } = open([project([feature({ requiresPrd: false })])]);
-    await flush();
-    button(container, 'Mini')!.click();
+  it('creates the product and opens its PRD', async () => {
+    const { container, unmount } = open();
     await flush();
 
-    expect(patch).toHaveBeenCalledWith('/boards/b1/canvas/features/f1', { requiresPrd: true });
+    button(container, 'Product')!.click();
+    await flush();
+    typeInto(container.querySelector('input[type="text"]') as HTMLInputElement, 'Checkout 2.0');
+    await flush();
+    button(container, 'Create & open PRD')!.click();
+    await flush();
+
     expect(post).toHaveBeenCalledWith('/prds', {
       boardId: 'b1',
-      canvasFeatureId: 'f1',
-      title: 'Self-serve onboarding',
+      canvasProjectId: 'p1',
+      title: 'Checkout 2.0',
     });
+    // The builder is the point of a product, so it opens on creation.
+    expect(container.querySelector('[aria-label^="PRD:"]')).not.toBeNull();
     unmount();
   });
 
-  it('shows a member a mini feature as a label, not a button', async () => {
-    const { container, unmount } = open([project([feature({ requiresPrd: false })])], false);
+  it('says what naming a product is about to do', async () => {
+    // Creating one jumps straight into a long form, which is a bigger step than
+    // the other prompts on this canvas take.
+    const { container, unmount } = open();
     await flush();
-    expect(button(container, 'Mini')).toBeUndefined();
-    expect(container.textContent).toContain('Mini');
+    button(container, 'Product')!.click();
+    await flush();
+    expect(container.textContent).toContain('opens the builder');
+    unmount();
+  });
+
+  it('opens an existing product when its card is clicked', async () => {
+    const { container, unmount } = open({
+      prds: [prd({ title: 'Checkout 2.0', canvasProjectId: 'p1' })],
+    });
+    await flush();
+    button(container, 'Checkout 2.0Draft')!.click();
+    await flush();
+    expect(container.querySelector('[aria-label="PRD: Checkout 2.0"]')).not.toBeNull();
+    unmount();
+  });
+
+  it('keeps adding products to admins', async () => {
+    const { container, unmount } = open({
+      prds: [prd({ title: 'Checkout 2.0', canvasProjectId: 'p1' })],
+      isAdmin: false,
+    });
+    await flush();
+    // A member still sees the product and can read it.
+    expect(container.textContent).toContain('Checkout 2.0');
+    expect(button(container, 'Product')).toBeUndefined();
+    unmount();
+  });
+
+  it('shows a member no empty Products row to wonder about', async () => {
+    const { container, unmount } = open({ isAdmin: false });
+    await flush();
+    expect(container.textContent).not.toContain('Products');
+    unmount();
+  });
+});
+
+describe('BoardCanvas — the PRDs features already had', () => {
+  const attached = prd({ id: 'legacy', title: 'Apple Pay at checkout', canvasFeatureId: 'f1' });
+
+  it('still opens from the feature it was written for', async () => {
+    // These predate products. Stranding them would lose the thinking behind a
+    // line that is still on the canvas.
+    const { container, unmount } = open({
+      projects: [project([feature()])],
+      prds: [attached],
+    });
+    await flush();
+    const badge = button(container, 'PRD')!;
+    expect(badge).toBeDefined();
+    badge.click();
+    await flush();
+    expect(container.querySelector('[aria-label="PRD: Apple Pay at checkout"]')).not.toBeNull();
+    unmount();
+  });
+
+  it('shows one to a member too, not only to admins', async () => {
+    const { container, unmount } = open({
+      projects: [project([feature()])],
+      prds: [attached],
+      isAdmin: false,
+    });
+    await flush();
+    expect(button(container, 'PRD')).toBeDefined();
+    unmount();
+  });
+
+  it('does not list a feature PRD among the products', async () => {
+    const { container, unmount } = open({
+      projects: [project([feature()])],
+      prds: [attached],
+    });
+    await flush();
+    // It belongs to no project, so the Products row offers only the add card.
+    const productsRow = container.querySelector('h4')?.parentElement?.parentElement;
+    expect(productsRow?.textContent).not.toContain('Apple Pay at checkout');
     unmount();
   });
 });

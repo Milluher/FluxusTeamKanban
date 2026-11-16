@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
 import socket from '@/lib/socket';
 import { CanvasProject, CanvasBlock, CanvasFeature, Prd, User } from '@/types';
+import { prdBadge } from '@/lib/prdBadge';
 import PrdBuilderModal from './PrdBuilderModal';
 
 interface Props {
@@ -25,9 +26,9 @@ const NAVY = '#1a1f3c';
 type ModalState =
   | { kind: 'add-project' }
   | { kind: 'rename-project'; project: CanvasProject }
+  | { kind: 'add-product' }
   | { kind: 'add-block' }
   | { kind: 'rename-block'; block: CanvasBlock }
-  | { kind: 'add-feature'; block: CanvasBlock }
   | { kind: 'edit-feature'; block: CanvasBlock; feature: CanvasFeature }
   | { kind: 'delete-project'; project: CanvasProject }
   | { kind: 'delete-block'; block: CanvasBlock }
@@ -74,9 +75,6 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
   const [modal, setModal] = useState<ModalState>(null);
   const [modalInput, setModalInput] = useState('');
   const [modalBusy, setModalBusy] = useState(false);
-  // The add-feature step's second question: is this one worth a PRD? Held
-  // separately from the text so the two can be answered in either order.
-  const [featureNeedsPrd, setFeatureNeedsPrd] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -108,6 +106,15 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
   }, [boardId, load]);
 
   const active = projects.find((p) => p.id === activeId) ?? null;
+
+  // This project's products, newest first — the order `GET /prds` returns is by
+  // last edit, which jumps a card around the grid every time somebody types in
+  // it. A list you are picking from should hold still.
+  const products = active
+    ? prds
+        .filter((p) => p.canvasProjectId === active.id)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    : [];
 
   // Helper: mutate a single block within the active project
   const updateBlock = (blockId: string, fn: (b: CanvasBlock) => CanvasBlock) => {
@@ -159,74 +166,41 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
     updateBlock(block.id, (b) => ({ ...b, features: b.features.map((f) => (f.id === featureId ? { ...f, text } : f)) }));
   };
 
-  // Adding a feature asks two questions, not one: what it is, and whether it is
-  // worth a PRD.
-  //
-  // Starting a document for every feature meant the builder opened over trivia —
-  // a copy change, a toggle — and the half-written PRDs that left behind made
-  // the real ones harder to find. So the creator says which kind of thing they
-  // are adding, and a "mini feature" is simply listed on the canvas.
-  //
-  // The feature is created first and the PRD second, so a failure to start the
-  // document leaves a feature rather than nothing — the canvas keeps working
-  // whether or not the builder does.
-  const addFeature = async (block: CanvasBlock, text: string, requiresPrd: boolean) => {
+  /**
+   * Adds a feature to a block. Nothing more than that.
+   *
+   * A feature used to start a PRD. That put the document at the wrong level: a
+   * block is a heading and its features are the bullet points under it — a
+   * sentence each — while a PRD has scope, personas, approvers and sign-off.
+   * Writing one per bullet point meant the builder opened over trivia. A
+   * document now belongs to a *product*, added alongside the blocks.
+   */
+  const addFeature = async (block: CanvasBlock, text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     setFeatureDrafts((d) => ({ ...d, [block.id]: '' }));
     const { data } = await api.post<CanvasFeature>(
       `/boards/${boardId}/canvas/blocks/${block.id}/features`,
-      { text: trimmed, requiresPrd }
+      { text: trimmed }
     );
     updateBlock(block.id, (b) => ({ ...b, features: [...b.features, data] }));
-    if (!requiresPrd) return;
-
-    try {
-      const { data: prd } = await api.post<Prd>('/prds', {
-        boardId,
-        canvasFeatureId: data.id,
-        title: trimmed,
-      });
-      setPrds((prev) => [prd, ...prev]);
-      setOpenPrd(prd);
-    } catch {
-      // The feature is already on the canvas and its PRD can be started from
-      // the feature itself. Not worth an error dialog over.
-    }
   };
 
   /**
-   * Opens the PRD for a feature, starting one if it has none yet.
+   * Starts a product: a PRD attached to this project, opened for writing.
    *
-   * A mini feature can turn out to deserve a document after all, so this works
-   * on one too — and records that, rather than leaving the feature still marked
-   * as needing nothing while a PRD hangs off it.
+   * The name is the document's title, which is all a draft needs — "required"
+   * is a condition of publishing, and the builder opens on the rest.
    */
-  const openPrdForFeature = async (feature: CanvasFeature) => {
-    const existing = prds.find((p) => p.canvasFeatureId === feature.id);
-    if (existing) { setOpenPrd(existing); return; }
-    if (!isAdmin) return;
-    try {
-      if (!feature.requiresPrd) {
-        await api.patch(`/boards/${boardId}/canvas/features/${feature.id}`, { requiresPrd: true });
-        setProjects((prev) => prev.map((p) => ({
-          ...p,
-          blocks: p.blocks.map((b) => ({
-            ...b,
-            features: b.features.map((f) => (f.id === feature.id ? { ...f, requiresPrd: true } : f)),
-          })),
-        })));
-      }
-      const { data: prd } = await api.post<Prd>('/prds', {
-        boardId,
-        canvasFeatureId: feature.id,
-        title: feature.text,
-      });
-      setPrds((prev) => [prd, ...prev]);
-      setOpenPrd(prd);
-    } catch {
-      // Nothing to do: the canvas is still usable without the document.
-    }
+  const doAddProduct = async (name: string) => {
+    if (!active) return;
+    const { data: prd } = await api.post<Prd>('/prds', {
+      boardId,
+      canvasProjectId: active.id,
+      title: name,
+    });
+    setPrds((prev) => [prd, ...prev]);
+    setOpenPrd(prd);
   };
 
   const deleteFeature = async (block: CanvasBlock, featureId: string) => {
@@ -246,18 +220,10 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
   };
 
   // --- Modal helpers ---
-  const openModal = (m: ModalState, initial = '') => {
-    setModal(m);
-    setModalInput(initial);
-    // Every feature starts out expecting a PRD, which is the answer that costs
-    // nothing to change: a document can be abandoned, a decision never recorded
-    // cannot be recovered.
-    if (m?.kind === 'add-feature') setFeatureNeedsPrd(true);
-  };
+  const openModal = (m: ModalState, initial = '') => { setModal(m); setModalInput(initial); };
   const closeModal = () => { if (!modalBusy) { setModal(null); setModalInput(''); } };
 
   const isConfirmModal = modal?.kind === 'delete-project' || modal?.kind === 'delete-block';
-  const isFeatureModal = modal?.kind === 'add-feature';
 
   const submitModal = async () => {
     if (!modal) return;
@@ -268,9 +234,9 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
       switch (modal.kind) {
         case 'add-project': await doAddProject(value); break;
         case 'rename-project': await doRenameProject(modal.project, value); break;
+        case 'add-product': await doAddProduct(value); break;
         case 'add-block': await doAddBlock(value); break;
         case 'rename-block': await doRenameBlock(modal.block, value); break;
-        case 'add-feature': await addFeature(modal.block, value, featureNeedsPrd); break;
         case 'edit-feature': await doEditFeature(modal.block, modal.feature.id, value); break;
         case 'delete-project': await doDeleteProject(modal.project); break;
         case 'delete-block': await doDeleteBlock(modal.block); break;
@@ -359,9 +325,79 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
         <div className="px-4 sm:px-6 pb-4">
           {projects.length === 0 ? (
             <EmptyState isAdmin={isAdmin} onAdd={() => openModal({ kind: 'add-project' })} />
-          ) : !active ? null : active.blocks.length === 0 && !isAdmin ? (
-            <p className="text-xs text-gray-500 py-6 text-center">No overview blocks yet for this project.</p>
+          ) : !active ? null : active.blocks.length === 0 && products.length === 0 && !isAdmin ? (
+            <p className="text-xs text-gray-500 py-6 text-center">Nothing in this project's overview yet.</p>
           ) : (
+            <>
+            {/* Products — the documents. Their own row above the blocks, and
+                labelled, because a product and a block are different kinds of
+                thing: one is a PRD, the other is a heading with a list under it.
+                Each gets its own labelled "add", so the choice is made by
+                clicking where the thing will appear rather than by picking an
+                option out of a menu that has to explain itself. */}
+            {(products.length > 0 || isAdmin) && (
+              <div className="mb-4">
+                <div className="flex items-baseline gap-2 mb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wide" style={{ color: NAVY }}>
+                    Products
+                  </h4>
+                  <span className="text-[11px] text-gray-500">each one has a PRD</span>
+                </div>
+                <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {products.map((prd) => {
+                    const badge = prdBadge(prd);
+                    return (
+                      <button
+                        key={prd.id}
+                        type="button"
+                        onClick={() => setOpenPrd(prd)}
+                        aria-label={`Open the PRD for ${prd.title}`}
+                        className="text-left rounded-xl border border-gray-200 bg-white px-3 py-2.5 hover:border-gray-300 hover:shadow-sm transition-all"
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <svg
+                            className="flex-shrink-0" width="12" height="12" viewBox="0 0 24 24"
+                            fill="none" stroke={ACCENT_TEXT} strokeWidth="2"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                          <span className="text-xs font-bold truncate" style={{ color: NAVY }}>
+                            {prd.title}
+                          </span>
+                        </span>
+                        <span
+                          className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
+                          style={{ background: badge.bg, color: badge.fg, borderColor: badge.bd }}
+                        >
+                          {badge.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {isAdmin && (
+                    <button
+                      onClick={() => openModal({ kind: 'add-product' })}
+                      className="rounded-xl border border-dashed border-gray-300 flex items-center justify-center gap-1.5 py-4 text-gray-500 hover:border-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      <span className="text-xs font-semibold">Product</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(active.blocks.length > 0 || isAdmin) && (
+              <div className="flex items-baseline gap-2 mb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wide" style={{ color: NAVY }}>
+                  Blocks
+                </h4>
+                <span className="text-[11px] text-gray-500">the features this project covers</span>
+              </div>
+            )}
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {active.blocks.map((block) => (
                 <div
@@ -430,45 +466,24 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
                           );
                         })()}
                         {(() => {
-                          // The document behind the feature: its state when it
-                          // exists, an invitation to start it when it does not.
-                          //
-                          // A mini feature says so instead. It is still a button
-                          // for an admin, because a feature that looked small can
-                          // turn out to need writing up — but it reads as a
-                          // finished answer rather than an outstanding one.
+                          // A feature no longer has a document of its own, so
+                          // there is nothing to offer here — except on the
+                          // features that were given one under the old
+                          // arrangement. Those keep their way in: the document
+                          // exists and is still the thinking behind this line.
                           const prd = prds.find((p) => p.canvasFeatureId === f.id);
-                          const mini = !prd && f.requiresPrd === false;
-                          if (!prd && !isAdmin) {
-                            return mini ? (
-                              <span
-                                className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
-                                style={{ background: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}
-                              >
-                                Mini
-                              </span>
-                            ) : null;
-                          }
+                          if (!prd) return null;
+                          const badge = prdBadge(prd);
                           return (
                             <button
                               type="button"
-                              onClick={() => openPrdForFeature(f)}
-                              title={mini ? 'A mini feature — start a PRD anyway' : undefined}
-                              aria-label={
-                                prd ? `Open PRD for ${f.text}`
-                                : mini ? `${f.text} is a mini feature — start a PRD anyway`
-                                : `Start a PRD for ${f.text}`
-                              }
+                              onClick={() => setOpenPrd(prd)}
+                              title={`PRD — ${badge.label}`}
+                              aria-label={`Open the PRD for ${f.text}`}
                               className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-colors"
-                              style={prd
-                                ? (prd.status === 'published'
-                                    ? { background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' }
-                                    : { background: '#fffbeb', color: '#b45309', borderColor: '#fcd34d' })
-                                : mini
-                                ? { background: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }
-                                : { background: 'white', color: '#9ca3af', borderColor: '#e5e7eb' }}
+                              style={{ background: badge.bg, color: badge.fg, borderColor: badge.bd }}
                             >
-                              {prd ? (prd.status === 'published' ? 'PRD' : 'PRD draft') : mini ? 'Mini' : '+ PRD'}
+                              PRD
                             </button>
                           );
                         })()}
@@ -504,21 +519,16 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
                       </div>
                     ))}
 
-                    {/* Add feature (admin).
-                        Enter opens the step that asks whether it needs a PRD,
-                        rather than creating it there and then. Leaving the field
-                        creates nothing — the text stays put until the question
-                        has been answered, since the answer decides what happens
-                        next and is not one to guess at on somebody's behalf. */}
+                    {/* Add feature (admin). A feature is one line on the
+                        canvas, so adding one is one keystroke — Enter commits
+                        it, and leaving the field commits it too rather than
+                        discarding what was typed. */}
                     {isAdmin && (
                       <input
                         value={featureDrafts[block.id] ?? ''}
                         onChange={(e) => setFeatureDrafts((d) => ({ ...d, [block.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key !== 'Enter') return;
-                          const text = (featureDrafts[block.id] ?? '').trim();
-                          if (text) openModal({ kind: 'add-feature', block }, text);
-                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') addFeature(block, featureDrafts[block.id] ?? ''); }}
+                        onBlur={() => addFeature(block, featureDrafts[block.id] ?? '')}
                         placeholder="+ Add feature"
                         aria-label={`Add a feature to ${block.title}`}
                         className="w-full text-xs px-2 py-1 mt-1 rounded-md border border-transparent hover:border-gray-200 focus:border-gray-300 outline-none bg-transparent focus:bg-white transition-all"
@@ -538,10 +548,11 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
-                  <span className="text-xs font-semibold">Add block</span>
+                  <span className="text-xs font-semibold">Block</span>
                 </button>
               )}
             </div>
+            </>
           )}
         </div>
       )}
@@ -596,38 +607,15 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
                   onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
 
-                {/* The question that decides whether the builder opens next.
-                    Asked here rather than assumed, because a PRD nobody wanted
-                    is a draft that sits unfinished and makes the real ones
-                    harder to find. */}
-                {isFeatureModal && (
-                  <fieldset className="space-y-2">
-                    <legend className="text-xs font-semibold text-gray-500 mb-1.5">
-                      Does this need a PRD?
-                    </legend>
-                    {FEATURE_KINDS.map((opt) => {
-                      const chosen = featureNeedsPrd === opt.needsPrd;
-                      return (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          onClick={() => setFeatureNeedsPrd(opt.needsPrd)}
-                          aria-pressed={chosen}
-                          className="w-full text-left p-3 rounded-xl border transition-all duration-150"
-                          style={{
-                            borderColor: chosen ? ACCENT : '#e5e7eb',
-                            background: chosen ? '#fff7f5' : 'white',
-                            boxShadow: chosen ? '0 0 0 2px rgba(232,57,14,0.15)' : 'none',
-                          }}
-                        >
-                          <span className="block text-xs font-bold" style={{ color: chosen ? ACCENT_TEXT : NAVY }}>
-                            {opt.label}
-                          </span>
-                          <span className="block text-xs leading-snug mt-0.5 text-gray-600">{opt.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </fieldset>
+                {/* Says what the button is about to do. Creating a product opens
+                    the builder, which is a bigger jump than the other prompts
+                    here make, and a modal that silently becomes a long form is
+                    disorientating. */}
+                {modal.kind === 'add-product' && (
+                  <p className="text-xs leading-relaxed text-gray-600">
+                    A product is the thing a PRD is written about. Naming it opens the
+                    builder, where you can fill in as much as you like now and the rest later.
+                  </p>
                 )}
 
                 <div className="flex gap-2">
@@ -640,8 +628,8 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
                   >
                     {modalBusy
                       ? 'Saving...'
-                      : isFeatureModal
-                      ? (featureNeedsPrd ? 'Add & start PRD' : 'Add feature')
+                      : modal.kind === 'add-product'
+                      ? 'Create & open PRD'
                       : 'Save'}
                   </button>
                 </div>
@@ -673,33 +661,12 @@ export default function BoardCanvas({ boardId, isAdmin, onCountChange, currentUs
   );
 }
 
-/**
- * The two kinds of thing that get added to a block.
- *
- * "Needs a PRD" leads, because the cost of the wrong answer is asymmetric: a
- * document started and abandoned is tidied away in a click, while a feature
- * nobody wrote up is only noticed when somebody needs the reasoning and it is
- * not there.
- */
-const FEATURE_KINDS = [
-  {
-    needsPrd: true,
-    label: 'Needs a PRD',
-    desc: 'Opens the builder now. For anything with scope, users or a decision behind it.',
-  },
-  {
-    needsPrd: false,
-    label: 'Mini feature',
-    desc: 'Listed on the canvas and nothing more. For small, self-explanatory changes.',
-  },
-];
-
 const MODAL_TITLES: Record<NonNullable<ModalState>['kind'], string> = {
   'add-project': 'New Project',
   'rename-project': 'Rename Project',
   'add-block': 'New Block',
+  'add-product': 'New Product',
   'rename-block': 'Rename Block',
-  'add-feature': 'Add Feature',
   'edit-feature': 'Edit Feature',
   'delete-project': 'Delete Project',
   'delete-block': 'Remove Block',
@@ -709,8 +676,8 @@ const MODAL_PLACEHOLDERS: Record<NonNullable<ModalState>['kind'], string> = {
   'add-project': 'e.g. Mobile App',
   'rename-project': 'Project name',
   'add-block': 'e.g. Security, Payments, Onboarding',
+  'add-product': 'e.g. Checkout 2.0',
   'rename-block': 'Block title',
-  'add-feature': 'What is the feature?',
   'edit-feature': 'Feature description',
   'delete-project': '',
   'delete-block': '',
@@ -722,7 +689,7 @@ function EmptyState({ isAdmin, onAdd }: { isAdmin: boolean; onAdd: () => void })
       <p className="text-sm font-semibold text-gray-500 mb-1">No project overview yet</p>
       <p className="text-xs text-gray-500 mb-3">
         {isAdmin
-          ? 'Add a project, then create blocks (e.g. Security) to show its available features.'
+          ? 'Add a project, then fill it with products (each with a PRD) and blocks (a heading with its features listed under it).'
           : 'An admin needs to set up the project overview.'}
       </p>
       {isAdmin && (

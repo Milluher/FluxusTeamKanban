@@ -52,6 +52,7 @@ const REQUIRED_TO_PUBLISH = [
 const prdInclude = {
   createdBy: { select: { id: true, name: true } },
   board: { select: { id: true, name: true } },
+  canvasProject: { select: { id: true, name: true } },
   canvasFeature: { select: { id: true, text: true } },
   personas: {
     include: { persona: { select: { id: true, name: true, segment: true } } },
@@ -305,11 +306,16 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Start one. Opens as a draft with nothing but a title, because the builder is
-// reached by adding a feature to the canvas — the author has not written
+// reached by adding a product to the canvas — the author has not written
 // anything yet at the moment it opens.
+//
+// `canvasProjectId` attaches it to a project as one of its products, which is
+// how documents are started now. `canvasFeatureId` is still accepted so the PRDs
+// already attached to a feature keep working; nothing in the UI creates one that
+// way any more.
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { boardId, canvasFeatureId } = req.body;
+    const { boardId, canvasFeatureId, canvasProjectId } = req.body;
     const title = (req.body.title || '').trim();
     if (!boardId) return res.status(400).json({ error: 'boardId required' });
     if (!title) return res.status(400).json({ error: 'A PRD needs a title' });
@@ -322,10 +328,26 @@ router.post('/', authenticate, async (req, res) => {
       if (existing) return res.status(409).json({ error: 'That feature already has a PRD' });
     }
 
+    // A product belongs to a project on the PRD's own board. Checked rather than
+    // trusted: the id arrives from the client, and attaching a document to
+    // another board's project would show it to people who cannot see the board
+    // it was written for.
+    if (canvasProjectId) {
+      const project = await prisma.canvasProject.findUnique({
+        where: { id: canvasProjectId },
+        select: { boardId: true },
+      });
+      if (!project) return res.status(404).json({ error: 'That project no longer exists' });
+      if (project.boardId !== boardId) {
+        return res.status(422).json({ error: 'That project belongs to another board' });
+      }
+    }
+
     const prd = await prisma.prd.create({
       data: {
         title,
         boardId,
+        canvasProjectId: canvasProjectId || null,
         canvasFeatureId: canvasFeatureId || null,
         version: (req.body.version || '').trim() || null,
         createdById: req.user.id,
