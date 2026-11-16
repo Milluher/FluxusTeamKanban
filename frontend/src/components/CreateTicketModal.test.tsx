@@ -16,7 +16,7 @@ vi.mock('next/dynamic', () => ({
   },
 }));
 
-const { renderToDom, flush, typeInto } = await import('@/test/render');
+const { renderToDom, flush, typeInto, chooseOption } = await import('@/test/render');
 const { draftKey, readDraft, writeDraft } = await import('@/lib/ticketDraft');
 const CreateTicketModal = (await import('./CreateTicketModal')).default;
 
@@ -130,6 +130,78 @@ describe('CreateTicketModal drafts', () => {
     await flush();
 
     expect(readDraft(key)).toMatchObject({ title: 'KYB onboarding' });
+    unmount();
+  });
+});
+
+describe('CreateTicketModal — the initiative a ticket serves', () => {
+  const initiatives = [
+    { id: 'i1', title: 'Cut onboarding to one day', status: 'in_progress' },
+    { id: 'i2', title: 'Retire the old admin', status: 'achieved' },
+  ];
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'u1', name: 'Alice Doe' }));
+    get.mockReset().mockImplementation((url: string) =>
+      Promise.resolve({ data: url === '/initiatives' ? initiatives : [] })
+    );
+    post.mockReset().mockResolvedValue({ data: { id: 't1', title: 'KYB' } as Ticket });
+  });
+
+  const picker = (container: HTMLElement) =>
+    container.querySelector('#new-ticket-initiative') as HTMLSelectElement;
+
+  it('offers the board\'s own initiatives while the ticket is being written', async () => {
+    // The field existed only once a ticket had been created, so the moment you
+    // actually knew which goal it served was the moment you could not say.
+    const { container, unmount } = await open();
+    expect(get).toHaveBeenCalledWith('/initiatives', { params: { boardId: 'b1' } });
+    expect(Array.from(picker(container).options).map((o) => o.value)).toEqual(['', 'i1', 'i2']);
+    unmount();
+  });
+
+  it('marks an achieved initiative, so it is not picked by accident', async () => {
+    const { container, unmount } = await open();
+    const achieved = Array.from(picker(container).options).find((o) => o.value === 'i2');
+    expect(achieved?.textContent).toContain('achieved');
+    unmount();
+  });
+
+  it('sends the chosen initiative with the new ticket', async () => {
+    const { container, unmount } = await open();
+    typeInto(titleInput(container), 'KYB onboarding');
+    chooseOption(picker(container), 'i1');
+    await flush();
+
+    (container.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+    await flush();
+
+    expect(post.mock.calls[0][0]).toBe('/tickets');
+    expect(post.mock.calls[0][1].initiativeId).toBe('i1');
+    unmount();
+  });
+
+  it('sends nothing when none is chosen, rather than an empty string', async () => {
+    // The route treats a falsy value as "no link", but an empty string in the
+    // payload is a value the next reader has to reason about.
+    const { container, unmount } = await open();
+    typeInto(titleInput(container), 'KYB onboarding');
+    await flush();
+    (container.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+    await flush();
+    expect(post.mock.calls[0][1].initiativeId).toBeUndefined();
+    unmount();
+  });
+
+  it('says what to do when the board has no initiatives yet', async () => {
+    get.mockReset().mockResolvedValue({ data: [] });
+    const { container, unmount } = await open();
+    expect(container.textContent).toContain('no initiatives yet');
     unmount();
   });
 });

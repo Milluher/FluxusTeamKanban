@@ -99,10 +99,13 @@ is open at a time, since they share the same space.
 `/initiatives` was a page and is now a redirect to the dashboard, so an old
 bookmark still lands somewhere useful.
 
-A ticket's **Initiative** field is shown on every ticket, not hidden behind
-"+ Add field" like the other optional fields — it was the one association nobody
+A ticket's **Initiative** field is offered in both places a ticket is written:
+on the New Ticket form, and on every open ticket rather than hidden behind
+"+ Add field" like the other optional fields. It was the one association nobody
 made, because it was invisible at exactly the moment a ticket was being
-described.
+described. In both places the picker offers that board's initiatives, and says
+what to do when the board has none yet — a dropdown holding only "None" reads as
+broken rather than empty.
 
 ## Products, blocks and PRDs
 
