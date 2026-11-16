@@ -217,6 +217,8 @@ model CanvasProject {
 
   board  Board         @relation(fields: [boardId], references: [id], onDelete: Cascade)
   blocks CanvasBlock[]
+  // The project's products: each one exists in order to have a PRD.
+  prds   Prd[]
 }
 
 model CanvasBlock {
@@ -235,11 +237,10 @@ model CanvasFeature {
   blockId   String
   text      String
   active    Boolean  @default(true)
-  // Whether this feature is worth a PRD. The creator answers that when they add
-  // it: a "mini feature" is listed on the canvas and that is the whole of it,
-  // while anything larger opens the builder there and then. Stored rather than
-  // inferred from "has no PRD", which cannot tell a mini feature from one whose
-  // document nobody has started yet.
+  // Legacy. Features briefly chose whether they warranted a PRD; documents now
+  // belong to a product instead, so adding a feature never starts one and this
+  // is no longer read. Kept so rows written while it was live keep their value
+  // rather than being rewritten.
   requiresPrd Boolean @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
@@ -407,6 +408,16 @@ model Prd {
   successMetrics     String? // §15 Success Metrics
 
   boardId         String
+  // How this PRD is reached on the canvas. Exactly one of the two in practice.
+  //
+  // `canvasProjectId` is a *product*: a thing an admin adds to a project in
+  // order to have a PRD. This is how new documents are started.
+  //
+  // `canvasFeatureId` is the old arrangement, where adding a feature to a block
+  // started a document for it. No longer offered — a feature is a line on the
+  // canvas and a PRD is far too much for one — but every PRD already attached
+  // this way keeps its attachment and stays readable and editable where it is.
+  canvasProjectId String?
   canvasFeatureId String?   @unique
   createdById     String
   publishedAt     DateTime?
@@ -414,6 +425,7 @@ model Prd {
   updatedAt       DateTime  @updatedAt
 
   board         Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  canvasProject CanvasProject? @relation(fields: [canvasProjectId], references: [id], onDelete: SetNull)
   canvasFeature CanvasFeature? @relation(fields: [canvasFeatureId], references: [id], onDelete: SetNull)
   createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
   personas      PrdPersona[]
@@ -423,6 +435,7 @@ model Prd {
 
   @@index([boardId])
   @@index([status])
+  @@index([canvasProjectId])
 }
 
 // §10 Target Personas, multi-select. A join rather than a list of ids, so a

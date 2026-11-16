@@ -85,6 +85,18 @@ export interface Prd {
   acceptanceCriteria?: string | null;
   successMetrics?: string | null;
   boardId: string;
+  /**
+   * The project this PRD is a *product* of. How documents are started now: an
+   * admin adds a product to a project in order to have a PRD.
+   */
+  canvasProjectId?: string | null;
+  canvasProject?: { id: string; name: string } | null;
+  /**
+   * The feature this PRD was started from, under the old arrangement where
+   * adding a feature to a block started a document for it. No longer offered,
+   * but the PRDs already attached this way keep their attachment and are still
+   * opened from the feature.
+   */
   canvasFeatureId?: string | null;
   createdById: string;
   createdBy: { id: string; name: string };
@@ -272,13 +284,11 @@ export interface CanvasFeature {
   text: string;
   active: boolean;
   /**
-   * Whether this feature is worth a PRD, answered by whoever added it.
-   *
-   * False is a "mini feature": it is listed on the canvas and that is the whole
-   * of it. Stored rather than inferred from "has no PRD yet", which cannot tell
-   * a mini feature from one whose document nobody has started.
+   * Legacy. Features briefly chose whether they warranted a PRD; documents now
+   * belong to a product instead, so adding a feature never starts one and this
+   * is no longer read. Optional because nothing sends it any more.
    */
-  requiresPrd: boolean;
+  requiresPrd?: boolean;
   order: number;
 }
 

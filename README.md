@@ -80,16 +80,26 @@ blocks and its approvers: those are handed straight to the person the document
 names, so they are assigned and have no sprint. They appear in the backlog list
 with their owner shown.
 
-## Features and PRDs
+## Products, blocks and PRDs
 
-Adding a feature to a project block asks two things: what it is, and whether it
-needs a PRD.
+A project in the Project Overview holds two kinds of thing, and an admin adds
+either:
 
-- **Needs a PRD** opens the builder there and then.
-- **Mini feature** lists it on the canvas and nothing more, tagged `Mini`.
+- **Products** — each one exists in order to have a PRD. Naming a product opens
+  the builder, and the document follows the normal flow from there. The card
+  shows where sign-off stands.
+- **Blocks** — a heading with its features listed under it. Adding a feature
+  adds a line to that list; it starts no document.
 
-An admin can still start a PRD on a mini feature later by clicking its `Mini`
-tag, which records the change of mind on the feature itself.
+Both have their own labelled add control in the row where the thing will appear,
+rather than one button hiding a menu.
+
+A PRD used to hang off a *feature*, which put a long document behind a bullet
+point: a block is a heading and its features are a sentence each, while a PRD
+carries scope, personas, approvers and sign-off. The PRDs already attached to a
+feature are left exactly as they were — the feature still shows a `PRD` badge
+that opens it, and it stays editable under the rules below. Only the *starting*
+of one moved.
 
 A PRD stays **editable after it is published**, right up until it is approved —
 sections, administrative blocks and approvers alike. Publishing circulates a
